@@ -10,6 +10,46 @@
 <style>
   html, body { margin: 0; padding: 0; background: #F5EBD6; font-family: 'Archivo', sans-serif; }
   * { box-sizing: border-box; }
+  img, video { max-width: 100%; height: auto; }
+  /* Responsive — mobile */
+  @media (max-width: 720px) {
+    html, body { overflow-x: hidden; }
+    /* Top brand bar: stack vertically */
+    .pf-brandbar { flex-direction: column !important; gap: 6px !important; padding: 10px 16px !important; align-items: flex-start !important; }
+    .pf-brandbar > div, .pf-brandbar > span { font-size: 10px !important; }
+    /* Header */
+    .pf-header { padding: 14px 16px !important; flex-wrap: wrap !important; gap: 12px !important; }
+    .pf-header nav { display: none !important; }
+    .pf-header .pf-brand { gap: 10px !important; }
+    .pf-header .pf-brand img.pf-logo-img { height: 36px !important; }
+    /* Sections: tighter side padding */
+    .pf-hero { padding: 24px 18px 24px !important; grid-template-columns: 1fr !important; gap: 24px !important; }
+    .pf-hero h1 { font-size: clamp(40px, 11vw, 64px) !important; line-height: 0.95 !important; }
+    .pf-hero p { font-size: 15px !important; }
+    .pf-hero .pf-reel { width: 100% !important; max-width: 280px !important; justify-self: center !important; }
+    .pf-hero-cta { gap: 10px !important; }
+    .pf-hero-cta a { padding: 12px 18px !important; font-size: 12px !important; }
+    /* Stats strip: 2 cols on mobile */
+    .pf-stats { grid-template-columns: repeat(2, 1fr) !important; }
+    .pf-stats > div { padding: 18px 14px !important; border-bottom: 1.5px solid #0A0A0A !important; }
+    .pf-stats > div:nth-child(2) { border-right: none !important; }
+    .pf-stats > div:nth-child(odd) { border-right: 1.5px solid #0A0A0A !important; }
+    .pf-stats > div:nth-child(n+3) { border-bottom: none !important; }
+    .pf-stats > div > div:first-child { font-size: 38px !important; }
+    /* Services / Productions / Tech specs / Pricing / Location grids → 1 col */
+    .pf-services, .pf-productions, .pf-techspecs, .pf-pricing-grid, .pf-location-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .pf-location-grid > div:last-child { min-height: 280px !important; }
+    /* Generic section padding reduction */
+    section { padding-left: 18px !important; padding-right: 18px !important; }
+    /* h2 sizing */
+    section h2 { font-size: clamp(30px, 8vw, 42px) !important; }
+    /* Booking calendar — horizontal scroll wrapper */
+    .pf-calendar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pf-calendar-wrap > div { min-width: 640px; }
+    /* Footer: stack */
+    footer .pf-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
+    footer .pf-footer-grid > div:first-child { grid-column: 1 / -1; }
+  }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -18,8 +58,8 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" src="shared.jsx?v=7"></script>
-<script type="text/babel" src="pod-factory-landing.jsx?v=7"></script>
+<script type="text/babel" src="shared.jsx?v=19"></script>
+<script type="text/babel" src="pod-factory-landing.jsx?v=19"></script>
 <script type="text/babel">
   ReactDOM.createRoot(document.getElementById('root')).render(<PodFactoryLanding />);
 </script>
