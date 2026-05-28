@@ -192,7 +192,7 @@ function PodFactoryLanding() {
               borderRadius: 999,
             }}>VER TARIFAS</a>
             <div style={{ fontSize: 11, fontFamily: PF.mono, color: PF.ink + 'aa', marginLeft: 8 }}>
-              Desde<br /><b style={{ color: PF.ink, fontSize: 14 }}>$149.990 + IVA / hora</b>
+              Desde<br /><b style={{ color: PF.ink, fontSize: 14 }}>$199.990 + IVA / hora</b>
             </div>
           </div>
         </Reveal>
@@ -371,31 +371,24 @@ function PodFactoryLanding() {
           </p>
         </Reveal>
 
-        {/* Base prices by group size */}
+        {/* Base price — single tier, up to 4 people */}
         <Reveal delay={200} style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.ink + '99', marginBottom: 12, fontWeight: 700 }}>
             ① TARIFA BASE · GRABACIÓN + EDICIÓN BÁSICA
           </div>
-          <div className="pf-pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {[
-              { size: '1-2 personas', price: 149990, color: PF.blue },
-              { size: '3-4 personas', price: 199990, color: PF.red },
-            ].map((b, i) => (
-              <div key={i} style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg, padding: '22px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                <div>
-                  <div style={{ width: 40, height: 6, background: b.color, marginBottom: 12 }} />
-                  <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em' }}>
-                    {b.size}
-                  </div>
-                  <div style={{ fontSize: 12, color: PF.ink + 'aa', marginTop: 4 }}>
-                    Grabación + Edición Básica
-                  </div>
-                </div>
-                <div style={{ fontFamily: PF.mono, fontWeight: 700, fontSize: 24, whiteSpace: 'nowrap' }}>
-                  ${b.price.toLocaleString('es-CL')}
-                </div>
+          <div style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ width: 48, height: 6, background: PF.blue, marginBottom: 14 }} />
+              <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 26, letterSpacing: '-0.02em' }}>
+                Sesión por hora · hasta 4 personas
               </div>
-            ))}
+              <div style={{ fontSize: 13, color: PF.ink + 'aa', marginTop: 5 }}>
+                Grabación + Edición Básica · tarifa única independiente de la cantidad de invitados
+              </div>
+            </div>
+            <div style={{ fontFamily: PF.mono, fontWeight: 700, fontSize: 28, whiteSpace: 'nowrap' }}>
+              $199.990
+            </div>
           </div>
         </Reveal>
 
