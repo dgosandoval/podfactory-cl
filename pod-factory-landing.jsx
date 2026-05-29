@@ -214,10 +214,9 @@ function PodFactoryLanding() {
               position: 'absolute', bottom: 14, left: 14, right: 14,
               background: PF.yellow, padding: '10px 14px',
               fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.1em',
-              display: 'flex', justifyContent: 'space-between',
+              fontWeight: 700, textAlign: 'center',
             }}>
-              <span style={{ fontWeight: 700 }}>MULTICÁMARA</span>
-              <span>4 × BLACKMAGIC · 2×6K + 2×4K</span>
+              ESTUDIO PREMIUM MULTICÁMARA EN VITACURA
             </div>
           </div>
           {/* Ray decoration */}
