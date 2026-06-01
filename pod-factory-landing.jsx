@@ -127,6 +127,7 @@ function PodFactoryLanding() {
             ['Producciones', '#producciones', false],
             ['Tarifas',      '#tarifas',     false],
             ['Ubicación',    '#ubicacion',   false],
+            ['FAQ',          '#faq',         false],
             ['Contacto',     waLink('quiero conversar con Pod Factory.'), true],
           ].map(([l, h, ext]) => (
             <a
@@ -485,7 +486,7 @@ function PodFactoryLanding() {
             <WhatsAppIcon size={16} color={PF.bg} />
           </a>
           <a
-            href="https://podfactory.site.agendapro.com/cl/sucursal/446357"
+            href={waLink('Hola! Quiero ver la disponibilidad de Pod Factory.')}
             target="_blank" rel="noopener"
             style={{
               background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`,
@@ -598,6 +599,111 @@ function PodFactoryLanding() {
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" style={{ padding: '70px 32px', borderTop: `1.5px solid ${PF.ink}` }}>
+        <Reveal style={{ marginBottom: 36 }}>
+          <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.2em', marginBottom: 14 }}>
+            ▸ PREGUNTAS FRECUENTES
+          </div>
+          <h2 style={{
+            fontFamily: PF.display, fontWeight: 900, fontSize: 64,
+            letterSpacing: '-0.04em', margin: 0, lineHeight: 0.92, maxWidth: 820,
+          }}>
+            Lo que <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.red }}>siempre</span> nos preguntan.
+          </h2>
+        </Reveal>
+
+        <style>{`
+          .pf-faq details { border-top: 1.5px solid ${PF.ink}; padding: 22px 0; position: relative; }
+          .pf-faq details:last-child { border-bottom: 1.5px solid ${PF.ink}; }
+          .pf-faq summary {
+            list-style: none; cursor: pointer; display: flex; align-items: flex-start;
+            justify-content: space-between; gap: 24px;
+            font-family: ${PF.display}; font-weight: 700; font-size: 22px;
+            letter-spacing: -0.018em; line-height: 1.2; color: ${PF.ink};
+          }
+          .pf-faq summary::-webkit-details-marker { display: none; }
+          .pf-faq summary .pf-faq-icon {
+            flex-shrink: 0; width: 28px; height: 28px; border: 1.5px solid ${PF.ink};
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-family: ${PF.mono}; font-size: 18px; line-height: 1; transition: transform 0.25s ease;
+            margin-top: 2px;
+          }
+          .pf-faq details[open] .pf-faq-icon { transform: rotate(45deg); background: ${PF.yellow}; }
+          .pf-faq details[open] summary { color: ${PF.blue}; }
+          .pf-faq-body {
+            margin-top: 14px; max-width: 820px;
+            font-size: 15px; line-height: 1.6; color: ${PF.ink}cc;
+          }
+          .pf-faq-body b { color: ${PF.ink}; font-weight: 700; }
+          @media (max-width: 720px) {
+            .pf-faq summary { font-size: 17px; }
+            .pf-faq-body { font-size: 14px; }
+          }
+        `}</style>
+
+        <Reveal delay={150} className="pf-faq" style={{ maxWidth: 920 }}>
+          {[
+            {
+              q: '¿Cuánto dura una sesión?',
+              a: <>Cada sesión incluye <b>60 minutos de grabación</b> + <b>20 minutos de setup</b>. Recomendamos llegar 10 minutos antes para coordinar la pauta y revisar el material que vayas a usar.</>,
+            },
+            {
+              q: '¿Hasta cuántas personas pueden grabar al mismo tiempo?',
+              a: <>El estudio acomoda <b>hasta 4 personas</b> en cabina con calidad broadcast. La tarifa es plana: <b>$199.990 + IVA por hora</b>, independiente de si grabas solo o con 3 invitados.</>,
+            },
+            {
+              q: '¿Qué incluye la Edición Básica?',
+              a: <>Logo al inicio y final, música de intro/outro, sobreimpresos con nombre y cargo, corrección de color y master de sonido. Entregamos el archivo de video + audio listo para publicar.</>,
+            },
+            {
+              q: '¿Qué suma la Edición Pro?',
+              a: <>Edición Pro (<b>+$99.990</b>) agrega un teaser de mejores momentos al inicio del episodio, un reel vertical para redes sociales y la <b>distribución</b> a Spotify, Apple Podcasts, YouTube y Amazon Music desde nuestras cuentas hacia tu canal.</>,
+            },
+            {
+              q: '¿Hacen streaming en vivo?',
+              a: <>Sí. El paquete de Streaming (<b>$149.990</b>) transmite multicámara en vivo a YouTube, LinkedIn, Zoom o la plataforma que prefieras. Necesitamos los accesos y datos RTMP el día de la sesión.</>,
+            },
+            {
+              q: '¿Cómo reservo y qué medios de pago aceptan?',
+              a: <>Reservas directo desde el calendario en la sección Tarifas. Confirmamos con <b>$30.000 de adelanto</b> y el saldo se paga el día de la sesión. Aceptamos MercadoPago (crédito, débito y transferencia).</>,
+            },
+            {
+              q: '¿Puedo cancelar o reagendar?',
+              a: <>Sí, con al menos <b>24 horas de antelación</b> reagendamos sin costo. Después de esa ventana, o por no presentarse, la sesión se considera realizada y el adelanto no es reembolsable.</>,
+            },
+            {
+              q: '¿Cuándo recibo el material?',
+              a: <>Entregamos el master en <b>24 horas</b> a través de un link de descarga (formato .mp4 Full HD + audio WAV). Para Edición Pro, los entregables completos llegan en hasta 5 días hábiles.</>,
+            },
+            {
+              q: '¿Necesito experiencia previa?',
+              a: <>No. Te acompaña un productor dedicado que opera el switcher, dirige la conversación si hace falta y resuelve la parte técnica para que tú te concentres en hablar.</>,
+            },
+            {
+              q: '¿Quién es dueño del contenido?',
+              a: <>El contenido es <b>100% tuyo</b>. Eres responsable de los derechos de música, imágenes y marcas que aparezcan. Podemos usar fragmentos en nuestro portfolio solo si nos das autorización por escrito.</>,
+            },
+          ].map(({ q, a }, i) => (
+            <Reveal as="details" key={i} delay={200 + i * 50}>
+              <summary>
+                <span>{q}</span>
+                <span className="pf-faq-icon">+</span>
+              </summary>
+              <div className="pf-faq-body">{a}</div>
+            </Reveal>
+          ))}
+        </Reveal>
+
+        <Reveal delay={400} style={{ marginTop: 36, fontFamily: PF.mono, fontSize: 12, color: PF.ink + 'aa' }}>
+          ¿Otra pregunta? Escríbenos por{' '}
+          <a href={waLink('tengo una duda sobre Pod Factory.')} target="_blank" rel="noopener" style={{ color: PF.blue, fontWeight: 700, textDecoration: 'underline' }}>
+            WhatsApp
+          </a>
+          {' '}y te respondemos rápido.
+        </Reveal>
       </section>
 
       {/* Footer */}
