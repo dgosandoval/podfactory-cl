@@ -4,28 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pod Factory by Doppel — Premium Podcast Studio</title>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-22Z1C3GEGN"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-22Z1C3GEGN', {
-    linker: { domains: ['doppel.cl', 'podfactory.cl'] }
-  });
-  // Track every click on a WhatsApp link as a GA4 event
-  document.addEventListener('click', function(e) {
-    var link = e.target.closest && e.target.closest('a[href*="wa.me/"]');
-    if (!link || typeof gtag !== 'function') return;
-    var text = '';
-    try { text = new URL(link.href).searchParams.get('text') || ''; } catch (_) {}
-    gtag('event', 'whatsapp_click', {
-      event_category: 'engagement',
-      event_label: decodeURIComponent(text).slice(0, 100),
-      source_site: 'podfactory.cl'
-    });
-  }, true);
-</script>
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1">
 <link rel="apple-touch-icon" href="assets/favicon.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
