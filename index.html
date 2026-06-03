@@ -60,10 +60,34 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" src="shared.jsx?v=22"></script>
-<script type="text/babel" src="pod-factory-landing.jsx?v=22"></script>
+<script type="text/babel" src="shared.jsx?v=23"></script>
+<script type="text/babel" src="booking.jsx?v=23"></script>
+<script type="text/babel" src="pod-factory-landing.jsx?v=23"></script>
 <script type="text/babel">
   ReactDOM.createRoot(document.getElementById('root')).render(<PodFactoryLanding />);
+</script>
+
+<!-- Aviso de retorno desde MercadoPago (?reserva=ok|error|pendiente) -->
+<script>
+(function () {
+  var estado = new URLSearchParams(location.search).get('reserva');
+  if (!estado) return;
+  var msg = {
+    ok: ['✓ ¡Reserva confirmada! Te llegará el detalle por correo. Nos vemos en el estudio.', '#1f7a3f'],
+    pendiente: ['⏳ Tu pago está pendiente de aprobación. Te avisaremos al confirmarse.', '#b8860b'],
+    error: ['✕ El pago no se completó. Tu bloque sigue libre, puedes intentar de nuevo.', '#D92E2E']
+  }[estado];
+  if (!msg) return;
+  var bar = document.createElement('div');
+  bar.textContent = msg[0];
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;padding:14px 20px;'
+    + 'background:' + msg[1] + ';color:#fff;font-family:Archivo,sans-serif;font-weight:600;'
+    + 'font-size:14px;text-align:center;box-shadow:0 2px 12px #0003;cursor:pointer';
+  bar.title = 'Cerrar';
+  bar.onclick = function () { bar.remove(); };
+  document.body.appendChild(bar);
+  history.replaceState(null, '', location.pathname);
+})();
 </script>
 </body>
 </html>

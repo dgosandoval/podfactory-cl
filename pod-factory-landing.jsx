@@ -471,7 +471,18 @@ function PodFactoryLanding() {
           </div>
         </Reveal>
 
+        {/* Booking calendar — reserva online con adelanto por MercadoPago */}
+        <Reveal delay={750} style={{ marginTop: 40 }} id="reservar">
+          <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.ink + '99', marginBottom: 12, fontWeight: 700 }}>
+            ③ RESERVA ONLINE · ELIGE DÍA Y HORA
+          </div>
+          <BookingCalendar />
+        </Reveal>
+
         <Reveal delay={800} style={{ display: 'flex', gap: 12, marginTop: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.ink + '99', width: '100%', marginBottom: 4 }}>
+            ¿Prefieres coordinar por WhatsApp?
+          </div>
           <a
             href={waLink('quiero reservar Pod Factory, cuéntame sobre disponibilidad.')}
             target="_blank" rel="noopener"

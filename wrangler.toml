@@ -1,0 +1,29 @@
+# Configuración de Cloudflare Pages para podfactory.cl
+# Despliegue: archivos estáticos en la raíz + Pages Functions en functions/
+name = "podfactory-cl"
+compatibility_date = "2025-06-01"
+pages_build_output_dir = "."
+
+# --- Configuración del estudio (público, no son secretos) ---
+[vars]
+TIMEZONE = "America/Santiago"
+OPEN_DAYS = "1,2,3,4,5,6"        # 1=Lun ... 6=Sáb (0=Dom cerrado)
+SLOT_STARTS = "10:00,11:30,13:00,14:30,16:00,17:30,19:00"
+SLOT_MINUTES = "80"              # 60 grabación + 20 setup
+HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga
+DEPOSIT_CLP = "30000"           # adelanto a cobrar por MercadoPago
+GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fcd720f162@group.calendar.google.com"
+# MOCK_AVAILABILITY = "1"       # descomenta para probar sin Google Calendar
+
+# --- KV: holds temporales de reservas en pago (Fase 2) ---
+# Crear con:  npx wrangler kv namespace create HOLDS
+# y pegar el id que devuelve aquí abajo.
+[[kv_namespaces]]
+binding = "HOLDS"
+id = "898ca71e643f49c0968f25c84ce3dea4"
+
+# --- Secrets (NO van aquí, se cargan con `wrangler pages secret put`) ---
+#   GOOGLE_SA_KEY        clave JSON del service account
+#   GOOGLE_CALENDAR_ID   id de la agenda de reservas
+#   MP_ACCESS_TOKEN      access token de MercadoPago
+#   MP_PUBLIC_KEY        public key de MercadoPago
