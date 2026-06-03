@@ -41,6 +41,12 @@ export function icsAttachment({ uid, start, end, summary, location, description 
   return { filename: "reserva-podfactory.ics", content: b64(ics) };
 }
 
+// Link wa.me con mensaje prellenado (o null si no hay número configurado).
+export function whatsappLink(env, msg) {
+  if (!env.WHATSAPP_PHONE) return null;
+  return `https://wa.me/${env.WHATSAPP_PHONE}?text=${encodeURIComponent(msg || "")}`;
+}
+
 // "miércoles 10 de junio · 13:00 hrs" a partir del instante UTC + zona horaria.
 export function formatSession(startISO, timeZone) {
   const d = new Date(startISO);
@@ -73,8 +79,14 @@ const button = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#0A0A0A;color:#F5EBD6;text-decoration:none;
     padding:12px 22px;font-weight:700;font-size:14px;border-radius:2px">${label}</a>`;
 
+const waLine = (whatsappUrl) => whatsappUrl ? `
+    <p style="font-size:13px;color:#0A0A0Acc;line-height:1.5;margin-top:14px">
+      ¿Necesitas avisarnos algo? Escríbenos por
+      <a href="${whatsappUrl}" style="color:#1f7a3f;font-weight:700;text-decoration:none">WhatsApp →</a>
+    </p>` : "";
+
 // Correo al cliente (confirmación)
-export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl }) {
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">¡Reserva confirmada! 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -95,6 +107,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       Puedes reagendar o cancelar sin costo hasta <b>24 horas antes</b> de tu sesión.
       Pasado ese plazo, el adelanto no es reembolsable.
     </p>` : ""}
+    ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:18px">Nos vemos pronto,<br><b>Equipo Pod Factory</b></p>
   `);
 }
@@ -132,7 +145,7 @@ export function cancelEmailHtml({ name, fecha, hora }) {
 }
 
 // Correo recordatorio (24 h antes)
-export function reminderEmailHtml({ name, fecha, hora, address, manageUrl }) {
+export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu sesión es mañana 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -147,6 +160,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl }) {
       Llega unos minutos antes para el setup. Recuerda traer el saldo de la sesión.
     </p>
     ${manageUrl ? `<p style="font-size:12px;color:#0A0A0A99">¿Algo cambió? <a href="${manageUrl}">Gestiona tu reserva</a> (hasta 24 h antes).</p>` : ""}
+    ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
   `);
 }

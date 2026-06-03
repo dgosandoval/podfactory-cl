@@ -3,7 +3,7 @@
 // creamos el evento confirmado en Google Calendar y liberamos el hold.
 import { parseConfig } from "../_lib/slots.js";
 import { createEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment } from "../_lib/email.js";
+import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "../_lib/email.js";
 import { newToken, saveBooking, manageUrl } from "../_lib/booking.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
@@ -96,7 +96,11 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: email,
         subject: "Tu reserva en Pod Factory está confirmada 🎙️",
-        html: customerEmailHtml({ name, fecha, hora, deposit: config.depositCLP, address, manageUrl: manageUrl(origin, token) }),
+        html: customerEmailHtml({
+          name, fecha, hora, deposit: config.depositCLP, address,
+          manageUrl: manageUrl(origin, token),
+          whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
+        }),
         attachments: [ics],
       });
     }

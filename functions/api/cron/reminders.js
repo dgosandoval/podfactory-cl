@@ -3,7 +3,7 @@
 // a las reservas cuya sesión es dentro de las próximas 24 h y aún no avisadas.
 import { parseConfig } from "../../_lib/slots.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, reminderEmailHtml } from "../../_lib/email.js";
+import { sendEmail, formatSession, reminderEmailHtml, whatsappLink } from "../../_lib/email.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -30,7 +30,7 @@ export async function onRequestGet({ request, env }) {
         await sendEmail(env, {
           to: b.email,
           subject: "Recordatorio: tu sesión en Pod Factory es mañana 🎙️",
-          html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token) }),
+          html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`) }),
         });
       }
       await saveBooking(env, { ...b, reminded: true });

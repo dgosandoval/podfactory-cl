@@ -17,7 +17,10 @@ GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fc
 # verificado). Enviamos desde @doppel.cl con nombre visible "Pod Factory".
 FROM_EMAIL = "Pod Factory <reservas@doppel.cl>"
 STUDIO_EMAIL = "hola@doppel.cl"
-STUDIO_ADDRESS = "Eduardo Marquina 3937, Vitacura · Santiago"
+# Dirección completa (con oficina) — solo se usa en correos/confirmación al cliente,
+# nunca en la web pública.
+STUDIO_ADDRESS = "Eduardo Marquina 3937, Oficina 906, Vitacura · Santiago"
+WHATSAPP_PHONE = "56927970014"   # para el link de WhatsApp en los correos
 # MOCK_AVAILABILITY = "1"       # descomenta para probar sin Google Calendar
 
 # --- KV: holds temporales de reservas en pago (Fase 2) ---
