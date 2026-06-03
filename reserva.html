@@ -60,6 +60,7 @@ function Manage() {
   }, [mode, activeDate]);
 
   async function doCancel() {
+    if (!window.confirm(`Vas a CANCELAR tu sesión del ${b.fecha} a las ${b.hora} hrs.\n\nEl adelanto de ${CLP(b.deposit)} no es reembolsable. ¿Confirmas la cancelación?`)) return;
     setBusy(true); setErr(null);
     try {
       const r = await fetch('/api/cancel', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: token }) });

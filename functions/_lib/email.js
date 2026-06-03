@@ -1,7 +1,7 @@
 // Envío de correos vía Resend (https://resend.com). Best-effort: si falla,
 // el llamador debe ignorarlo para no romper la confirmación de la reserva.
 
-export async function sendEmail(env, { to, subject, html, replyTo }) {
+export async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
   if (!env.RESEND_API_KEY) return { skipped: "RESEND_API_KEY no configurada" };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -12,10 +12,33 @@ export async function sendEmail(env, { to, subject, html, replyTo }) {
       subject,
       html,
       reply_to: replyTo || env.STUDIO_EMAIL || undefined,
+      attachments: attachments && attachments.length ? attachments : undefined,
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
   return res.json();
+}
+
+// Base64 (UTF-8) para adjuntos.
+function b64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+// Genera un .ics (iCalendar) para que el cliente agregue la sesión a su calendario.
+const icsDate = (iso) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+export function icsAttachment({ uid, start, end, summary, location, description }) {
+  const esc = (s) => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pod Factory//Reservas//ES", "METHOD:PUBLISH",
+    "BEGIN:VEVENT", `UID:${uid}@podfactory.cl`, `DTSTAMP:${icsDate(start)}`,
+    `DTSTART:${icsDate(start)}`, `DTEND:${icsDate(end)}`,
+    `SUMMARY:${esc(summary)}`, `LOCATION:${esc(location)}`, `DESCRIPTION:${esc(description)}`,
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  return { filename: "reserva-podfactory.ics", content: b64(ics) };
 }
 
 // "miércoles 10 de junio · 13:00 hrs" a partir del instante UTC + zona horaria.

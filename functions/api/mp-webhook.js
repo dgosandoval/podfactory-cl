@@ -3,7 +3,7 @@
 // creamos el evento confirmado en Google Calendar y liberamos el hold.
 import { parseConfig } from "../_lib/slots.js";
 import { createEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml } from "../_lib/email.js";
+import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment } from "../_lib/email.js";
 import { newToken, saveBooking, manageUrl } from "../_lib/booking.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
@@ -41,6 +41,13 @@ export async function onRequestPost({ request, env }) {
   const [date, label] = String(pay.external_reference || "").split("__");
   if (!date || !label) return ok();
 
+  // Anti-duplicado: re-chequear y "reclamar" el pago ANTES de crear el evento.
+  // (MercadoPago entrega la misma notificación más de una vez.)
+  if (env.HOLDS) {
+    if (await env.HOLDS.get(dedupeKey)) return ok();
+    await env.HOLDS.put(dedupeKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
+  }
+
   const holdKey = `hold:${date}:${label}`;
   const hold = env.HOLDS ? await env.HOLDS.get(holdKey, "json") : null;
   // Reconstruir datos desde el hold (o desde el pago si el hold ya expiró).
@@ -68,12 +75,10 @@ export async function onRequestPost({ request, env }) {
     });
     // Persistir la reserva para gestión (cancelar/reagendar) y recordatorio.
     await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, deposit: config.depositCLP, reminded: false });
-    if (env.HOLDS) {
-      await env.HOLDS.put(dedupeKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
-      await env.HOLDS.delete(holdKey);
-    }
+    if (env.HOLDS) await env.HOLDS.delete(holdKey);
   } catch (e) {
-    // No marcamos como confirmado: MercadoPago reintentará y volveremos a intentar.
+    // Falló: liberamos la marca para que MercadoPago pueda reintentar.
+    if (env.HOLDS) await env.HOLDS.delete(dedupeKey);
     return new Response(`retry: ${e}`, { status: 500 });
   }
 
@@ -83,10 +88,16 @@ export async function onRequestPost({ request, env }) {
     const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
     const origin = new URL(request.url).origin;
     if (email) {
+      const ics = icsAttachment({
+        uid: token, start, end,
+        summary: "Sesión Pod Factory", location: address,
+        description: `Tu sesión de grabación en Pod Factory (${tipo}, ${personas} personas). Saldo a pagar el día de la sesión.`,
+      });
       await sendEmail(env, {
         to: email,
         subject: "Tu reserva en Pod Factory está confirmada 🎙️",
         html: customerEmailHtml({ name, fecha, hora, deposit: config.depositCLP, address, manageUrl: manageUrl(origin, token) }),
+        attachments: [ics],
       });
     }
     if (env.STUDIO_EMAIL) {
