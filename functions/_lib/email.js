@@ -66,7 +66,8 @@ const shell = (inner) => `
     <div style="padding:28px 24px">${inner}</div>
     <div style="border-top:1px solid #0A0A0A22;padding:20px 24px;font-size:11px;color:#0A0A0A99;text-align:center">
       <img src="https://podfactory.cl/assets/doppel-logo.png" alt="doppel" height="15" style="height:15px;width:auto;opacity:0.65"><br>
-      <span style="display:inline-block;margin-top:8px">Pod Factory · Estudio de podcast · Eduardo Marquina 3937, Vitacura · Santiago</span>
+      <a href="https://podfactory.cl" style="display:inline-block;margin-top:8px;color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a><br>
+      <span style="display:inline-block;margin-top:4px">Pod Factory · Estudio de podcast · Eduardo Marquina 3937, Vitacura · Santiago</span>
     </div>
   </div>
 </div>`;
@@ -147,7 +148,7 @@ export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
 }
 
 // Correo al cliente (reserva cancelada)
-export function cancelEmailHtml({ name, fecha, hora }) {
+export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva cancelada</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -155,8 +156,10 @@ export function cancelEmailHtml({ name, fecha, hora }) {
       El horario quedó liberado.
     </p>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Cuando quieras, puedes reservar una nueva sesión desde nuestro sitio. ¡Te esperamos!
+      Cuando quieras, puedes reservar una nueva sesión en
+      <a href="https://podfactory.cl" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>. ¡Te esperamos!
     </p>
+    ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:14px"><b>Equipo Pod Factory</b></p>
   `);
 }

@@ -4,7 +4,7 @@
 import { parseConfig } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
 import { deleteEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, cancelEmailHtml } from "../_lib/email.js";
+import { sendEmail, formatSession, cancelEmailHtml, whatsappLink } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -32,7 +32,10 @@ export async function onRequestPost({ request, env }) {
   try {
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     if (b.email) {
-      await sendEmail(env, { to: b.email, subject: "Reserva cancelada · Pod Factory", html: cancelEmailHtml({ name: b.name, fecha, hora }) });
+      await sendEmail(env, {
+        to: b.email, subject: "Reserva cancelada · Pod Factory",
+        html: cancelEmailHtml({ name: b.name, fecha, hora, whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva cancelada del ${fecha}:`) }),
+      });
     }
     if (env.STUDIO_EMAIL) {
       await sendEmail(env, { to: env.STUDIO_EMAIL, subject: `Reserva CANCELADA: ${b.name} · ${fecha} ${hora} hrs`, html: cancelEmailHtml({ name: b.name, fecha, hora }) });
