@@ -16,6 +16,12 @@ export async function onRequestPost({ request, env }) {
   if (!date || !start || !label || !name || !email || !phone) {
     return json({ error: "Faltan datos de la reserva" }, 400);
   }
+  // Servicios (opcionales) — saneados.
+  const ALLOWED_ADDONS = ["Edición Pro", "3 Reels adicionales"];
+  const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
+  const personas = Math.min(4, Math.max(1, parseInt(body.personas, 10) || 1));
+  const addons = Array.isArray(body.addons) ? body.addons.filter((a) => ALLOWED_ADDONS.includes(a)) : [];
+  const comentarios = String(body.comentarios || "").slice(0, 500);
   if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
 
   // 1) El bloque debe ser uno válido de la grilla y en día abierto.
@@ -44,7 +50,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   // 3) Congelar el bloque (expira solo si no se paga).
-  const holdPayload = { start: slot.start, end: slot.end, label, name, email, phone, date };
+  const holdPayload = { start: slot.start, end: slot.end, label, name, email, phone, date, tipo, personas, addons, comentarios };
   if (env.HOLDS) await env.HOLDS.put(holdKey, JSON.stringify(holdPayload), { expirationTtl: config.holdMinutes * 60 });
 
   // 4) Crear preferencia de pago en MercadoPago (Checkout Pro).

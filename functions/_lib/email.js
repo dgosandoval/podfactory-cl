@@ -129,7 +129,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl }) {
 }
 
 // Correo de aviso al estudio
-export function studioEmailHtml({ name, email, phone, fecha, hora, deposit }) {
+export function studioEmailHtml({ name, email, phone, fecha, hora, deposit, tipo, personas, addons, comentarios }) {
   return shell(`
     <div style="font-size:20px;font-weight:800;margin-bottom:6px">Nueva reserva ✅</div>
     <table style="width:100%;border-collapse:collapse;margin:14px 0">
@@ -138,6 +138,10 @@ export function studioEmailHtml({ name, email, phone, fecha, hora, deposit }) {
       ${row("Hora", hora + " hrs")}
       ${row("Email", email)}
       ${row("Teléfono", phone || "—")}
+      ${tipo ? row("Tipo", tipo) : ""}
+      ${personas ? row("Personas", personas) : ""}
+      ${addons && addons.length ? row("Adicionales", addons.join(", ")) : ""}
+      ${comentarios ? row("Comentarios", comentarios) : ""}
       ${row("Adelanto", CLP(deposit) + " (pagado)")}
     </table>
     <p style="font-size:12px;color:#0A0A0A99">Ya está en tu Google Calendar (agenda Pod Factory — Reservas).</p>

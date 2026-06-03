@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Admin · Pod Factory Reservas</title>
+<link rel="icon" type="image/png" href="assets/favicon.png?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F5EBD6; font-family:'Archivo',sans-serif; color:#0A0A0A; }
+  * { box-sizing:border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const M = { bg:'#F5EBD6', ink:'#0A0A0A', blue:'#1F3FA3', red:'#D92E2E', green:'#1f7a3f',
+  display:"'Archivo',sans-serif", mono:"'Space Mono',monospace" };
+const CLP = (n) => '$' + Number(n||0).toLocaleString('es-CL');
+const KEYNAME = 'pf_admin_key';
+
+function upcomingDays(count) {
+  const out = []; const d = new Date(); d.setHours(0,0,0,0);
+  while (out.length < count) {
+    if ([1,2,3,4,5,6].includes(d.getDay())) out.push({
+      iso:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+      dow:d.toLocaleDateString('es-CL',{weekday:'short'}).replace('.',''), dn:d.getDate(),
+      mon:d.toLocaleDateString('es-CL',{month:'short'}).replace('.','') });
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+function Admin() {
+  const [key, setKey] = React.useState(() => localStorage.getItem(KEYNAME) || '');
+  const [authed, setAuthed] = React.useState(false);
+  const [input, setInput] = React.useState('');
+  const [bookings, setBookings] = React.useState(null);
+  const [err, setErr] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const headers = () => ({ 'x-admin-key': key, 'content-type':'application/json' });
+
+  async function load(k = key) {
+    setErr(null);
+    const r = await fetch('/api/admin/bookings', { headers: { 'x-admin-key': k } });
+    if (r.status === 403) { setAuthed(false); setErr('Clave incorrecta.'); localStorage.removeItem(KEYNAME); return false; }
+    const o = await r.json();
+    setBookings(o.bookings || []); setAuthed(true); return true;
+  }
+  React.useEffect(() => { if (key) load(); }, []);
+
+  async function entrar() {
+    setKey(input);
+    const ok = await load(input);
+    if (ok) localStorage.setItem(KEYNAME, input);
+  }
+  async function cancelar(b) {
+    if (!confirm(`¿Cancelar la reserva de ${b.name} (${b.fecha} ${b.hora})?`)) return;
+    setBusy(true);
+    const r = await fetch('/api/cancel', { method:'POST', headers: headers(), body: JSON.stringify({ id: b.token }) });
+    setBusy(false);
+    if (!r.ok) { const o = await r.json(); alert('Error: ' + (o.error||'')); return; }
+    load();
+  }
+
+  const wrap = { maxWidth:760, margin:'0 auto', padding:'28px 18px' };
+
+  if (!authed) return (
+    <div style={wrap}>
+      <h1 style={{fontFamily:M.display,fontWeight:800}}>Admin · Pod Factory</h1>
+      <p style={{fontFamily:M.mono,fontSize:13,color:M.ink+'99'}}>Ingresa la clave de administración:</p>
+      <div style={{display:'flex',gap:8,maxWidth:420}}>
+        <input type="password" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&entrar()}
+          placeholder="ADMIN_KEY" style={{flex:1,padding:'12px',border:`1.5px solid ${M.ink}`,fontFamily:M.mono,fontSize:13}} />
+        <button onClick={entrar} style={{padding:'12px 18px',border:'none',background:M.ink,color:M.bg,fontFamily:M.display,fontWeight:800,cursor:'pointer'}}>Entrar</button>
+      </div>
+      {err && <p style={{color:M.red,fontFamily:M.mono,fontSize:12}}>{err}</p>}
+    </div>
+  );
+
+  return (
+    <div style={wrap}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',flexWrap:'wrap',gap:8}}>
+        <h1 style={{fontFamily:M.display,fontWeight:800,margin:'0 0 4px'}}>Reservas</h1>
+        <button onClick={()=>load()} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>↻ Actualizar</button>
+      </div>
+      {!bookings && <p style={{fontFamily:M.mono}}>Cargando…</p>}
+      {bookings && bookings.length === 0 && <p style={{fontFamily:M.mono,color:M.ink+'99'}}>Aún no hay reservas.</p>}
+      {bookings && bookings.map(b => (
+        <BookingCard key={b.token} b={b} busy={busy} onCancel={()=>cancelar(b)} headers={headers} reload={load} />
+      ))}
+    </div>
+  );
+}
+
+function BookingCard({ b, busy, onCancel, headers, reload }) {
+  const [resched, setResched] = React.useState(false);
+  const [days] = React.useState(() => upcomingDays(18));
+  const [date, setDate] = React.useState(days[0].iso);
+  const [avail, setAvail] = React.useState(null);
+  const [working, setWorking] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!resched) return; setAvail(null);
+    fetch(`/api/availability?date=${date}`).then(r=>r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
+  }, [resched, date]);
+
+  async function mover(slot) {
+    setWorking(true);
+    const r = await fetch('/api/reschedule', { method:'POST', headers: headers(),
+      body: JSON.stringify({ id: b.token, date, start: slot.start, label: slot.label }) });
+    setWorking(false);
+    if (!r.ok) { const o = await r.json(); alert('Error: ' + (o.error||'')); return; }
+    setResched(false); reload();
+  }
+
+  const card = { border:`1.5px solid ${M.ink}`, background:'#fff', padding:'16px 18px', marginBottom:12, opacity: b.past?0.55:1 };
+  const tag = { fontFamily:M.mono, fontSize:11, color:M.ink+'99' };
+  return (
+    <div style={card}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+        <div>
+          <div style={{fontFamily:M.display,fontWeight:800,fontSize:17,textTransform:'capitalize'}}>{b.fecha} · {b.hora} hrs {b.past && <span style={{...tag,fontWeight:400}}>(pasada)</span>}</div>
+          <div style={{fontFamily:M.display,fontWeight:700,fontSize:15,marginTop:2}}>{b.name}</div>
+          <div style={tag}>{b.email} · {b.phone}</div>
+          <div style={{...tag,marginTop:6,color:M.ink}}>
+            {b.tipo} · {b.personas} {b.personas>1?'personas':'persona'}{b.addons&&b.addons.length?` · ${b.addons.join(', ')}`:''}
+          </div>
+          {b.comentarios && <div style={{...tag,marginTop:4,fontStyle:'italic'}}>“{b.comentarios}”</div>}
+        </div>
+        <div style={{...tag,textAlign:'right',whiteSpace:'nowrap'}}>Adelanto<br/><b style={{color:M.green,fontSize:14}}>{CLP(b.deposit)}</b></div>
+      </div>
+      {!b.past && (
+        <div style={{display:'flex',gap:8,marginTop:12}}>
+          <button onClick={()=>setResched(!resched)} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:resched?M.ink:'#fff',color:resched?'#fff':M.ink,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>Reagendar</button>
+          <button onClick={onCancel} disabled={busy} style={{padding:'8px 14px',border:`1.5px solid ${M.red}`,background:'#fff',color:M.red,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>Cancelar</button>
+        </div>
+      )}
+      {resched && (
+        <div style={{marginTop:12,borderTop:`1px solid ${M.ink}22`,paddingTop:12}}>
+          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8}}>
+            {days.map(d=>{const on=d.iso===date;return(
+              <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:'0 0 auto',minWidth:50,padding:'6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,cursor:'pointer',textAlign:'center'}}>
+                <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div><div style={{fontSize:16,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
+              </button>);})}
+          </div>
+          {!avail && <span style={{fontFamily:M.mono,fontSize:12}}>Cargando…</span>}
+          {avail && avail.open && (
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:6}}>
+              {avail.slots.map(s=>(
+                <button key={s.start} disabled={!s.available||working} onClick={()=>mover(s)}
+                  style={{padding:'10px 4px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:s.available?'#fff':M.ink+'0a',color:s.available?M.ink:M.ink+'55',fontFamily:M.mono,fontWeight:700,fontSize:12,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>
+              ))}
+            </div>
+          )}
+          {avail && !avail.open && <span style={{fontFamily:M.mono,fontSize:12,color:M.ink+'99'}}>Día cerrado.</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Admin />);
+</script>
+</body>
+</html>

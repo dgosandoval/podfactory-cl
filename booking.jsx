@@ -37,7 +37,9 @@ function BookingCalendar() {
   const [data, setData] = React.useState(null);       // respuesta de availability
   const [loading, setLoading] = React.useState(false);
   const [slot, setSlot] = React.useState(null);        // bloque elegido
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '' });
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', tipo: 'Podcast', personas: 1, addons: [], comentarios: '' });
+  const toggleAddon = (a) => setForm((f) => ({ ...f, addons: f.addons.includes(a) ? f.addons.filter((x) => x !== a) : [...f.addons, a] }));
+  const ADDONS = [['Edición Pro', 99990], ['3 Reels adicionales', 99990]];
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
 
@@ -158,6 +160,67 @@ function BookingCalendar() {
                   }} />
               ))}
             </div>
+
+            {/* Tipo de sesión */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>TIPO DE SESIÓN</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['Podcast', 'Webinar / Streaming'].map((t) => {
+                  const on = form.tipo === t;
+                  return (
+                    <button key={t} onClick={() => setForm({ ...form, tipo: t })} style={{
+                      flex: 1, padding: '10px 8px', cursor: 'pointer', border: `1.5px solid ${PFB.ink}`,
+                      background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink, fontFamily: PFB.mono, fontSize: 12, fontWeight: 700,
+                    }}>{t}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* N° de personas */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>N° DE PERSONAS (HASTA 4)</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4].map((n) => {
+                  const on = form.personas === n;
+                  return (
+                    <button key={n} onClick={() => setForm({ ...form, personas: n })} style={{
+                      width: 44, height: 40, cursor: 'pointer', border: `1.5px solid ${PFB.ink}`,
+                      background: on ? PFB.blue : '#fff', color: on ? '#fff' : PFB.ink, fontFamily: PFB.mono, fontSize: 14, fontWeight: 700,
+                    }}>{n}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Adicionales */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>ADICIONALES (OPCIONAL)</div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {ADDONS.map(([name, price]) => {
+                  const on = form.addons.includes(name);
+                  return (
+                    <button key={name} onClick={() => toggleAddon(name)} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left',
+                      padding: '10px 12px', cursor: 'pointer', border: `1.5px solid ${on ? PFB.ink : PFB.ink + '44'}`,
+                      background: on ? PFB.ink + '0d' : '#fff', color: PFB.ink, fontFamily: PFB.mono, fontSize: 12,
+                    }}>
+                      <span><span style={{ fontWeight: 700 }}>{on ? '☑' : '☐'} {name}</span></span>
+                      <span style={{ fontWeight: 700 }}>+{CLP(price)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, color: PFB.ink + '77', marginTop: 6, lineHeight: 1.4 }}>
+                Los adicionales se coordinan y pagan con el saldo; aquí solo quedan registrados.
+              </div>
+            </div>
+
+            {/* Comentarios */}
+            <textarea placeholder="Comentarios (cuéntanos de tu podcast o pide algo especial)" value={form.comentarios}
+              onChange={(e) => setForm({ ...form, comentarios: e.target.value })} rows={2}
+              style={{ width: '100%', padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0, marginBottom: 14, resize: 'vertical' }} />
+
             <button onClick={reservar} disabled={!valid || submitting} style={{
               width: '100%', padding: '15px', cursor: valid && !submitting ? 'pointer' : 'not-allowed',
               border: 'none', background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',

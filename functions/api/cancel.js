@@ -16,7 +16,8 @@ export async function onRequestPost({ request, env }) {
 
   const b = await getBooking(env, body?.id);
   if (!b) return json({ error: "Reserva no encontrada" }, 404);
-  if (!isModifiable(b.start)) {
+  const isAdmin = env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY;
+  if (!isAdmin && !isModifiable(b.start)) {
     return json({ error: "Ya no se puede cancelar (menos de 24 horas para la sesión)." }, 409);
   }
 

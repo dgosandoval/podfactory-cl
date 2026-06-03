@@ -49,19 +49,25 @@ export async function onRequestPost({ request, env }) {
   const name = hold?.name || pay.payer?.first_name || "Cliente";
   const email = hold?.email || pay.payer?.email || "";
   const phone = hold?.phone || "";
+  const tipo = hold?.tipo || "Podcast";
+  const personas = hold?.personas || 1;
+  const addons = hold?.addons || [];
+  const comentarios = hold?.comentarios || "";
   if (!start || !end) return ok(); // sin ventana horaria no podemos agendar
+
+  const serviciosTxt = `Tipo: ${tipo} · Personas: ${personas}${addons.length ? ` · Adicionales: ${addons.join(", ")}` : ""}${comentarios ? `\nComentarios: ${comentarios}` : ""}`;
 
   const token = newToken();
   try {
     const ev = await createEvent(env, {
       summary: `🎙️ Reserva: ${name}`,
-      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.\nGestión: ${date} ${label} · token ${token}`,
+      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\n${serviciosTxt}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.\nGestión: ${date} ${label} · token ${token}`,
       startISO: start,
       endISO: end,
       timeZone: config.timeZone,
     });
     // Persistir la reserva para gestión (cancelar/reagendar) y recordatorio.
-    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, deposit: config.depositCLP, reminded: false });
+    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, deposit: config.depositCLP, reminded: false });
     if (env.HOLDS) {
       await env.HOLDS.put(dedupeKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
       await env.HOLDS.delete(holdKey);
@@ -87,7 +93,7 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: env.STUDIO_EMAIL,
         subject: `Nueva reserva: ${name} · ${fecha} ${hora} hrs`,
-        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP }),
+        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP, tipo, personas, addons, comentarios }),
         replyTo: email,
       });
     }

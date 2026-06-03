@@ -145,6 +145,20 @@ cada hora a un endpoint protegido y ese envía los recordatorios pendientes.
 
 ---
 
+## Paso F — Panel de administración (/admin)
+
+En `podfactory.cl/admin` ves todas las reservas (quién, contacto, servicios,
+adelanto) y puedes reagendar o cancelar cualquiera, sin el límite de 24 h.
+
+1. Inventa una contraseña larga para `ADMIN_KEY` y cárgala como secret (Paso C).
+2. Entra a `podfactory.cl/admin`, escribe esa clave y listo. Queda guardada en
+   tu navegador (no la pide cada vez).
+
+> La página tiene `noindex` para que no aparezca en Google. La clave es lo único
+> que la protege, así que usa una larga y no la compartas.
+
+---
+
 ## Paso C — Guardar los secrets en Cloudflare
 
 Cuando tengas los 4 valores, NO me los pegues en el chat. En su lugar:
@@ -157,6 +171,7 @@ npx wrangler pages secret put MP_ACCESS_TOKEN
 npx wrangler pages secret put MP_PUBLIC_KEY
 npx wrangler pages secret put RESEND_API_KEY
 npx wrangler pages secret put CRON_KEY
+npx wrangler pages secret put ADMIN_KEY
 ```
 (GOOGLE_CALENDAR_ID ya quedó configurado en wrangler.toml — no es secreto.)
 `CRON_KEY` es una contraseña que inventas tú (cualquier texto largo al azar);
