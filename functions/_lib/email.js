@@ -54,13 +54,13 @@ const CLP = (n) => "$" + Number(n).toLocaleString("es-CL");
 const shell = (inner) => `
 <div style="background:#F5EBD6;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#0A0A0A">
   <div style="max-width:520px;margin:0 auto;background:#fff;border:2px solid #0A0A0A">
-    <div style="background:#0A0A0A;padding:18px 24px">
-      <span style="color:#F5EBD6;font-size:18px;font-weight:800;letter-spacing:-0.02em">POD FACTORY</span>
-      <span style="color:#F4B81C;font-size:11px;letter-spacing:0.15em;margin-left:8px">BY DOPPEL</span>
+    <div style="background:#000000;padding:20px 24px;text-align:center">
+      <img src="https://podfactory.cl/assets/podfactory-logo.png" alt="Pod Factory" height="48" style="display:inline-block;height:48px;width:auto">
     </div>
     <div style="padding:28px 24px">${inner}</div>
-    <div style="border-top:1px solid #0A0A0A22;padding:16px 24px;font-size:11px;color:#0A0A0A99">
-      Pod Factory · Estudio de podcast · Eduardo Marquina 3937, Vitacura · Santiago
+    <div style="border-top:1px solid #0A0A0A22;padding:20px 24px;font-size:11px;color:#0A0A0A99;text-align:center">
+      <img src="https://podfactory.cl/assets/doppel-logo.png" alt="doppel" height="15" style="height:15px;width:auto;opacity:0.65"><br>
+      <span style="display:inline-block;margin-top:8px">Pod Factory · Estudio de podcast · Eduardo Marquina 3937, Vitacura · Santiago</span>
     </div>
   </div>
 </div>`;
