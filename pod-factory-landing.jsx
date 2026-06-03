@@ -27,21 +27,32 @@ function WhatsAppIcon({ size = 16, color = '#fff' }) {
   );
 }
 
-// Par de acciones siempre juntas: Reservar (→ calendario) + WhatsApp.
+// Botón de WhatsApp solo-ícono (círculo verde).
+function WhatsAppButton({ dim = 44, waContext = 'quiero reservar Pod Factory.', style = {} }) {
+  return (
+    <a href={waLink(waContext)} target="_blank" rel="noopener" title="Escríbenos por WhatsApp" aria-label="WhatsApp"
+      style={{
+        background: '#25D366', borderRadius: '50%', width: dim, height: dim, flexShrink: 0,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', ...style,
+      }}>
+      <WhatsAppIcon size={Math.round(dim * 0.5)} color="#fff" />
+    </a>
+  );
+}
+
+// Par de acciones siempre juntas: Reservar (→ calendario) + WhatsApp (ícono).
 function CTAButtons({ size = 'md', waContext = 'quiero reservar Pod Factory.', style = {} }) {
   const pad = size === 'lg' ? '16px 26px' : size === 'sm' ? '11px 18px' : '14px 22px';
   const fs = size === 'sm' ? 12 : 13;
-  const base = {
-    padding: pad, fontSize: fs, fontWeight: 700, letterSpacing: '0.08em',
-    fontFamily: PF.display, textDecoration: 'none', borderRadius: 999,
-    display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
-  };
+  const dim = size === 'lg' ? 50 : size === 'sm' ? 38 : 44;
   return (
     <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', ...style }}>
-      <a href="#reservar" style={{ ...base, background: PF.red, color: PF.bg }}>RESERVAR</a>
-      <a href={waLink(waContext)} target="_blank" rel="noopener" style={{ ...base, background: PF.ink, color: PF.bg }}>
-        WHATSAPP <WhatsAppIcon size={fs + 2} color={PF.bg} />
-      </a>
+      <a href="#reservar" style={{
+        padding: pad, fontSize: fs, fontWeight: 700, letterSpacing: '0.08em',
+        fontFamily: PF.display, textDecoration: 'none', borderRadius: 999,
+        background: PF.red, color: PF.bg, display: 'inline-flex', alignItems: 'center', lineHeight: 1,
+      }}>RESERVAR</a>
+      <WhatsAppButton dim={dim} waContext={waContext} />
     </div>
   );
 }
@@ -477,31 +488,9 @@ function PodFactoryLanding() {
 
         <Reveal delay={800} style={{ display: 'flex', gap: 12, marginTop: 24, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.ink + '99', width: '100%', marginBottom: 4 }}>
-            ¿Prefieres coordinar por WhatsApp?
+            ¿Dudas o prefieres coordinar por WhatsApp?
           </div>
-          <a
-            href={waLink('quiero reservar Pod Factory, cuéntame sobre disponibilidad.')}
-            target="_blank" rel="noopener"
-            style={{
-              background: PF.ink, color: PF.bg, padding: '16px 24px',
-              fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', fontFamily: PF.display,
-              textDecoration: 'none', borderRadius: 999,
-              display: 'inline-flex', alignItems: 'center', gap: 12, lineHeight: 1,
-            }}
-          >
-            RESERVAR
-            <WhatsAppIcon size={16} color={PF.bg} />
-          </a>
-          <a
-            href={waLink('Hola! Quiero ver la disponibilidad de Pod Factory.')}
-            target="_blank" rel="noopener"
-            style={{
-              background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`,
-              padding: '16px 24px', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em',
-              fontFamily: PF.display, textDecoration: 'none', display: 'inline-block',
-              borderRadius: 999,
-            }}
-          >VER DISPONIBILIDAD ↗</a>
+          <WhatsAppButton dim={48} waContext="tengo una duda sobre reservar en Pod Factory." />
         </Reveal>
       </section>
 
@@ -763,12 +752,7 @@ function PodFactoryLanding() {
           textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
           boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
         }}>RESERVAR</a>
-        <a href={waLink('quiero reservar Pod Factory.')} target="_blank" rel="noopener" style={{
-          background: '#25D366', color: '#fff', borderRadius: 999, padding: '14px 22px',
-          fontFamily: PF.display, fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
-          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
-          boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
-        }}>WHATSAPP <WhatsAppIcon size={16} color="#fff" /></a>
+        <WhatsAppButton dim={56} style={{ boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }} />
       </div>
     </div>
   );
