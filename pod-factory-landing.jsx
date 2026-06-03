@@ -27,8 +27,27 @@ function WhatsAppIcon({ size = 16, color = '#fff' }) {
   );
 }
 
+// Par de acciones siempre juntas: Reservar (→ calendario) + WhatsApp.
+function CTAButtons({ size = 'md', waContext = 'quiero reservar Pod Factory.', style = {} }) {
+  const pad = size === 'lg' ? '16px 26px' : size === 'sm' ? '11px 18px' : '14px 22px';
+  const fs = size === 'sm' ? 12 : 13;
+  const base = {
+    padding: pad, fontSize: fs, fontWeight: 700, letterSpacing: '0.08em',
+    fontFamily: PF.display, textDecoration: 'none', borderRadius: 999,
+    display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
+  };
+  return (
+    <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', ...style }}>
+      <a href="#reservar" style={{ ...base, background: PF.red, color: PF.bg }}>RESERVAR</a>
+      <a href={waLink(waContext)} target="_blank" rel="noopener" style={{ ...base, background: PF.ink, color: PF.bg }}>
+        WHATSAPP <WhatsAppIcon size={fs + 2} color={PF.bg} />
+      </a>
+    </div>
+  );
+}
+
 // Generic fade-up wrapper triggered by IntersectionObserver
-function Reveal({ children, delay = 0, distance = 22, duration = 750, threshold = 0.2, style = {}, className, as: Tag = 'div' }) {
+function Reveal({ children, delay = 0, distance = 22, duration = 750, threshold = 0.2, style = {}, className, id, as: Tag = 'div' }) {
   const [visible, setVisible] = React.useState(false);
   const ref = React.useRef(null);
   React.useEffect(() => {
@@ -49,6 +68,7 @@ function Reveal({ children, delay = 0, distance = 22, duration = 750, threshold 
   return (
     <Tag
       ref={ref}
+      id={id}
       className={className}
       style={{
         ...style,
@@ -138,19 +158,7 @@ function PodFactoryLanding() {
             >{l}</a>
           ))}
         </nav>
-        <a
-          href={waLink('quiero reservar Pod Factory para mi podcast.')}
-          target="_blank" rel="noopener"
-          style={{
-            background: PF.red, color: PF.bg, padding: '12px 20px',
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
-            fontFamily: PF.display, textDecoration: 'none', borderRadius: 999,
-            display: 'inline-flex', alignItems: 'center', gap: 10, lineHeight: 1,
-          }}
-        >
-          RESERVAR
-          <WhatsAppIcon size={14} color={PF.bg} />
-        </a>
+        <CTAButtons size="sm" waContext="quiero reservar Pod Factory para mi podcast." />
       </header>
 
       {/* Hero */}
@@ -173,19 +181,7 @@ function PodFactoryLanding() {
             Llegas, te sientas, grabas. Nosotros hacemos el resto.
           </p>
           <div className="pf-hero-cta" style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center', flexWrap: 'wrap' }}>
-            <a
-              href={waLink('quiero reservar Pod Factory.')}
-              target="_blank" rel="noopener"
-              style={{
-                background: PF.ink, color: PF.bg, padding: '16px 24px',
-                fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', fontFamily: PF.display,
-                textDecoration: 'none', borderRadius: 999,
-                display: 'inline-flex', alignItems: 'center', gap: 12, lineHeight: 1,
-              }}
-            >
-              RESERVAR ESTUDIO
-              <WhatsAppIcon size={16} color={PF.bg} />
-            </a>
+            <CTAButtons size="lg" />
             <a href="#tarifas" style={{
               background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`,
               padding: '16px 26px', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em',
@@ -756,22 +752,24 @@ function PodFactoryLanding() {
         </Reveal>
       </footer>
 
-      {/* Floating "Reservar" CTA — persistent across scroll */}
-      <a
-        href={waLink('quiero reservar Pod Factory.')}
-        target="_blank" rel="noopener"
-        style={{
-          position: 'fixed', bottom: 22, right: 22, zIndex: 100,
-          background: PF.red, color: PF.bg, borderRadius: 999,
-          padding: '14px 22px', fontFamily: PF.display, fontWeight: 700,
-          fontSize: 13, letterSpacing: '0.08em', textDecoration: 'none',
-          display: 'inline-flex', alignItems: 'center', gap: 10, lineHeight: 1,
+      {/* Floating CTAs — Reservar + WhatsApp, persistentes */}
+      <div style={{
+        position: 'fixed', bottom: 22, right: 22, zIndex: 100,
+        display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end',
+      }}>
+        <a href="#reservar" style={{
+          background: PF.red, color: PF.bg, borderRadius: 999, padding: '14px 22px',
+          fontFamily: PF.display, fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
+          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
           boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
-        }}
-      >
-        RESERVAR
-        <WhatsAppIcon size={16} color={PF.bg} />
-      </a>
+        }}>RESERVAR</a>
+        <a href={waLink('quiero reservar Pod Factory.')} target="_blank" rel="noopener" style={{
+          background: '#25D366', color: '#fff', borderRadius: 999, padding: '14px 22px',
+          fontFamily: PF.display, fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
+          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
+        }}>WHATSAPP <WhatsAppIcon size={16} color="#fff" /></a>
+      </div>
     </div>
   );
 }
