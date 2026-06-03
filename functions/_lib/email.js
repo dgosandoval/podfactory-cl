@@ -79,6 +79,21 @@ const button = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#0A0A0A;color:#F5EBD6;text-decoration:none;
     padding:12px 22px;font-weight:700;font-size:14px;border-radius:2px">${label}</a>`;
 
+// Botones "Cómo llegar" (Waze + Google Maps) a partir de la dirección.
+// Quita la oficina para que el geocoding apunte bien al edificio.
+const mapsBlock = (address) => {
+  if (!address) return "";
+  const q = encodeURIComponent(address.replace(/,?\s*Oficina[^,·]*/i, "").replace(/\s*·\s*/g, ", "));
+  const waze = `https://waze.com/ul?q=${q}&navigate=yes`;
+  const gmaps = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  return `
+    <div style="margin:-6px 0 6px">
+      <span style="font-size:11px;color:#0A0A0A99;font-family:Arial,sans-serif">CÓMO LLEGAR:</span><br>
+      <a href="${waze}" style="display:inline-block;background:#33ccff;color:#0A0A0A;text-decoration:none;padding:9px 16px;font-weight:700;font-size:13px;border-radius:4px;margin:6px 8px 0 0">Abrir en Waze</a>
+      <a href="${gmaps}" style="display:inline-block;background:#ffffff;border:1.5px solid #0A0A0A;color:#0A0A0A;text-decoration:none;padding:8px 16px;font-weight:700;font-size:13px;border-radius:4px;margin-top:6px">Google Maps</a>
+    </div>`;
+};
+
 const waLine = (whatsappUrl) => whatsappUrl ? `
     <div style="margin-top:16px">
       <p style="font-size:13px;color:#0A0A0Acc;line-height:1.5;margin:0 0 8px">¿Necesitas avisarnos algo?</p>
@@ -98,6 +113,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       ${row("Dirección", address)}
       ${row("Adelanto pagado", CLP(deposit))}
     </table>
+    ${mapsBlock(address)}
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       El saldo se paga el día de la sesión. Te enviaremos un recordatorio 24 horas antes.
     </p>
@@ -124,6 +140,7 @@ export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
       ${row("Hora", hora + " hrs")}
       ${row("Dirección", address)}
     </table>
+    ${mapsBlock(address)}
     ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, "Ver mi reserva")}</div>` : ""}
     <p style="font-size:13px;margin-top:8px">Nos vemos,<br><b>Equipo Pod Factory</b></p>
   `);
@@ -156,6 +173,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
       ${row("Hora", hora + " hrs")}
       ${row("Dirección", address)}
     </table>
+    ${mapsBlock(address)}
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Llega unos minutos antes para el setup. Recuerda traer el saldo de la sesión.
     </p>
