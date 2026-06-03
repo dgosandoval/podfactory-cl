@@ -4,6 +4,7 @@
 import { parseConfig } from "../_lib/slots.js";
 import { createEvent } from "../_lib/google.js";
 import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml } from "../_lib/email.js";
+import { newToken, saveBooking, manageUrl } from "../_lib/booking.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
 const ok = () => new Response("ok", { status: 200 });
@@ -50,14 +51,17 @@ export async function onRequestPost({ request, env }) {
   const phone = hold?.phone || "";
   if (!start || !end) return ok(); // sin ventana horaria no podemos agendar
 
+  const token = newToken();
   try {
-    await createEvent(env, {
+    const ev = await createEvent(env, {
       summary: `🎙️ Reserva: ${name}`,
-      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.`,
+      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.\nGestión: ${date} ${label} · token ${token}`,
       startISO: start,
       endISO: end,
       timeZone: config.timeZone,
     });
+    // Persistir la reserva para gestión (cancelar/reagendar) y recordatorio.
+    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, deposit: config.depositCLP, reminded: false });
     if (env.HOLDS) {
       await env.HOLDS.put(dedupeKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
       await env.HOLDS.delete(holdKey);
@@ -71,11 +75,12 @@ export async function onRequestPost({ request, env }) {
   try {
     const { fecha, hora } = formatSession(start, config.timeZone);
     const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
+    const origin = new URL(request.url).origin;
     if (email) {
       await sendEmail(env, {
         to: email,
         subject: "Tu reserva en Pod Factory está confirmada 🎙️",
-        html: customerEmailHtml({ name, fecha, hora, deposit: config.depositCLP, address }),
+        html: customerEmailHtml({ name, fecha, hora, deposit: config.depositCLP, address, manageUrl: manageUrl(origin, token) }),
       });
     }
     if (env.STUDIO_EMAIL) {

@@ -124,6 +124,27 @@ Para enviar el correo de "Reserva confirmada" al cliente y el aviso a ti.
 
 ---
 
+## Paso E — Recordatorio 24 h (cron externo)
+
+Cloudflare Pages no tiene tareas programadas, así que un cron gratuito llama
+cada hora a un endpoint protegido y ese envía los recordatorios pendientes.
+
+1. Inventa una contraseña larga al azar para `CRON_KEY` (ej. un texto de 30+
+   caracteres). Cárgala como secret en Cloudflare (ver Paso C).
+2. Crea cuenta gratis en https://cron-job.org/ → **Create cronjob**.
+3. Configura:
+   - **Title:** `Pod Factory recordatorios`
+   - **URL:** `https://podfactory.cl/api/cron/reminders?key=TU_CRON_KEY`
+     (reemplaza `TU_CRON_KEY` por el valor que inventaste)
+   - **Schedule:** cada hora (every hour / `0 * * * *`).
+4. Guardar. Listo: cada hora revisa las reservas y envía el recordatorio a las
+   que sean dentro de las próximas 24 h (una sola vez por reserva).
+
+> Para probar: abre esa URL en el navegador. Si la key es correcta verás algo
+> como `{"checked":N,"sent":0}`. Si la key está mal, dice `forbidden`.
+
+---
+
 ## Paso C — Guardar los secrets en Cloudflare
 
 Cuando tengas los 4 valores, NO me los pegues en el chat. En su lugar:
@@ -135,8 +156,11 @@ npx wrangler pages secret put GOOGLE_SA_KEY
 npx wrangler pages secret put MP_ACCESS_TOKEN
 npx wrangler pages secret put MP_PUBLIC_KEY
 npx wrangler pages secret put RESEND_API_KEY
+npx wrangler pages secret put CRON_KEY
 ```
 (GOOGLE_CALENDAR_ID ya quedó configurado en wrangler.toml — no es secreto.)
+`CRON_KEY` es una contraseña que inventas tú (cualquier texto largo al azar);
+protege el endpoint del recordatorio. La usas también en el Paso E.
 (Cada comando te pide pegar el valor de forma segura.)
 
 **Opción 2 — desde el panel web de Cloudflare:**
@@ -152,9 +176,9 @@ Dashboard → Workers & Pages → tu proyecto `podfactory-cl` → Settings →
 - [ ] A.5 — `GOOGLE_CALENDAR_ID` copiado
 - [ ] A.6 — Agenda compartida con el email del service account
 - [ ] B.2 — `MP_ACCESS_TOKEN` y `MP_PUBLIC_KEY` copiados
-- [ ] D.1 — Dominio verificado en Resend (DNS en Cloudflare)
-- [ ] D.2 — `RESEND_API_KEY` copiada
-- [ ] C   — Los secrets cargados en Cloudflare (SA key, MP token/key, Resend key)
+- [ ] D.2 — `RESEND_API_KEY` copiada (doppel.cl ya verificado, ver D.1)
+- [ ] E   — Cronjob en cron-job.org apuntando al endpoint con `CRON_KEY`
+- [ ] C   — Secrets en Cloudflare (SA key, MP token/key, Resend key, CRON_KEY)
 
 Avísame cuando tengas esto (o dudas en cualquier paso) y enchufamos todo.
 ```

@@ -81,3 +81,29 @@ export async function createEvent(env, { summary, description, startISO, endISO,
   if (!res.ok) throw new Error(`createEvent error: ${res.status} ${await res.text()}`);
   return res.json();
 }
+
+// Mueve un evento existente a un nuevo horario (reagendar).
+export async function patchEvent(env, eventId, { startISO, endISO, timeZone }) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ start: { dateTime: startISO, timeZone }, end: { dateTime: endISO, timeZone } }),
+  });
+  if (!res.ok) throw new Error(`patchEvent error: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+// Borra un evento (cancelar). Trata 404/410 como éxito (ya no existe).
+export async function deleteEvent(env, eventId) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, { method: "DELETE", headers: { authorization: `Bearer ${token}` } });
+  if (!res.ok && res.status !== 404 && res.status !== 410) {
+    throw new Error(`deleteEvent error: ${res.status} ${await res.text()}`);
+  }
+  return true;
+}

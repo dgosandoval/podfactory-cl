@@ -46,8 +46,12 @@ const row = (label, value) =>
   `<tr><td style="padding:6px 0;font-size:12px;color:#0A0A0A99;width:120px">${label}</td>
        <td style="padding:6px 0;font-size:14px;font-weight:700">${value}</td></tr>`;
 
-// Correo al cliente
-export function customerEmailHtml({ name, fecha, hora, deposit, address }) {
+const button = (href, label) =>
+  `<a href="${href}" style="display:inline-block;background:#0A0A0A;color:#F5EBD6;text-decoration:none;
+    padding:12px 22px;font-weight:700;font-size:14px;border-radius:2px">${label}</a>`;
+
+// Correo al cliente (confirmación)
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">¡Reserva confirmada! 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -60,10 +64,67 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address }) {
       ${row("Adelanto pagado", CLP(deposit))}
     </table>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      El saldo se paga el día de la sesión. ¿Necesitas reagendar? Escríbenos con al menos
-      24 horas de anticipación y lo movemos sin costo.
+      El saldo se paga el día de la sesión. Te enviaremos un recordatorio 24 horas antes.
     </p>
+    ${manageUrl ? `
+    <div style="margin:18px 0">${button(manageUrl, "Reagendar o cancelar")}</div>
+    <p style="font-size:12px;color:#0A0A0A99;line-height:1.5">
+      Puedes reagendar o cancelar sin costo hasta <b>24 horas antes</b> de tu sesión.
+      Pasado ese plazo, el adelanto no es reembolsable.
+    </p>` : ""}
     <p style="font-size:13px;margin-top:18px">Nos vemos pronto,<br><b>Equipo Pod Factory</b></p>
+  `);
+}
+
+// Correo al cliente (reserva reagendada)
+export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva reagendada ✅</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, listo: movimos tu sesión. Tu adelanto sigue aplicado. Nueva cita:
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0">
+      ${row("Fecha", fecha)}
+      ${row("Hora", hora + " hrs")}
+      ${row("Dirección", address)}
+    </table>
+    ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, "Ver mi reserva")}</div>` : ""}
+    <p style="font-size:13px;margin-top:8px">Nos vemos,<br><b>Equipo Pod Factory</b></p>
+  `);
+}
+
+// Correo al cliente (reserva cancelada)
+export function cancelEmailHtml({ name, fecha, hora }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva cancelada</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, cancelamos tu sesión del <b>${fecha}</b> a las <b>${hora} hrs</b>.
+      El horario quedó liberado.
+    </p>
+    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
+      Cuando quieras, puedes reservar una nueva sesión desde nuestro sitio. ¡Te esperamos!
+    </p>
+    <p style="font-size:13px;margin-top:14px"><b>Equipo Pod Factory</b></p>
+  `);
+}
+
+// Correo recordatorio (24 h antes)
+export function reminderEmailHtml({ name, fecha, hora, address, manageUrl }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu sesión es mañana 🎙️</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, te recordamos tu sesión en Pod Factory:
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0">
+      ${row("Fecha", fecha)}
+      ${row("Hora", hora + " hrs")}
+      ${row("Dirección", address)}
+    </table>
+    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
+      Llega unos minutos antes para el setup. Recuerda traer el saldo de la sesión.
+    </p>
+    ${manageUrl ? `<p style="font-size:12px;color:#0A0A0A99">¿Algo cambió? <a href="${manageUrl}">Gestiona tu reserva</a> (hasta 24 h antes).</p>` : ""}
+    <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
   `);
 }
 

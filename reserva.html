@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi reserva · Pod Factory</title>
+<link rel="icon" type="image/png" href="assets/favicon.png?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #F5EBD6; font-family: 'Archivo', sans-serif; color: #0A0A0A; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const M = { bg:'#F5EBD6', ink:'#0A0A0A', blue:'#1F3FA3', red:'#D92E2E', green:'#1f7a3f',
+  display:"'Archivo', sans-serif", mono:"'Space Mono', monospace" };
+const CLP = (n) => '$' + Number(n).toLocaleString('es-CL');
+
+function upcomingDays(count) {
+  const out = []; const d = new Date(); d.setHours(0,0,0,0);
+  while (out.length < count) {
+    if ([1,2,3,4,5,6].includes(d.getDay())) out.push({
+      iso: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+      dow: d.toLocaleDateString('es-CL',{weekday:'short'}).replace('.',''), dn: d.getDate(),
+      mon: d.toLocaleDateString('es-CL',{month:'short'}).replace('.','') });
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+function Manage() {
+  const token = new URLSearchParams(location.search).get('id');
+  const [b, setB] = React.useState(null);
+  const [state, setState] = React.useState('loading'); // loading|ready|notfound|cancelled|rescheduled
+  const [err, setErr] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+  const [mode, setMode] = React.useState(null); // null|cancel|reschedule
+  const [days] = React.useState(() => upcomingDays(18));
+  const [activeDate, setActiveDate] = React.useState(null);
+  const [avail, setAvail] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!token) { setState('notfound'); return; }
+    fetch(`/api/booking?id=${token}`).then(r => r.json()).then(d => {
+      if (!d.found) setState('notfound'); else { setB(d); setState('ready'); }
+    }).catch(() => setState('notfound'));
+  }, [token]);
+
+  React.useEffect(() => {
+    if (mode !== 'reschedule' || !activeDate) return;
+    setAvail(null);
+    fetch(`/api/availability?date=${activeDate}`).then(r => r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
+  }, [mode, activeDate]);
+
+  async function doCancel() {
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch('/api/cancel', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: token }) });
+      const o = await r.json(); if (!r.ok) throw new Error(o.error || 'Error');
+      setState('cancelled');
+    } catch(e) { setErr(String(e.message||e)); } finally { setBusy(false); }
+  }
+  async function doReschedule(slot) {
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch('/api/reschedule', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ id: token, date: activeDate, start: slot.start, label: slot.label }) });
+      const o = await r.json(); if (!r.ok) throw new Error(o.error || 'Error');
+      setState('rescheduled');
+    } catch(e) { setErr(String(e.message||e)); } finally { setBusy(false); }
+  }
+
+  const card = { maxWidth:520, margin:'40px auto', background:'#fff', border:`1.5px solid ${M.ink}` };
+  const head = { background:M.ink, color:M.bg, padding:'16px 22px', fontWeight:800, fontSize:18 };
+  const body = { padding:'22px' };
+  const btn = (bg,color) => ({ padding:'13px 18px', border:'none', background:bg, color, fontFamily:M.display, fontWeight:800, fontSize:13, letterSpacing:'0.04em', cursor:'pointer' });
+  const note = { fontFamily:M.mono, fontSize:12, color:M.ink+'99', lineHeight:1.5 };
+
+  if (state === 'loading') return <div style={card}><div style={head}>POD FACTORY</div><div style={body}><p style={note}>Cargando tu reserva…</p></div></div>;
+  if (state === 'notfound') return <div style={card}><div style={head}>POD FACTORY</div><div style={body}><p>No encontramos esta reserva. El enlace puede haber expirado o la reserva fue cancelada.</p><a href="/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
+  if (state === 'cancelled') return <div style={card}><div style={{...head,background:M.red}}>RESERVA CANCELADA</div><div style={body}><p>Cancelamos tu sesión y liberamos el horario. Te enviamos un correo de confirmación.</p><a href="/" style={{color:M.blue}}>Reservar otra sesión</a></div></div>;
+  if (state === 'rescheduled') return <div style={card}><div style={{...head,background:M.green}}>RESERVA REAGENDADA</div><div style={body}><p>Listo, movimos tu sesión. Te enviamos el nuevo detalle por correo. ¡Nos vemos!</p><a href="/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
+
+  // state === 'ready'
+  return (
+    <div style={card}>
+      <div style={head}>Mi reserva · POD FACTORY</div>
+      <div style={body}>
+        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:16}}>
+          <tbody>
+            <tr><td style={{...note,padding:'5px 0',width:90}}>Nombre</td><td style={{padding:'5px 0',fontWeight:700}}>{b.name}</td></tr>
+            <tr><td style={{...note,padding:'5px 0'}}>Fecha</td><td style={{padding:'5px 0',fontWeight:700,textTransform:'capitalize'}}>{b.fecha}</td></tr>
+            <tr><td style={{...note,padding:'5px 0'}}>Hora</td><td style={{padding:'5px 0',fontWeight:700}}>{b.hora} hrs</td></tr>
+            <tr><td style={{...note,padding:'5px 0'}}>Dirección</td><td style={{padding:'5px 0'}}>{b.address}</td></tr>
+          </tbody>
+        </table>
+
+        {b.pastSession && <p style={note}>Esta sesión ya pasó.</p>}
+        {!b.pastSession && !b.modifiable && (
+          <p style={note}>Estás dentro de las 24 horas previas a tu sesión, por lo que ya no se puede reagendar ni cancelar. Si necesitas algo, escríbenos por WhatsApp.</p>
+        )}
+
+        {!b.pastSession && b.modifiable && !mode && (
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button style={btn(M.ink,M.bg)} onClick={()=>{ setMode('reschedule'); setActiveDate(days[0].iso); }}>Reagendar</button>
+            <button style={btn('transparent',M.red)} onClick={()=>setMode('cancel')}>Cancelar</button>
+          </div>
+        )}
+
+        {mode === 'cancel' && (
+          <div>
+            <p style={{fontSize:14}}>¿Seguro que quieres <b>cancelar</b> tu sesión del {b.fecha} a las {b.hora} hrs?</p>
+            <p style={note}>El adelanto de {CLP(b.deposit)} no es reembolsable.</p>
+            <div style={{display:'flex',gap:10,marginTop:12}}>
+              <button style={btn(M.red,'#fff')} disabled={busy} onClick={doCancel}>{busy?'Cancelando…':'Sí, cancelar'}</button>
+              <button style={btn('transparent',M.ink)} disabled={busy} onClick={()=>setMode(null)}>Volver</button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'reschedule' && (
+          <div>
+            <p style={{fontSize:14,marginTop:0}}>Elige el nuevo día y hora:</p>
+            <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:8}}>
+              {days.map(d => {
+                const on = d.iso === activeDate;
+                return <button key={d.iso} onClick={()=>setActiveDate(d.iso)} style={{flex:'0 0 auto',minWidth:54,padding:'8px 6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,textAlign:'center',cursor:'pointer'}}>
+                  <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div>
+                  <div style={{fontSize:18,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
+                  <div style={{fontSize:8,opacity:.7,textTransform:'uppercase'}}>{d.mon}</div>
+                </button>;
+              })}
+            </div>
+            {!avail && <p style={note}>Cargando bloques…</p>}
+            {avail && !avail.open && <p style={note}>Día cerrado.</p>}
+            {avail && avail.open && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(88px,1fr))',gap:8,marginTop:6}}>
+                {avail.slots.map(s => (
+                  <button key={s.start} disabled={!s.available||busy} onClick={()=>doReschedule(s)}
+                    style={{padding:'11px 6px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:s.available?'#fff':M.ink+'0a',color:s.available?M.ink:M.ink+'55',fontFamily:M.mono,fontWeight:700,fontSize:13,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>
+                ))}
+                {avail.slots.every(s=>!s.available) && <p style={{...note,gridColumn:'1/-1'}}>Sin bloques disponibles ese día.</p>}
+              </div>
+            )}
+            <button style={{...btn('transparent',M.ink),marginTop:14}} onClick={()=>setMode(null)}>Volver</button>
+          </div>
+        )}
+
+        {err && <p style={{color:M.red,fontFamily:M.mono,fontSize:12,marginTop:12}}>{err}</p>}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Manage />);
+</script>
+</body>
+</html>
