@@ -97,6 +97,28 @@ chats públicos ni en git.
 
 ---
 
+## Paso D — Resend (correos de confirmación)
+
+Para enviar el correo de "Reserva confirmada" al cliente y el aviso a ti.
+
+### D.1 — Cuenta y verificación del dominio
+1. Crea cuenta en https://resend.com/ (plan gratis alcanza de sobra).
+2. Ve a **Domains** → **Add Domain** → escribe `podfactory.cl`.
+3. Resend te muestra unos registros DNS (MX/TXT/DKIM). Como tu DNS está en
+   **Cloudflare**, agrégalos en: dash.cloudflare.com → tu dominio
+   `podfactory.cl` → **DNS** → **Add record** (copia cada uno tal cual).
+   - ⚠️ Si esos registros DKIM/SPF tienen el proxy naranja activado, déjalos
+     en **DNS only** (nube gris).
+4. Vuelve a Resend → **Verify**. Cuando quede verde, listo.
+   (Si prefieres usar `doppel.cl` en vez de `podfactory.cl`, verifica ese y
+   cambia `FROM_EMAIL` en wrangler.toml.)
+
+### D.2 — API key
+1. Resend → **API Keys** → **Create API Key** (permiso *Sending access*).
+2. Copia la key (empieza con `re_...`). Es secreta → será `RESEND_API_KEY`.
+
+---
+
 ## Paso C — Guardar los secrets en Cloudflare
 
 Cuando tengas los 4 valores, NO me los pegues en el chat. En su lugar:
@@ -107,6 +129,7 @@ lleguemos):
 npx wrangler pages secret put GOOGLE_SA_KEY
 npx wrangler pages secret put MP_ACCESS_TOKEN
 npx wrangler pages secret put MP_PUBLIC_KEY
+npx wrangler pages secret put RESEND_API_KEY
 ```
 (GOOGLE_CALENDAR_ID ya quedó configurado en wrangler.toml — no es secreto.)
 (Cada comando te pide pegar el valor de forma segura.)
@@ -124,7 +147,9 @@ Dashboard → Workers & Pages → tu proyecto `podfactory-cl` → Settings →
 - [ ] A.5 — `GOOGLE_CALENDAR_ID` copiado
 - [ ] A.6 — Agenda compartida con el email del service account
 - [ ] B.2 — `MP_ACCESS_TOKEN` y `MP_PUBLIC_KEY` copiados
-- [ ] C   — Los 4 secrets cargados en Cloudflare
+- [ ] D.1 — Dominio verificado en Resend (DNS en Cloudflare)
+- [ ] D.2 — `RESEND_API_KEY` copiada
+- [ ] C   — Los secrets cargados en Cloudflare (SA key, MP token/key, Resend key)
 
 Avísame cuando tengas esto (o dudas en cualquier paso) y enchufamos todo.
 ```

@@ -3,6 +3,7 @@
 // creamos el evento confirmado en Google Calendar y liberamos el hold.
 import { parseConfig } from "../_lib/slots.js";
 import { createEvent } from "../_lib/google.js";
+import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml } from "../_lib/email.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
 const ok = () => new Response("ok", { status: 200 });
@@ -64,6 +65,29 @@ export async function onRequestPost({ request, env }) {
   } catch (e) {
     // No marcamos como confirmado: MercadoPago reintentará y volveremos a intentar.
     return new Response(`retry: ${e}`, { status: 500 });
+  }
+
+  // Correos de confirmación — best-effort: un fallo aquí NO debe revertir la reserva.
+  try {
+    const { fecha, hora } = formatSession(start, config.timeZone);
+    const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
+    if (email) {
+      await sendEmail(env, {
+        to: email,
+        subject: "Tu reserva en Pod Factory está confirmada 🎙️",
+        html: customerEmailHtml({ name, fecha, hora, deposit: config.depositCLP, address }),
+      });
+    }
+    if (env.STUDIO_EMAIL) {
+      await sendEmail(env, {
+        to: env.STUDIO_EMAIL,
+        subject: `Nueva reserva: ${name} · ${fecha} ${hora} hrs`,
+        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP }),
+        replyTo: email,
+      });
+    }
+  } catch (e) {
+    console.log("email error (reserva igual confirmada):", String(e));
   }
 
   return ok();

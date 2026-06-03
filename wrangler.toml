@@ -13,6 +13,10 @@ SLOT_MINUTES = "80"              # 60 grabación + 20 setup
 HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga
 DEPOSIT_CLP = "30000"           # adelanto a cobrar por MercadoPago
 GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fcd720f162@group.calendar.google.com"
+# Correos de confirmación (Resend). El dominio de FROM_EMAIL debe estar verificado en Resend.
+FROM_EMAIL = "Pod Factory <reservas@podfactory.cl>"
+STUDIO_EMAIL = "hola@doppel.cl"
+STUDIO_ADDRESS = "Eduardo Marquina 3937, Vitacura · Santiago"
 # MOCK_AVAILABILITY = "1"       # descomenta para probar sin Google Calendar
 
 # --- KV: holds temporales de reservas en pago (Fase 2) ---
