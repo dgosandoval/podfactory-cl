@@ -57,6 +57,34 @@ function CTAButtons({ size = 'md', waContext = 'quiero reservar Pod Factory.', s
   );
 }
 
+// CTAs flotantes (Reservar + WhatsApp) — aparecen al desplazar, no al inicio
+// (donde ya están los del hero), para no duplicar en pantalla.
+function FloatingCTA() {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <div style={{
+      position: 'fixed', bottom: 22, right: 22, zIndex: 100,
+      display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end',
+      opacity: show ? 1 : 0, transform: show ? 'translateY(0)' : 'translateY(20px)',
+      transition: 'opacity .3s ease, transform .3s ease', pointerEvents: show ? 'auto' : 'none',
+    }}>
+      <a href="#reservar" style={{
+        background: PF.red, color: PF.bg, borderRadius: 999, padding: '14px 22px',
+        fontFamily: PF.display, fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
+        textDecoration: 'none', display: 'inline-flex', alignItems: 'center', lineHeight: 1,
+        boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
+      }}>RESERVAR</a>
+      <WhatsAppButton dim={56} style={{ boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }} />
+    </div>
+  );
+}
+
 // Generic fade-up wrapper triggered by IntersectionObserver
 function Reveal({ children, delay = 0, distance = 22, duration = 750, threshold = 0.2, style = {}, className, id, as: Tag = 'div' }) {
   const [visible, setVisible] = React.useState(false);
@@ -169,7 +197,7 @@ function PodFactoryLanding() {
             >{l}</a>
           ))}
         </nav>
-        <CTAButtons size="sm" waContext="quiero reservar Pod Factory para mi podcast." />
+        <div className="pf-header-cta"><CTAButtons size="sm" waContext="quiero reservar Pod Factory para mi podcast." /></div>
       </header>
 
       {/* Hero */}
@@ -741,19 +769,7 @@ function PodFactoryLanding() {
         </Reveal>
       </footer>
 
-      {/* Floating CTAs — Reservar + WhatsApp, persistentes */}
-      <div style={{
-        position: 'fixed', bottom: 22, right: 22, zIndex: 100,
-        display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end',
-      }}>
-        <a href="#reservar" style={{
-          background: PF.red, color: PF.bg, borderRadius: 999, padding: '14px 22px',
-          fontFamily: PF.display, fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
-          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, lineHeight: 1,
-          boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
-        }}>RESERVAR</a>
-        <WhatsAppButton dim={56} style={{ boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }} />
-      </div>
+      <FloatingCTA />
     </div>
   );
 }
