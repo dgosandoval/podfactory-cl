@@ -102,6 +102,11 @@ chats públicos ni en git.
 Para enviar el correo de "Reserva confirmada" al cliente y el aviso a ti.
 
 ### D.1 — Cuenta y verificación del dominio
+> ✅ ATAJO: `doppel.cl` YA está verificado en tu Resend (lo usa doppel-clientes),
+> y `FROM_EMAIL` envía desde `@doppel.cl`. Por lo tanto este paso ya está hecho:
+> salta directo a D.2 (solo necesitas la API key). Lo de abajo queda solo como
+> referencia si algún día quieres verificar `podfactory.cl`.
+
 1. Crea cuenta en https://resend.com/ (plan gratis alcanza de sobra).
 2. Ve a **Domains** → **Add Domain** → escribe `podfactory.cl`.
 3. Resend te muestra unos registros DNS (MX/TXT/DKIM). Como tu DNS está en
