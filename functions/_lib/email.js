@@ -102,7 +102,7 @@ const waLine = (whatsappUrl) => whatsappUrl ? `
     </div>` : "";
 
 // Correo al cliente (confirmación)
-export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl }) {
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">¡Reserva confirmada! 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -115,6 +115,13 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       ${row("Adelanto pagado", CLP(deposit))}
     </table>
     ${mapsBlock(address)}
+    ${portalUrl ? `
+    <div style="margin:18px 0;padding:16px;background:#0A0A0A;border-radius:4px">
+      <p style="font-size:13px;color:#F5EBD6;line-height:1.5;margin:0 0 10px">
+        Sigue tu sesión y recibe tu <b>entrega</b> (video y audio editado) en tu portal de cliente:
+      </p>
+      <a href="${portalUrl}" style="display:inline-block;background:#F4B81C;color:#0A0A0A;text-decoration:none;padding:11px 20px;font-weight:800;font-size:14px;border-radius:4px">Ver mi sesión en el portal</a>
+    </div>` : ""}
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       El saldo se paga el día de la sesión. Te enviaremos un recordatorio 24 horas antes.
     </p>

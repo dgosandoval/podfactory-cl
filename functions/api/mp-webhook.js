@@ -88,9 +88,26 @@ export async function onRequestPost({ request, env }) {
     return new Response(`retry: ${e}`, { status: 500 });
   }
 
+  const { fecha, hora } = formatSession(start, config.timeZone);
+
+  // Crear el proyecto del cliente en el portal de Doppel (best-effort).
+  let portalUrl = null;
+  if (env.PORTAL_INTAKE_URL && env.PORTAL_INTAKE_SECRET) {
+    try {
+      const r = await fetch(env.PORTAL_INTAKE_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
+        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios, deposit: config.depositCLP, paymentId }),
+      });
+      if (r.ok) portalUrl = (await r.json()).projectUrl || null;
+      else console.log("portal intake non-ok:", r.status, await r.text());
+    } catch (e) {
+      console.log("portal intake error:", String(e));
+    }
+  }
+
   // Correos de confirmación — best-effort: un fallo aquí NO debe revertir la reserva.
   try {
-    const { fecha, hora } = formatSession(start, config.timeZone);
     const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
     const origin = new URL(request.url).origin;
     if (email) {
@@ -106,6 +123,7 @@ export async function onRequestPost({ request, env }) {
           name, fecha, hora, deposit: config.depositCLP, address,
           manageUrl: manageUrl(origin, token),
           whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
+          portalUrl,
         }),
         attachments: [ics],
       });
