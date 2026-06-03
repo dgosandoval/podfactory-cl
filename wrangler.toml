@@ -21,9 +21,9 @@ STUDIO_EMAIL = "hola@doppel.cl"
 # nunca en la web pública.
 STUDIO_ADDRESS = "Eduardo Marquina 3937, Oficina 906, Vitacura · Santiago"
 WHATSAPP_PHONE = "56927970014"   # para el link de WhatsApp en los correos
-# Integración con el portal de clientes (doppel-clientes). Desactivada hasta
-# poner la URL + el secret PORTAL_INTAKE_SECRET (= INTAKE_SECRET del portal).
-# PORTAL_INTAKE_URL = "https://TU-PORTAL/api/intake/podfactory"
+# Integración con el portal de clientes (doppel-clientes), vía clientes.podfactory.cl.
+# Se activa al cargar el secret PORTAL_INTAKE_SECRET (= INTAKE_SECRET del portal).
+PORTAL_INTAKE_URL = "https://clientes.podfactory.cl/api/intake/podfactory"
 # MOCK_AVAILABILITY = "1"       # descomenta para probar sin Google Calendar
 
 # --- KV: holds temporales de reservas en pago (Fase 2) ---
