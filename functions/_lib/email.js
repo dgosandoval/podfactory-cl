@@ -80,10 +80,10 @@ const button = (href, label) =>
     padding:12px 22px;font-weight:700;font-size:14px;border-radius:2px">${label}</a>`;
 
 const waLine = (whatsappUrl) => whatsappUrl ? `
-    <p style="font-size:13px;color:#0A0A0Acc;line-height:1.5;margin-top:14px">
-      ¿Necesitas avisarnos algo? Escríbenos por
-      <a href="${whatsappUrl}" style="color:#1f7a3f;font-weight:700;text-decoration:none">WhatsApp →</a>
-    </p>` : "";
+    <div style="margin-top:16px">
+      <p style="font-size:13px;color:#0A0A0Acc;line-height:1.5;margin:0 0 8px">¿Necesitas avisarnos algo?</p>
+      <a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:11px 20px;font-weight:700;font-size:14px;border-radius:4px">Escríbenos por WhatsApp</a>
+    </div>` : "";
 
 // Correo al cliente (confirmación)
 export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl }) {

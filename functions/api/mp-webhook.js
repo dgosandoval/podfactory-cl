@@ -65,8 +65,12 @@ export async function onRequestPost({ request, env }) {
   const serviciosTxt = `Tipo: ${tipo} · Personas: ${personas}${addons.length ? ` · Adicionales: ${addons.join(", ")}` : ""}${comentarios ? `\nComentarios: ${comentarios}` : ""}`;
 
   const token = newToken();
+  // ID determinístico del evento = idempotencia fuerte (Google Calendar es
+  // consistente). Si la notificación llega repetida, el 2º insert da 409.
+  const eventId = ("pf" + String(paymentId)).toLowerCase().replace(/[^a-v0-9]/g, "");
   try {
     const ev = await createEvent(env, {
+      id: eventId,
       summary: `🎙️ Reserva: ${name}`,
       description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\n${serviciosTxt}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.\nGestión: ${date} ${label} · token ${token}`,
       startISO: start,
@@ -77,7 +81,9 @@ export async function onRequestPost({ request, env }) {
     await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, deposit: config.depositCLP, reminded: false });
     if (env.HOLDS) await env.HOLDS.delete(holdKey);
   } catch (e) {
-    // Falló: liberamos la marca para que MercadoPago pueda reintentar.
+    // Notificación repetida: el evento ya existe → no reenviamos correos.
+    if (String(e.message) === "DUPLICATE_EVENT") return ok();
+    // Otro fallo: liberamos la marca para que MercadoPago pueda reintentar.
     if (env.HOLDS) await env.HOLDS.delete(dedupeKey);
     return new Response(`retry: ${e}`, { status: 500 });
   }

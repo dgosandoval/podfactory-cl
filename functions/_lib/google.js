@@ -64,7 +64,9 @@ export async function getBusy(env, timeMinISO, timeMaxISO) {
 }
 
 // Crea el evento de reserva confirmada (Fase 2, tras el pago).
-export async function createEvent(env, { summary, description, startISO, endISO, timeZone }) {
+// `id` opcional = idempotencia: si ya existe un evento con ese id, Google
+// responde 409 y lanzamos "DUPLICATE_EVENT" (lo usa el webhook anti-duplicado).
+export async function createEvent(env, { id, summary, description, startISO, endISO, timeZone }) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events`;
@@ -72,12 +74,14 @@ export async function createEvent(env, { summary, description, startISO, endISO,
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({
+      ...(id ? { id } : {}),
       summary,
       description,
       start: { dateTime: startISO, timeZone },
       end: { dateTime: endISO, timeZone },
     }),
   });
+  if (res.status === 409) throw new Error("DUPLICATE_EVENT");
   if (!res.ok) throw new Error(`createEvent error: ${res.status} ${await res.text()}`);
   return res.json();
 }
