@@ -73,7 +73,7 @@ function BookingCalendar() {
   const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8;
 
   return (
-    <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0 }}>
+    <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: '100%', overflow: 'hidden' }}>
       {/* Encabezado */}
       <div style={{ padding: '20px 24px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em' }}>
@@ -84,9 +84,9 @@ function BookingCalendar() {
         </div>
       </div>
 
-      {/* Selector de días */}
-      <div className="pf-calendar-wrap" style={{ padding: '16px 24px 4px' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* Selector de días — scroll horizontal dentro de la tarjeta */}
+      <div style={{ padding: '16px 24px 4px' }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
           {days.map((d) => {
             const on = d.iso === activeDate;
             return (
