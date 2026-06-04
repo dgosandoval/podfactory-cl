@@ -119,6 +119,9 @@ function NewBookingForm({ headers, onDone }) {
   const [f, setF] = React.useState({ name:'', email:'', phone:'', tipo:'Podcast', personas:1, addons:[], comentarios:'', deposit:'', sendEmail:true });
   const [working, setWorking] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const [custom, setCustom] = React.useState(false);
+  const [cstart, setCstart] = React.useState('12:00');
+  const [cmins, setCmins] = React.useState(80);
   const ADDONS = ['Edición Pro','3 Reels adicionales'];
 
   React.useEffect(() => { setAvail(null); setSlot(null);
@@ -132,7 +135,7 @@ function NewBookingForm({ headers, onDone }) {
     setWorking(true); setErr(null);
     try {
       const r = await fetch('/api/admin/create-booking', { method:'POST', headers: headers(),
-        body: JSON.stringify({ date, label: slot.label, name:f.name, email:f.email, phone:f.phone, tipo:f.tipo, personas:f.personas, addons:f.addons, comentarios:f.comentarios, deposit: parseInt(f.deposit,10)||0, sendEmail:f.sendEmail }) });
+        body: JSON.stringify({ date, ...(custom ? {customStart: cstart, customMinutes: cmins} : {label: slot?.label}), name:f.name, email:f.email, phone:f.phone, tipo:f.tipo, personas:f.personas, addons:f.addons, comentarios:f.comentarios, deposit: parseInt(f.deposit,10)||0, sendEmail:f.sendEmail }) });
       const o = await r.json();
       if (!r.ok) throw new Error(o.error||'Error');
       onDone();
@@ -151,14 +154,27 @@ function NewBookingForm({ headers, onDone }) {
       </div>
       {!avail && <span style={{fontFamily:M.mono,fontSize:12}}>Cargando…</span>}
       {avail && !avail.open && <span style={{fontFamily:M.mono,fontSize:12,color:M.ink+'99'}}>Día cerrado.</span>}
-      {avail && avail.open && (
+      {!custom && avail && avail.open && (
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(82px,1fr))',gap:6,marginBottom:8}}>
           {avail.slots.map(s=>{const on=slot?.label===s.label;return(
             <button key={s.start} disabled={!s.available} onClick={()=>setSlot(s)}
               style={{padding:'10px 4px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:on?M.blue:(s.available?'#fff':M.ink+'0a'),color:on?'#fff':(s.available?M.ink:M.ink+'55'),fontFamily:M.mono,fontWeight:700,fontSize:12,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>);})}
         </div>
       )}
-      {slot && (
+      <div style={{margin:'2px 0 8px'}}>
+        <label style={{fontFamily:M.mono,fontSize:12,display:'inline-flex',gap:6,alignItems:'center',cursor:'pointer'}}>
+          <input type="checkbox" checked={custom} onChange={e=>{setCustom(e.target.checked); setSlot(null);}} /> Horario personalizado (entre medio)
+        </label>
+        {custom && (
+          <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center',flexWrap:'wrap'}}>
+            <input type="time" value={cstart} onChange={e=>setCstart(e.target.value)} style={{...inp,width:120}} />
+            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>dura</span>
+            <input type="number" min="20" step="5" value={cmins} onChange={e=>setCmins(parseInt(e.target.value,10)||80)} style={{...inp,width:80}} />
+            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>min</span>
+          </div>
+        )}
+      </div>
+      {(slot || custom) && (
         <div style={{marginTop:10}}>
           <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', margin:'8px 0 6px'}}>2. DATOS DEL CLIENTE</div>
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8}}>

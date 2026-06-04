@@ -2,7 +2,7 @@
 // Reserva creada a mano por el estudio (cliente que reservó directo): crea el
 // evento en el calendario, la reserva, su página de entrega en el portal y,
 // opcionalmente, envía el correo de confirmación.
-import { parseConfig, buildSlots, weekday, overlapsBusy } from "../../_lib/slots.js";
+import { parseConfig, buildSlots, weekday, overlapsBusy, getOffset } from "../../_lib/slots.js";
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, customerEmailHtml, icsAttachment, whatsappLink } from "../../_lib/email.js";
@@ -19,12 +19,23 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "JSON inválido" }, 400); }
 
   const { date, label, name, email, phone } = body || {};
-  if (!date || !label || !name) return json({ error: "Faltan datos (fecha, bloque y nombre)" }, 400);
-
-  // Validar el bloque
+  if (!date || !name) return json({ error: "Faltan datos (fecha y nombre)" }, 400);
   if (!config.openDays.includes(weekday(date, config.timeZone))) return json({ error: "Día no disponible" }, 400);
-  const slot = buildSlots(date, config).find((s) => s.label === label);
-  if (!slot) return json({ error: "Bloque no válido" }, 400);
+
+  // El bloque puede ser uno estándar (label) o una hora personalizada (customStart HH:MM).
+  let slot;
+  if (body.customStart) {
+    if (!/^\d{1,2}:\d{2}$/.test(body.customStart)) return json({ error: "Hora personalizada inválida (HH:MM)" }, 400);
+    const hhmm = body.customStart.padStart(5, "0");
+    const startMs = Date.parse(`${date}T${hhmm}:00${getOffset(date, config.timeZone)}`);
+    if (isNaN(startMs)) return json({ error: "Hora inválida" }, 400);
+    const mins = Math.min(480, Math.max(20, parseInt(body.customMinutes, 10) || config.slotMinutes));
+    slot = { label: hhmm, start: new Date(startMs).toISOString(), end: new Date(startMs + mins * 60000).toISOString() };
+  } else {
+    if (!label) return json({ error: "Falta el bloque" }, 400);
+    slot = buildSlots(date, config).find((s) => s.label === label);
+    if (!slot) return json({ error: "Bloque no válido" }, 400);
+  }
   if (Date.parse(slot.start) <= Date.now()) return json({ error: "Ese bloque ya pasó" }, 400);
 
   // Servicios (opcionales) saneados
