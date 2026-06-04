@@ -186,7 +186,7 @@ function PodFactoryLanding() {
             ['Producciones', '#producciones', false],
             ['Tarifas',      '#tarifas',     false],
             ['Ubicación',    '#ubicacion',   false],
-            ['FAQ',          '#faq',         false],
+            ['Preguntas',    '#faq',         false],
             ['Contacto',     waLink('quiero conversar con Pod Factory.'), true],
           ].map(([l, h, ext]) => (
             <a
@@ -635,7 +635,7 @@ function PodFactoryLanding() {
             fontFamily: PF.display, fontWeight: 900, fontSize: 64,
             letterSpacing: '-0.04em', margin: 0, lineHeight: 0.92, maxWidth: 820,
           }}>
-            Lo que <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.red }}>siempre</span> nos preguntan.
+            Preguntas <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.red }}>frecuentes</span>.
           </h2>
         </Reveal>
 
@@ -676,7 +676,7 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Hasta cuántas personas pueden grabar al mismo tiempo?',
-              a: <>El estudio acomoda <b>hasta 4 personas</b> en cabina con calidad broadcast. La tarifa es plana: <b>$199.990 + IVA por hora</b>, independiente de si grabas solo o con 3 invitados.</>,
+              a: <>El estudio acomoda <b>hasta 4 personas</b> con calidad broadcast. La tarifa es plana: <b>$199.990 + IVA por hora</b>, independiente de si grabas solo o con 3 invitados.</>,
             },
             {
               q: '¿Qué incluye la Edición Básica?',
