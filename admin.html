@@ -42,7 +42,12 @@ function Admin() {
   const [bookings, setBookings] = React.useState(null);
   const [err, setErr] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
-  const [showNew, setShowNew] = React.useState(false);
+  const [prefill] = React.useState(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('nb') ? { name: p.get('name')||'', email: p.get('email')||'', phone: p.get('phone')||'', portalProjectId: p.get('project')||'' } : null;
+  });
+  const [showNew, setShowNew] = React.useState(() => !!new URLSearchParams(location.search).get('nb'));
+  React.useEffect(() => { if (new URLSearchParams(location.search).get('nb')) history.replaceState(null,'','/admin'); }, []);
 
   const headers = () => ({ 'x-admin-key': key, 'content-type':'application/json' });
 
@@ -101,7 +106,7 @@ function Admin() {
           <button onClick={()=>load()} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>↻ Actualizar</button>
         </div>
       </div>
-      {showNew && <NewBookingForm headers={headers} onDone={()=>{setShowNew(false);load();}} />}
+      {showNew && <NewBookingForm headers={headers} prefill={prefill} onDone={()=>{setShowNew(false);load();}} />}
       {!bookings && <p style={{fontFamily:M.mono}}>Cargando…</p>}
       {bookings && bookings.length === 0 && <p style={{fontFamily:M.mono,color:M.ink+'99'}}>Aún no hay reservas.</p>}
       {bookings && bookings.map(b => (
@@ -111,12 +116,12 @@ function Admin() {
   );
 }
 
-function NewBookingForm({ headers, onDone }) {
+function NewBookingForm({ headers, onDone, prefill }) {
   const [days] = React.useState(() => upcomingDays(18));
   const [date, setDate] = React.useState(days[0].iso);
   const [avail, setAvail] = React.useState(null);
   const [slot, setSlot] = React.useState(null);
-  const [f, setF] = React.useState({ name:'', email:'', phone:'', tipo:'Podcast', personas:1, addons:[], comentarios:'', deposit:'', sendEmail:true });
+  const [f, setF] = React.useState({ name: prefill?.name||'', email: prefill?.email||'', phone: prefill?.phone||'', tipo:'Podcast', personas:1, addons:[], comentarios:'', deposit:'', sendEmail:true });
   const [working, setWorking] = React.useState(false);
   const [err, setErr] = React.useState(null);
   const [custom, setCustom] = React.useState(false);
@@ -135,7 +140,7 @@ function NewBookingForm({ headers, onDone }) {
     setWorking(true); setErr(null);
     try {
       const r = await fetch('/api/admin/create-booking', { method:'POST', headers: headers(),
-        body: JSON.stringify({ date, ...(custom ? {customStart: cstart, customMinutes: cmins} : {label: slot?.label}), name:f.name, email:f.email, phone:f.phone, tipo:f.tipo, personas:f.personas, addons:f.addons, comentarios:f.comentarios, deposit: parseInt(f.deposit,10)||0, sendEmail:f.sendEmail }) });
+        body: JSON.stringify({ date, ...(custom ? {customStart: cstart, customMinutes: cmins} : {label: slot?.label}), name:f.name, email:f.email, phone:f.phone, tipo:f.tipo, personas:f.personas, addons:f.addons, comentarios:f.comentarios, deposit: Math.max(0, parseInt(f.deposit,10)||0), sendEmail:f.sendEmail, portalProjectId: prefill?.portalProjectId || undefined }) });
       const o = await r.json();
       if (!r.ok) throw new Error(o.error||'Error');
       onDone();
@@ -145,6 +150,11 @@ function NewBookingForm({ headers, onDone }) {
   return (
     <div style={{border:`1.5px solid ${M.ink}`, background:'#fff', padding:18, marginBottom:16}}>
       <div style={{fontFamily:M.display, fontWeight:800, fontSize:16, marginBottom:10}}>Nueva reserva manual</div>
+      {prefill?.portalProjectId && (
+        <div style={{background:M.ink, color:M.bg, padding:'8px 12px', fontFamily:M.mono, fontSize:12, marginBottom:12}}>
+          Se asociará al proyecto del portal #{prefill.portalProjectId} · cliente {prefill.name || prefill.email}
+        </div>
+      )}
       <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', marginBottom:6}}>1. ELIGE DÍA Y BLOQUE</div>
       <div style={{display:'flex', gap:6, overflowX:'auto', paddingBottom:8}}>
         {days.map(d=>{const on=d.iso===date;return(
@@ -198,7 +208,7 @@ function NewBookingForm({ headers, onDone }) {
           </div>
           <textarea style={{...inp, marginBottom:8, resize:'vertical'}} rows={2} placeholder="Comentarios (opcional)" value={f.comentarios} onChange={e=>setF({...f,comentarios:e.target.value})} />
           <div style={{display:'flex', gap:12, flexWrap:'wrap', alignItems:'center', marginBottom:10}}>
-            <input style={{...inp, width:160}} type="number" placeholder="Adelanto $ (opcional)" value={f.deposit} onChange={e=>setF({...f,deposit:e.target.value})} />
+            <input style={{...inp, width:160}} type="number" min="0" placeholder="Adelanto $ (opcional)" value={f.deposit} onChange={e=>setF({...f,deposit:e.target.value})} />
             <label style={{fontFamily:M.mono, fontSize:12, display:'flex', gap:6, alignItems:'center', cursor:'pointer'}}>
               <input type="checkbox" checked={f.sendEmail} onChange={e=>setF({...f,sendEmail:e.target.checked})} /> Enviar correo de confirmación al cliente
             </label>

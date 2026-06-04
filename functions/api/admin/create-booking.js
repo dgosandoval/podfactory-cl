@@ -84,7 +84,7 @@ export async function onRequestPost({ request, env }) {
       const r = await fetch(env.PORTAL_INTAKE_URL, {
         method: "POST",
         headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
-        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios, deposit, paymentId: `manual-${token}` }),
+        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios, deposit, paymentId: `manual-${token}`, projectId: body.portalProjectId || undefined }),
       });
       if (r.ok) { const j = await r.json(); portalUrl = j.loginUrl || j.projectUrl || null; }
     } catch (e) { console.log("portal intake (manual) error:", String(e)); }
