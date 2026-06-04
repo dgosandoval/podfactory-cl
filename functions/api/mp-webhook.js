@@ -99,7 +99,7 @@ export async function onRequestPost({ request, env }) {
         headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
         body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios, deposit: config.depositCLP, paymentId }),
       });
-      if (r.ok) portalUrl = (await r.json()).projectUrl || null;
+      if (r.ok) { const j = await r.json(); portalUrl = j.loginUrl || j.projectUrl || null; }
       else console.log("portal intake non-ok:", r.status, await r.text());
     } catch (e) {
       console.log("portal intake error:", String(e));
