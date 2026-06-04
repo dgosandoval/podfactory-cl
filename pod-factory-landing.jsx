@@ -150,9 +150,9 @@ function PodFactoryLanding() {
             color: PF.yellow, fontWeight: 700, textDecoration: 'none',
             display: 'inline-flex', alignItems: 'center', gap: 4,
           }}>DOPPEL ↗</a>
-          <span style={{ color: PF.bg + '50', marginLeft: 6 }}>(agencia creativa)</span>
+          <span className="pf-bb-hide-mobile" style={{ color: PF.bg + '50', marginLeft: 6 }}>(agencia creativa)</span>
         </div>
-        <span style={{ color: PF.bg + '80' }}>VITACURA · SANTIAGO</span>
+        <span className="pf-bb-hide-mobile" style={{ color: PF.bg + '80' }}>VITACURA · SANTIAGO</span>
       </div>
 
       {/* Header with Doppel logo + Pod Factory marker */}
@@ -174,7 +174,7 @@ function PodFactoryLanding() {
               alt="Pod Factory"
               style={{ height: 48, display: 'block' }}
             />
-            <div style={{ fontFamily: PF.mono, fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', color: PF.ink + '99', lineHeight: 1.4 }}>
+            <div className="pf-header-sub" style={{ fontFamily: PF.mono, fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', color: PF.ink + '99', lineHeight: 1.4 }}>
               PODCAST · VODCAST<br />EST. 2024
             </div>
           </div>
