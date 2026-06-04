@@ -11,7 +11,7 @@ OPEN_DAYS = "1,2,3,4,5,6"        # 1=Lun ... 6=Sáb (0=Dom cerrado)
 SLOT_STARTS = "10:00,11:30,13:00,14:30,16:00,17:30,19:00"
 SLOT_MINUTES = "80"              # 60 grabación + 20 setup
 HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga
-DEPOSIT_CLP = "1000"            # TEMP prueba (volver a 30000 después)
+DEPOSIT_CLP = "30000"           # adelanto a cobrar por MercadoPago
 GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fcd720f162@group.calendar.google.com"
 # Correos de confirmación (Resend). Plan gratis = 1 dominio (doppel.cl, ya
 # verificado). Enviamos desde @doppel.cl con nombre visible "Pod Factory".
