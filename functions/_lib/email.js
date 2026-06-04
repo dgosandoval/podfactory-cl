@@ -112,7 +112,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       ${row("Fecha", fecha)}
       ${row("Hora", hora + " hrs")}
       ${row("Dirección", address)}
-      ${row("Adelanto pagado", CLP(deposit))}
+      ${deposit ? row("Adelanto pagado", CLP(deposit)) : ""}
     </table>
     ${mapsBlock(address)}
     ${portalUrl ? `

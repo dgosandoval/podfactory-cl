@@ -42,6 +42,7 @@ function Admin() {
   const [bookings, setBookings] = React.useState(null);
   const [err, setErr] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
+  const [showNew, setShowNew] = React.useState(false);
 
   const headers = () => ({ 'x-admin-key': key, 'content-type':'application/json' });
 
@@ -95,13 +96,103 @@ function Admin() {
       {logoBar}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',flexWrap:'wrap',gap:8}}>
         <h1 style={{fontFamily:M.display,fontWeight:800,margin:'0 0 4px'}}>Reservas</h1>
-        <button onClick={()=>load()} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>↻ Actualizar</button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowNew(v=>!v)} style={{padding:'8px 14px',border:'none',background:M.ink,color:M.bg,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>{showNew?'✕ Cerrar':'+ Nueva reserva'}</button>
+          <button onClick={()=>load()} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>↻ Actualizar</button>
+        </div>
       </div>
+      {showNew && <NewBookingForm headers={headers} onDone={()=>{setShowNew(false);load();}} />}
       {!bookings && <p style={{fontFamily:M.mono}}>Cargando…</p>}
       {bookings && bookings.length === 0 && <p style={{fontFamily:M.mono,color:M.ink+'99'}}>Aún no hay reservas.</p>}
       {bookings && bookings.map(b => (
         <BookingCard key={b.token} b={b} busy={busy} onCancel={()=>cancelar(b)} headers={headers} reload={load} />
       ))}
+    </div>
+  );
+}
+
+function NewBookingForm({ headers, onDone }) {
+  const [days] = React.useState(() => upcomingDays(18));
+  const [date, setDate] = React.useState(days[0].iso);
+  const [avail, setAvail] = React.useState(null);
+  const [slot, setSlot] = React.useState(null);
+  const [f, setF] = React.useState({ name:'', email:'', phone:'', tipo:'Podcast', personas:1, addons:[], comentarios:'', deposit:'', sendEmail:true });
+  const [working, setWorking] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+  const ADDONS = ['Edición Pro','3 Reels adicionales'];
+
+  React.useEffect(() => { setAvail(null); setSlot(null);
+    fetch(`/api/availability?date=${date}`).then(r=>r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
+  }, [date]);
+
+  const toggleAddon = (a) => setF(s=>({...s, addons: s.addons.includes(a)?s.addons.filter(x=>x!==a):[...s.addons,a]}));
+  const inp = { padding:'9px 11px', border:`1.5px solid ${M.ink}`, fontFamily:M.mono, fontSize:13, width:'100%' };
+
+  async function crear() {
+    setWorking(true); setErr(null);
+    try {
+      const r = await fetch('/api/admin/create-booking', { method:'POST', headers: headers(),
+        body: JSON.stringify({ date, label: slot.label, name:f.name, email:f.email, phone:f.phone, tipo:f.tipo, personas:f.personas, addons:f.addons, comentarios:f.comentarios, deposit: parseInt(f.deposit,10)||0, sendEmail:f.sendEmail }) });
+      const o = await r.json();
+      if (!r.ok) throw new Error(o.error||'Error');
+      onDone();
+    } catch(e) { setErr(String(e.message||e)); setWorking(false); }
+  }
+
+  return (
+    <div style={{border:`1.5px solid ${M.ink}`, background:'#fff', padding:18, marginBottom:16}}>
+      <div style={{fontFamily:M.display, fontWeight:800, fontSize:16, marginBottom:10}}>Nueva reserva manual</div>
+      <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', marginBottom:6}}>1. ELIGE DÍA Y BLOQUE</div>
+      <div style={{display:'flex', gap:6, overflowX:'auto', paddingBottom:8}}>
+        {days.map(d=>{const on=d.iso===date;return(
+          <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:'0 0 auto',minWidth:50,padding:'6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,cursor:'pointer',textAlign:'center'}}>
+            <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div><div style={{fontSize:16,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
+          </button>);})}
+      </div>
+      {!avail && <span style={{fontFamily:M.mono,fontSize:12}}>Cargando…</span>}
+      {avail && !avail.open && <span style={{fontFamily:M.mono,fontSize:12,color:M.ink+'99'}}>Día cerrado.</span>}
+      {avail && avail.open && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(82px,1fr))',gap:6,marginBottom:8}}>
+          {avail.slots.map(s=>{const on=slot?.label===s.label;return(
+            <button key={s.start} disabled={!s.available} onClick={()=>setSlot(s)}
+              style={{padding:'10px 4px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:on?M.blue:(s.available?'#fff':M.ink+'0a'),color:on?'#fff':(s.available?M.ink:M.ink+'55'),fontFamily:M.mono,fontWeight:700,fontSize:12,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>);})}
+        </div>
+      )}
+      {slot && (
+        <div style={{marginTop:10}}>
+          <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', margin:'8px 0 6px'}}>2. DATOS DEL CLIENTE</div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8}}>
+            <input style={{...inp, gridColumn:'1/-1'}} placeholder="Nombre y apellido" value={f.name} onChange={e=>setF({...f,name:e.target.value})} />
+            <input style={inp} type="email" placeholder="Email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} />
+            <input style={inp} placeholder="Teléfono" value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} />
+          </div>
+          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:8, alignItems:'center'}}>
+            {['Podcast','Webinar / Streaming'].map(t=>(
+              <button key={t} onClick={()=>setF({...f,tipo:t})} style={{padding:'8px 10px',border:`1.5px solid ${M.ink}`,background:f.tipo===t?M.ink:'#fff',color:f.tipo===t?'#fff':M.ink,fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>{t}</button>
+            ))}
+            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>Personas:</span>
+            {[1,2,3,4].map(n=>(
+              <button key={n} onClick={()=>setF({...f,personas:n})} style={{width:34,height:32,border:`1.5px solid ${M.ink}`,background:f.personas===n?M.blue:'#fff',color:f.personas===n?'#fff':M.ink,fontFamily:M.mono,fontWeight:700,cursor:'pointer'}}>{n}</button>
+            ))}
+          </div>
+          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:8}}>
+            {ADDONS.map(a=>(
+              <button key={a} onClick={()=>toggleAddon(a)} style={{padding:'8px 10px',border:`1.5px solid ${f.addons.includes(a)?M.ink:M.ink+'44'}`,background:f.addons.includes(a)?M.ink+'0d':'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>{f.addons.includes(a)?'☑':'☐'} {a}</button>
+            ))}
+          </div>
+          <textarea style={{...inp, marginBottom:8, resize:'vertical'}} rows={2} placeholder="Comentarios (opcional)" value={f.comentarios} onChange={e=>setF({...f,comentarios:e.target.value})} />
+          <div style={{display:'flex', gap:12, flexWrap:'wrap', alignItems:'center', marginBottom:10}}>
+            <input style={{...inp, width:160}} type="number" placeholder="Adelanto $ (opcional)" value={f.deposit} onChange={e=>setF({...f,deposit:e.target.value})} />
+            <label style={{fontFamily:M.mono, fontSize:12, display:'flex', gap:6, alignItems:'center', cursor:'pointer'}}>
+              <input type="checkbox" checked={f.sendEmail} onChange={e=>setF({...f,sendEmail:e.target.checked})} /> Enviar correo de confirmación al cliente
+            </label>
+          </div>
+          <button onClick={crear} disabled={working || !f.name} style={{padding:'11px 20px',border:'none',background:(working||!f.name)?M.ink+'55':M.green,color:'#fff',fontFamily:M.display,fontWeight:800,fontSize:14,cursor:(working||!f.name)?'not-allowed':'pointer'}}>
+            {working?'Creando…':'Crear reserva'}
+          </button>
+          {err && <span style={{color:M.red,fontFamily:M.mono,fontSize:12,marginLeft:10}}>{err}</span>}
+        </div>
+      )}
     </div>
   );
 }
