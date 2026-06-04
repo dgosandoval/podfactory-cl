@@ -6,10 +6,15 @@
 <meta name="robots" content="noindex">
 <title>Admin · Pod Factory Reservas</title>
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  html, body { margin:0; padding:0; background:#F5EBD6; font-family:'Archivo',sans-serif; color:#0A0A0A; }
+  :root { --bg:#f8f9fa; --paper:#fff; --ink:#212529; --muted:#6c757d; --line:#dee2e6; --blue:#0d6efd; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-size:16px; line-height:1.5;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; }
   * { box-sizing:border-box; }
+  input, textarea, select, button { font-family:inherit; }
+  input:focus, textarea:focus, select:focus { outline:0; border-color:#86b7fe; box-shadow:0 0 0 .25rem rgba(13,110,253,.25); }
+  button { cursor:pointer; }
+  button:disabled { cursor:not-allowed; opacity:.65; }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
@@ -18,10 +23,25 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const M = { bg:'#F5EBD6', ink:'#0A0A0A', blue:'#1F3FA3', red:'#D92E2E', green:'#1f7a3f',
-  display:"'Archivo',sans-serif", mono:"'Space Mono',monospace" };
+const M = { bg:'#f8f9fa', paper:'#fff', ink:'#212529', muted:'#6c757d', line:'#dee2e6',
+  blue:'#0d6efd', red:'#dc3545', green:'#198754' };
 const CLP = (n) => '$' + Number(n||0).toLocaleString('es-CL');
 const KEYNAME = 'pf_admin_key';
+
+// ── Estilos compartidos (look Bootstrap, igual que el portal de proyectos) ──
+const CARD = { background:M.paper, border:`1px solid ${M.line}`, borderRadius:8, padding:'18px 20px', marginBottom:16, boxShadow:'0 .125rem .25rem rgba(0,0,0,.05)' };
+const BTN = { padding:'8px 16px', border:`1px solid ${M.blue}`, background:M.blue, color:'#fff', borderRadius:6, fontWeight:500, fontSize:14, lineHeight:1.5 };
+const BTN_GHOST = { padding:'8px 14px', border:'1px solid #ced4da', background:'#fff', color:M.muted, borderRadius:6, fontSize:13, fontWeight:500 };
+const INP = { padding:'8px 12px', border:'1px solid #ced4da', borderRadius:6, fontSize:14, width:'100%', color:M.ink, background:'#fff' };
+const LEGEND = { fontSize:11, color:M.muted, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:600 };
+const TAG = { fontSize:13, color:M.muted };
+// Botón de día/slot tipo "chip": seleccionado = azul, disponible = blanco, no disponible = atenuado.
+const chip = (on, available=true) => ({
+  border:`1px solid ${on ? M.blue : (available ? M.line : '#e3e6ea')}`,
+  background:on ? M.blue : (available ? '#fff' : '#f1f3f5'),
+  color:on ? '#fff' : (available ? M.ink : '#adb5bd'),
+  borderRadius:6, fontSize:13, fontWeight:600,
+});
 
 function upcomingDays(count) {
   const out = []; const d = new Date(); d.setHours(0,0,0,0);
@@ -34,6 +54,16 @@ function upcomingDays(count) {
   }
   return out;
 }
+
+const Header = () => (
+  <div style={{ background:'#fff', borderBottom:`1px solid ${M.line}`, boxShadow:'0 .125rem .25rem rgba(0,0,0,.04)',
+    padding:'12px 18px', marginBottom:24, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+    <span style={{ background:'#000', borderRadius:7, padding:'6px 9px', display:'inline-flex', alignItems:'center' }}>
+      <img src="/assets/podfactory-logo.png" alt="Pod Factory" style={{ height:18, display:'block' }} />
+    </span>
+    <a href="https://podfactory.cl" target="_blank" rel="noopener" style={{ color:M.blue, fontSize:13, fontWeight:600, textDecoration:'none' }}>Ir a Pod Factory ↗</a>
+  </div>
+);
 
 function Admin() {
   const [key, setKey] = React.useState(() => localStorage.getItem(KEYNAME) || '');
@@ -74,41 +104,37 @@ function Admin() {
     load();
   }
 
-  const wrap = { maxWidth:760, margin:'0 auto', padding:'28px 18px' };
-  const logoBar = (
-    <div style={{ background:'#000', padding:'14px 18px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-      <img src="/assets/podfactory-logo.png" alt="Pod Factory" style={{ height:34, width:'auto' }} />
-      <a href="https://podfactory.cl" target="_blank" rel="noopener" style={{ color:'#F4B81C', fontFamily:M.mono, fontSize:12, fontWeight:700, textDecoration:'none' }}>Ir a Pod Factory ↗</a>
-    </div>
-  );
+  const wrap = { maxWidth:760, margin:'0 auto', padding:'24px 18px' };
 
   if (!authed) return (
     <div style={wrap}>
-      {logoBar}
-      <h1 style={{fontFamily:M.display,fontWeight:800,margin:'0 0 4px'}}>Admin</h1>
-      <p style={{fontFamily:M.mono,fontSize:13,color:M.ink+'99'}}>Ingresa la clave de administración:</p>
-      <div style={{display:'flex',gap:8,maxWidth:420}}>
-        <input type="password" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&entrar()}
-          placeholder="ADMIN_KEY" style={{flex:1,padding:'12px',border:`1.5px solid ${M.ink}`,fontFamily:M.mono,fontSize:13}} />
-        <button onClick={entrar} style={{padding:'12px 18px',border:'none',background:M.ink,color:M.bg,fontFamily:M.display,fontWeight:800,cursor:'pointer'}}>Entrar</button>
+      <Header />
+      <div style={CARD}>
+        <h1 style={{ fontSize:28, fontWeight:600, letterSpacing:'-0.01em', margin:'0 0 4px' }}>Admin</h1>
+        <p style={{ ...TAG, margin:'0 0 14px' }}>Ingresa la clave de administración:</p>
+        <div style={{ display:'flex', gap:8, maxWidth:420 }}>
+          <input type="password" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&entrar()}
+            placeholder="ADMIN_KEY" style={{ ...INP, flex:1 }} />
+          <button onClick={entrar} style={{ ...BTN, whiteSpace:'nowrap' }}>Entrar</button>
+        </div>
+        {err && <p style={{ color:M.red, fontSize:13, marginBottom:0 }}>{err}</p>}
       </div>
-      {err && <p style={{color:M.red,fontFamily:M.mono,fontSize:12}}>{err}</p>}
     </div>
   );
 
   return (
     <div style={wrap}>
-      {logoBar}
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',flexWrap:'wrap',gap:8}}>
-        <h1 style={{fontFamily:M.display,fontWeight:800,margin:'0 0 4px'}}>Reservas</h1>
-        <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>setShowNew(v=>!v)} style={{padding:'8px 14px',border:'none',background:M.ink,color:M.bg,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>{showNew?'✕ Cerrar':'+ Nueva reserva'}</button>
-          <button onClick={()=>load()} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>↻ Actualizar</button>
+      <Header />
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10, marginBottom:18 }}>
+        <h1 style={{ fontSize:30, fontWeight:600, letterSpacing:'-0.01em', margin:0 }}>Reservas</h1>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={()=>setShowNew(v=>!v)} style={BTN}>{showNew?'✕ Cerrar':'+ Nueva reserva'}</button>
+          <button onClick={()=>load()} style={BTN_GHOST}>↻ Actualizar</button>
         </div>
       </div>
       {showNew && <NewBookingForm headers={headers} prefill={prefill} onDone={()=>{setShowNew(false);load();}} />}
-      {!bookings && <p style={{fontFamily:M.mono}}>Cargando…</p>}
-      {bookings && bookings.length === 0 && <p style={{fontFamily:M.mono,color:M.ink+'99'}}>Aún no hay reservas.</p>}
+      {!bookings && <p style={TAG}>Cargando…</p>}
+      {bookings && bookings.length === 0 && <p style={TAG}>Aún no hay reservas.</p>}
       {bookings && bookings.map(b => (
         <BookingCard key={b.token} b={b} busy={busy} onCancel={()=>cancelar(b)} headers={headers} reload={load} />
       ))}
@@ -134,7 +160,6 @@ function NewBookingForm({ headers, onDone, prefill }) {
   }, [date]);
 
   const toggleAddon = (a) => setF(s=>({...s, addons: s.addons.includes(a)?s.addons.filter(x=>x!==a):[...s.addons,a]}));
-  const inp = { padding:'9px 11px', border:`1.5px solid ${M.ink}`, fontFamily:M.mono, fontSize:13, width:'100%' };
 
   async function crear() {
     setWorking(true); setErr(null);
@@ -148,75 +173,75 @@ function NewBookingForm({ headers, onDone, prefill }) {
   }
 
   return (
-    <div style={{border:`1.5px solid ${M.ink}`, background:'#fff', padding:18, marginBottom:16}}>
-      <div style={{fontFamily:M.display, fontWeight:800, fontSize:16, marginBottom:10}}>Nueva reserva manual</div>
+    <div style={CARD}>
+      <div style={{ fontWeight:600, fontSize:17, marginBottom:12 }}>Nueva reserva manual</div>
       {prefill?.portalProjectId && (
-        <div style={{background:M.ink, color:M.bg, padding:'8px 12px', fontFamily:M.mono, fontSize:12, marginBottom:12}}>
+        <div style={{ background:'#cfe2ff', color:'#084298', border:'1px solid #b6d4fe', borderRadius:6, padding:'8px 12px', fontSize:13, marginBottom:12 }}>
           Se asociará al proyecto del portal #{prefill.portalProjectId} · cliente {prefill.name || prefill.email}
         </div>
       )}
-      <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', marginBottom:6}}>1. ELIGE DÍA Y BLOQUE</div>
-      <div style={{display:'flex', gap:6, overflowX:'auto', paddingBottom:8}}>
+      <div style={{ ...LEGEND, marginBottom:6 }}>1. Elige día y bloque</div>
+      <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
         {days.map(d=>{const on=d.iso===date;return(
-          <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:'0 0 auto',minWidth:50,padding:'6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,cursor:'pointer',textAlign:'center'}}>
-            <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div><div style={{fontSize:16,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
+          <button key={d.iso} onClick={()=>setDate(d.iso)} style={{ ...chip(on), flex:'0 0 auto', minWidth:52, padding:'6px', textAlign:'center' }}>
+            <div style={{ fontSize:10, opacity:.7, textTransform:'uppercase' }}>{d.dow}</div><div style={{ fontSize:16, fontWeight:700 }}>{d.dn}</div>
           </button>);})}
       </div>
-      {!avail && <span style={{fontFamily:M.mono,fontSize:12}}>Cargando…</span>}
-      {avail && !avail.open && <span style={{fontFamily:M.mono,fontSize:12,color:M.ink+'99'}}>Día cerrado.</span>}
+      {!avail && <span style={{ ...TAG, fontSize:12 }}>Cargando…</span>}
+      {avail && !avail.open && <span style={{ ...TAG, fontSize:12 }}>Día cerrado.</span>}
       {!custom && avail && avail.open && (
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(82px,1fr))',gap:6,marginBottom:8}}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(82px,1fr))', gap:6, marginBottom:8 }}>
           {avail.slots.map(s=>{const on=slot?.label===s.label;return(
             <button key={s.start} disabled={!s.available} onClick={()=>setSlot(s)}
-              style={{padding:'10px 4px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:on?M.blue:(s.available?'#fff':M.ink+'0a'),color:on?'#fff':(s.available?M.ink:M.ink+'55'),fontFamily:M.mono,fontWeight:700,fontSize:12,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>);})}
+              style={{ ...chip(on, s.available), padding:'10px 4px', textDecoration:s.available?'none':'line-through' }}>{s.label}</button>);})}
         </div>
       )}
-      <div style={{margin:'2px 0 8px'}}>
-        <label style={{fontFamily:M.mono,fontSize:12,display:'inline-flex',gap:6,alignItems:'center',cursor:'pointer'}}>
+      <div style={{ margin:'2px 0 8px' }}>
+        <label style={{ fontSize:13, color:M.muted, display:'inline-flex', gap:6, alignItems:'center', cursor:'pointer' }}>
           <input type="checkbox" checked={custom} onChange={e=>{setCustom(e.target.checked); setSlot(null);}} /> Horario personalizado (entre medio)
         </label>
         {custom && (
-          <div style={{display:'flex',gap:8,marginTop:6,alignItems:'center',flexWrap:'wrap'}}>
-            <input type="time" value={cstart} onChange={e=>setCstart(e.target.value)} style={{...inp,width:120}} />
-            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>dura</span>
-            <input type="number" min="20" step="5" value={cmins} onChange={e=>setCmins(parseInt(e.target.value,10)||80)} style={{...inp,width:80}} />
-            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>min</span>
+          <div style={{ display:'flex', gap:8, marginTop:6, alignItems:'center', flexWrap:'wrap' }}>
+            <input type="time" value={cstart} onChange={e=>setCstart(e.target.value)} style={{ ...INP, width:130 }} />
+            <span style={{ ...TAG, fontSize:12 }}>dura</span>
+            <input type="number" min="20" step="5" value={cmins} onChange={e=>setCmins(parseInt(e.target.value,10)||80)} style={{ ...INP, width:90 }} />
+            <span style={{ ...TAG, fontSize:12 }}>min</span>
           </div>
         )}
       </div>
       {(slot || custom) && (
-        <div style={{marginTop:10}}>
-          <div style={{fontFamily:M.mono, fontSize:11, color:M.ink+'99', margin:'8px 0 6px'}}>2. DATOS DEL CLIENTE</div>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8}}>
-            <input style={{...inp, gridColumn:'1/-1'}} placeholder="Nombre y apellido" value={f.name} onChange={e=>setF({...f,name:e.target.value})} />
-            <input style={inp} type="email" placeholder="Email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} />
-            <input style={inp} placeholder="Teléfono" value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} />
+        <div style={{ marginTop:10 }}>
+          <div style={{ ...LEGEND, margin:'8px 0 6px' }}>2. Datos del cliente</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+            <input style={{ ...INP, gridColumn:'1/-1' }} placeholder="Nombre y apellido" value={f.name} onChange={e=>setF({...f,name:e.target.value})} />
+            <input style={INP} type="email" placeholder="Email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} />
+            <input style={INP} placeholder="Teléfono" value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} />
           </div>
-          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:8, alignItems:'center'}}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8, alignItems:'center' }}>
             {['Podcast','Webinar / Streaming'].map(t=>(
-              <button key={t} onClick={()=>setF({...f,tipo:t})} style={{padding:'8px 10px',border:`1.5px solid ${M.ink}`,background:f.tipo===t?M.ink:'#fff',color:f.tipo===t?'#fff':M.ink,fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>{t}</button>
+              <button key={t} onClick={()=>setF({...f,tipo:t})} style={{ ...chip(f.tipo===t), padding:'8px 12px' }}>{t}</button>
             ))}
-            <span style={{fontFamily:M.mono,fontSize:11,color:M.ink+'99'}}>Personas:</span>
+            <span style={{ ...TAG, fontSize:12 }}>Personas:</span>
             {[1,2,3,4].map(n=>(
-              <button key={n} onClick={()=>setF({...f,personas:n})} style={{width:34,height:32,border:`1.5px solid ${M.ink}`,background:f.personas===n?M.blue:'#fff',color:f.personas===n?'#fff':M.ink,fontFamily:M.mono,fontWeight:700,cursor:'pointer'}}>{n}</button>
+              <button key={n} onClick={()=>setF({...f,personas:n})} style={{ ...chip(f.personas===n), width:34, height:34, fontWeight:700 }}>{n}</button>
             ))}
           </div>
-          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:8}}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
             {ADDONS.map(a=>(
-              <button key={a} onClick={()=>toggleAddon(a)} style={{padding:'8px 10px',border:`1.5px solid ${f.addons.includes(a)?M.ink:M.ink+'44'}`,background:f.addons.includes(a)?M.ink+'0d':'#fff',fontFamily:M.mono,fontSize:12,cursor:'pointer'}}>{f.addons.includes(a)?'☑':'☐'} {a}</button>
+              <button key={a} onClick={()=>toggleAddon(a)} style={{ ...chip(f.addons.includes(a)), padding:'8px 12px', fontWeight:500 }}>{f.addons.includes(a)?'☑':'☐'} {a}</button>
             ))}
           </div>
-          <textarea style={{...inp, marginBottom:8, resize:'vertical'}} rows={2} placeholder="Comentarios (opcional)" value={f.comentarios} onChange={e=>setF({...f,comentarios:e.target.value})} />
-          <div style={{display:'flex', gap:12, flexWrap:'wrap', alignItems:'center', marginBottom:10}}>
-            <input style={{...inp, width:160}} type="number" min="0" placeholder="Adelanto $ (opcional)" value={f.deposit} onChange={e=>setF({...f,deposit:e.target.value})} />
-            <label style={{fontFamily:M.mono, fontSize:12, display:'flex', gap:6, alignItems:'center', cursor:'pointer'}}>
+          <textarea style={{ ...INP, marginBottom:8, resize:'vertical' }} rows={2} placeholder="Comentarios (opcional)" value={f.comentarios} onChange={e=>setF({...f,comentarios:e.target.value})} />
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap', alignItems:'center', marginBottom:12 }}>
+            <input style={{ ...INP, width:200 }} type="number" min="0" placeholder="Adelanto $ (opcional)" value={f.deposit} onChange={e=>setF({...f,deposit:e.target.value})} />
+            <label style={{ fontSize:13, color:M.muted, display:'flex', gap:6, alignItems:'center', cursor:'pointer' }}>
               <input type="checkbox" checked={f.sendEmail} onChange={e=>setF({...f,sendEmail:e.target.checked})} /> Enviar correo de confirmación al cliente
             </label>
           </div>
-          <button onClick={crear} disabled={working || !f.name} style={{padding:'11px 20px',border:'none',background:(working||!f.name)?M.ink+'55':M.green,color:'#fff',fontFamily:M.display,fontWeight:800,fontSize:14,cursor:(working||!f.name)?'not-allowed':'pointer'}}>
+          <button onClick={crear} disabled={working || !f.name} style={{ ...BTN, background:M.green, borderColor:M.green, padding:'10px 20px', fontSize:14 }}>
             {working?'Creando…':'Crear reserva'}
           </button>
-          {err && <span style={{color:M.red,fontFamily:M.mono,fontSize:12,marginLeft:10}}>{err}</span>}
+          {err && <span style={{ color:M.red, fontSize:13, marginLeft:10 }}>{err}</span>}
         </div>
       )}
     </div>
@@ -244,46 +269,44 @@ function BookingCard({ b, busy, onCancel, headers, reload }) {
     setResched(false); reload();
   }
 
-  const card = { border:`1.5px solid ${M.ink}`, background:'#fff', padding:'16px 18px', marginBottom:12, opacity: b.past?0.55:1 };
-  const tag = { fontFamily:M.mono, fontSize:11, color:M.ink+'99' };
   return (
-    <div style={card}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+    <div style={{ ...CARD, opacity: b.past?0.6:1 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
         <div>
-          <div style={{fontFamily:M.display,fontWeight:800,fontSize:17,textTransform:'capitalize'}}>{b.fecha} · {b.hora} hrs {b.past && <span style={{...tag,fontWeight:400}}>(pasada)</span>}</div>
-          <div style={{fontFamily:M.display,fontWeight:700,fontSize:15,marginTop:2}}>{b.name}</div>
-          <div style={tag}>{b.email} · {b.phone}</div>
-          <div style={{...tag,marginTop:6,color:M.ink}}>
+          <div style={{ fontWeight:600, fontSize:17, textTransform:'capitalize' }}>{b.fecha} · {b.hora} hrs {b.past && <span style={{ ...TAG, fontWeight:400 }}>(pasada)</span>}</div>
+          <div style={{ fontWeight:600, fontSize:15, marginTop:2 }}>{b.name}</div>
+          <div style={TAG}>{b.email} · {b.phone}</div>
+          <div style={{ ...TAG, marginTop:6, color:M.ink }}>
             {b.tipo} · {b.personas} {b.personas>1?'personas':'persona'}{b.addons&&b.addons.length?` · ${b.addons.join(', ')}`:''}
           </div>
-          {b.comentarios && <div style={{...tag,marginTop:4,fontStyle:'italic'}}>“{b.comentarios}”</div>}
+          {b.comentarios && <div style={{ ...TAG, marginTop:4, fontStyle:'italic' }}>“{b.comentarios}”</div>}
         </div>
-        <div style={{...tag,textAlign:'right',whiteSpace:'nowrap'}}>Adelanto<br/><b style={{color:M.green,fontSize:14}}>{CLP(b.deposit)}</b></div>
+        <div style={{ ...TAG, textAlign:'right', whiteSpace:'nowrap' }}>Adelanto<br/><b style={{ color:M.green, fontSize:15 }}>{CLP(b.deposit)}</b></div>
       </div>
       {!b.past && (
-        <div style={{display:'flex',gap:8,marginTop:12}}>
-          <button onClick={()=>setResched(!resched)} style={{padding:'8px 14px',border:`1.5px solid ${M.ink}`,background:resched?M.ink:'#fff',color:resched?'#fff':M.ink,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>Reagendar</button>
-          <button onClick={onCancel} disabled={busy} style={{padding:'8px 14px',border:`1.5px solid ${M.red}`,background:'#fff',color:M.red,fontFamily:M.mono,fontSize:12,fontWeight:700,cursor:'pointer'}}>Cancelar</button>
+        <div style={{ display:'flex', gap:8, marginTop:12 }}>
+          <button onClick={()=>setResched(!resched)} style={resched ? { ...BTN } : { ...BTN_GHOST, color:M.ink }}>Reagendar</button>
+          <button onClick={onCancel} disabled={busy} style={{ ...BTN_GHOST, color:M.red, borderColor:'#f1aeb5' }}>Cancelar</button>
         </div>
       )}
       {resched && (
-        <div style={{marginTop:12,borderTop:`1px solid ${M.ink}22`,paddingTop:12}}>
-          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8}}>
+        <div style={{ marginTop:12, borderTop:`1px solid ${M.line}`, paddingTop:12 }}>
+          <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
             {days.map(d=>{const on=d.iso===date;return(
-              <button key={d.iso} onClick={()=>setDate(d.iso)} style={{flex:'0 0 auto',minWidth:50,padding:'6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,cursor:'pointer',textAlign:'center'}}>
-                <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div><div style={{fontSize:16,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
+              <button key={d.iso} onClick={()=>setDate(d.iso)} style={{ ...chip(on), flex:'0 0 auto', minWidth:52, padding:'6px', textAlign:'center' }}>
+                <div style={{ fontSize:10, opacity:.7, textTransform:'uppercase' }}>{d.dow}</div><div style={{ fontSize:16, fontWeight:700 }}>{d.dn}</div>
               </button>);})}
           </div>
-          {!avail && <span style={{fontFamily:M.mono,fontSize:12}}>Cargando…</span>}
+          {!avail && <span style={{ ...TAG, fontSize:12 }}>Cargando…</span>}
           {avail && avail.open && (
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:6}}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:6 }}>
               {avail.slots.map(s=>(
                 <button key={s.start} disabled={!s.available||working} onClick={()=>mover(s)}
-                  style={{padding:'10px 4px',border:`1.5px solid ${s.available?M.ink:M.ink+'33'}`,background:s.available?'#fff':M.ink+'0a',color:s.available?M.ink:M.ink+'55',fontFamily:M.mono,fontWeight:700,fontSize:12,cursor:s.available?'pointer':'not-allowed',textDecoration:s.available?'none':'line-through'}}>{s.label}</button>
+                  style={{ ...chip(false, s.available), padding:'10px 4px', textDecoration:s.available?'none':'line-through' }}>{s.label}</button>
               ))}
             </div>
           )}
-          {avail && !avail.open && <span style={{fontFamily:M.mono,fontSize:12,color:M.ink+'99'}}>Día cerrado.</span>}
+          {avail && !avail.open && <span style={{ ...TAG, fontSize:12 }}>Día cerrado.</span>}
         </div>
       )}
     </div>
