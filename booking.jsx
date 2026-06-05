@@ -123,11 +123,7 @@ function BookingCalendar() {
       {/* Selector de días — semanas apiladas */}
       <div style={{ padding: '12px 18px 2px' }}>
         {weeks.map((w) => (
-          <div key={w.wk} style={{ marginBottom: 10 }}>
-            <div style={{ fontFamily: PFB.mono, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: PFB.ink + '99', marginBottom: 4, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ fontWeight: 700 }}>{w.label}</span>
-              <span style={{ opacity: 0.8 }}>{w.range}</span>
-            </div>
+          <div key={w.wk} style={{ marginBottom: 8 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 5 }}>
               {w.days.map((d) => {
                 const on = d.iso === activeDate;
