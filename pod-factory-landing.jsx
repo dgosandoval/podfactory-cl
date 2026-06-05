@@ -409,7 +409,7 @@ function PodFactoryLanding() {
         {/* Base price — single tier, up to 4 people */}
         <Reveal delay={200} style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.ink + '99', marginBottom: 12, fontWeight: 700 }}>
-            ① TARIFA BASE · GRABACIÓN + EDICIÓN BÁSICA
+            ① TARIFA BASE · GRABACIÓN + EDICIÓN
           </div>
           <div style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <div>
@@ -418,7 +418,7 @@ function PodFactoryLanding() {
                 Sesión por hora · hasta 4 personas
               </div>
               <div style={{ fontSize: 13, color: PF.ink + 'aa', marginTop: 5 }}>
-                Grabación + Edición Básica · tarifa única independiente de la cantidad de invitados
+                Grabación + Edición · tarifa única independiente de la cantidad de invitados
               </div>
             </div>
             <div style={{ fontFamily: PF.mono, fontWeight: 700, fontSize: 28, whiteSpace: 'nowrap' }}>
@@ -498,7 +498,7 @@ function PodFactoryLanding() {
           marginTop: 28, padding: '20px 24px', background: PF.ink, color: PF.bg,
         }}>
           <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.yellow, marginBottom: 10, fontWeight: 700 }}>
-            ✂️ EDICIÓN BÁSICA INCLUYE
+            ✂️ LA EDICIÓN INCLUYE
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.55, color: PF.bg + 'cc', maxWidth: 760 }}>
             Logo al inicio y final, música de intro/outro, sobreimpresos con nombre y cargo,
@@ -679,7 +679,7 @@ function PodFactoryLanding() {
               a: <>El estudio acomoda <b>hasta 4 personas</b> con calidad broadcast. La tarifa es plana: <b>$199.990 + IVA por hora</b>, independiente de si grabas solo o con 3 invitados.</>,
             },
             {
-              q: '¿Qué incluye la Edición Básica?',
+              q: '¿Qué incluye la Edición?',
               a: <>Logo al inicio y final, música de intro/outro, sobreimpresos con nombre y cargo, corrección de color y master de sonido. Entregamos el archivo de video + audio listo para publicar.</>,
             },
             {
