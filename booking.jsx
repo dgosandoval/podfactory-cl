@@ -66,6 +66,14 @@ function BookingCalendar() {
   const OPEN_DOWS = [1, 2, 3, 4, 5, 6]; // Lun–Sáb
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
+  const monthLabel = React.useMemo(() => {
+    if (!days.length) return '';
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const f = new Date(days[0].ts), l = new Date(days[days.length - 1].ts);
+    const mf = cap(f.toLocaleDateString('es-CL', { month: 'long' }));
+    const ml = cap(l.toLocaleDateString('es-CL', { month: 'long' }));
+    return mf === ml ? `${mf} ${l.getFullYear()}` : `${mf} – ${ml} ${l.getFullYear()}`;
+  }, [days]);
   const [activeDate, setActiveDate] = React.useState(days[0]?.iso);
   const [data, setData] = React.useState(null);       // respuesta de availability
   const [loading, setLoading] = React.useState(false);
@@ -122,6 +130,9 @@ function BookingCalendar() {
 
       {/* Selector de días — semanas apiladas */}
       <div style={{ padding: '12px 18px 2px' }}>
+        <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', fontWeight: 700, marginBottom: 8 }}>
+          {monthLabel}
+        </div>
         {weeks.map((w) => (
           <div key={w.wk} style={{ marginBottom: 8 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 5 }}>
