@@ -302,7 +302,7 @@ function PodFactoryLanding() {
             ['Dirección & producción', 'Un productor dedicado, guía de entrevista, y edición de primer corte.', PF.orange],
             ['Streaming opcional', 'Transmisión en vivo a YouTube, Spotify Video o tu plataforma.', PF.yellow],
             ['Estudio móvil', 'Llevamos el estudio donde estés. Ideal para entrevistas fuera de Santiago.', PF.blue],
-            ['Distribución (con Edición Pro)', 'Subimos por ti a Spotify, Apple Podcasts, YouTube, Amazon. Incluido al elegir Edición Pro.', PF.red],
+            ['Distribución (con Teaser)', 'Subimos por ti a Spotify, Apple Podcasts, YouTube, Amazon. Incluido al elegir el Teaser.', PF.red],
           ].map(([t, d, c], i) => (
             <Reveal key={i} delay={150 + i * 100} style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
               <div style={{ height: 6, background: c }} />
@@ -435,8 +435,8 @@ function PodFactoryLanding() {
           <div style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
             {[
               {
-                name: 'Edición Pro',
-                desc: 'Teaser de mejores momentos al inicio + reel vertical para RRSS. Incluye distribución a Spotify, Apple Podcasts, YouTube y Amazon.',
+                name: 'Teaser',
+                desc: 'Resumen de mejores momentos al inicio del episodio + reel vertical para RRSS. Incluye distribución a Spotify, Apple Podcasts, YouTube y Amazon.',
                 delta: 99990,
                 color: PF.orange,
               },
@@ -683,8 +683,8 @@ function PodFactoryLanding() {
               a: <>Logo al inicio y final, música de intro/outro, sobreimpresos con nombre y cargo, corrección de color y master de sonido. Entregamos el archivo de video + audio listo para publicar.</>,
             },
             {
-              q: '¿Qué suma la Edición Pro?',
-              a: <>Edición Pro (<b>+$99.990</b>) agrega un teaser de mejores momentos al inicio del episodio, un reel vertical para redes sociales y la <b>distribución</b> a Spotify, Apple Podcasts, YouTube y Amazon Music desde nuestras cuentas hacia tu canal.</>,
+              q: '¿Qué suma el Teaser?',
+              a: <>El Teaser (<b>+$99.990</b>) agrega un resumen de los mejores momentos al inicio del episodio, un reel vertical para redes sociales y la <b>distribución</b> a Spotify, Apple Podcasts, YouTube y Amazon Music desde nuestras cuentas hacia tu canal.</>,
             },
             {
               q: '¿Hacen streaming en vivo?',
@@ -700,7 +700,7 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Cuándo recibo el material?',
-              a: <>Entregamos el master en <b>24 horas</b> a través de un link de descarga (formato .mp4 Full HD + audio WAV). Para Edición Pro, los entregables completos llegan en hasta 5 días hábiles.</>,
+              a: <>Entregamos el master en <b>24 horas</b> a través de un link de descarga (formato .mp4 Full HD + audio WAV). Para el Teaser, los entregables completos llegan en hasta 5 días hábiles.</>,
             },
             {
               q: '¿Necesito experiencia previa?',

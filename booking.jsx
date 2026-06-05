@@ -80,7 +80,7 @@ function BookingCalendar() {
   const [slot, setSlot] = React.useState(null);        // bloque elegido
   const [form, setForm] = React.useState({ name: '', email: '', phone: '', tipo: 'Podcast', personas: 1, addons: [], comentarios: '' });
   const toggleAddon = (a) => setForm((f) => ({ ...f, addons: f.addons.includes(a) ? f.addons.filter((x) => x !== a) : [...f.addons, a] }));
-  const ADDONS = [['Edición Pro', 99990], ['3 Reels adicionales', 99990]];
+  const ADDONS = [['Teaser', 99990], ['3 Reels adicionales', 99990]];
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
 
