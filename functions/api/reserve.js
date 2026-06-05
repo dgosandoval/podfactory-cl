@@ -17,7 +17,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Faltan datos de la reserva" }, 400);
   }
   // Servicios (opcionales) — saneados.
-  const ALLOWED_ADDONS = ["Edición Pro", "3 Reels adicionales"];
+  const ALLOWED_ADDONS = ["Teaser", "3 Reels adicionales"];
   const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
   const personas = Math.min(4, Math.max(1, parseInt(body.personas, 10) || 1));
   const addons = Array.isArray(body.addons) ? body.addons.filter((a) => ALLOWED_ADDONS.includes(a)) : [];

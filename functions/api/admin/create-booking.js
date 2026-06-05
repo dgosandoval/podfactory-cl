@@ -39,7 +39,7 @@ export async function onRequestPost({ request, env }) {
   if (Date.parse(slot.start) <= Date.now()) return json({ error: "Ese bloque ya pasó" }, 400);
 
   // Servicios (opcionales) saneados
-  const ALLOWED_ADDONS = ["Edición Pro", "3 Reels adicionales"];
+  const ALLOWED_ADDONS = ["Teaser", "3 Reels adicionales"];
   const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
   const personas = Math.min(4, Math.max(1, parseInt(body.personas, 10) || 1));
   const addons = Array.isArray(body.addons) ? body.addons.filter((a) => ALLOWED_ADDONS.includes(a)) : [];

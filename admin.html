@@ -154,7 +154,8 @@ function NewBookingForm({ headers, onDone, prefill }) {
   const [custom, setCustom] = React.useState(false);
   const [cstart, setCstart] = React.useState('12:00');
   const [cmins, setCmins] = React.useState(80);
-  const ADDONS = ['Edición Pro','3 Reels adicionales'];
+  const ADDONS = ['Teaser','3 Reels adicionales'];
+  const ADDON_DESC = { 'Teaser': 'Se pone al inicio del video y se entrega aparte en formato vertical.' };
 
   React.useEffect(() => { setAvail(null); setSlot(null);
     fetch(`/api/availability?date=${date}`).then(r=>r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
@@ -229,7 +230,7 @@ function NewBookingForm({ headers, onDone, prefill }) {
           </div>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
             {ADDONS.map(a=>(
-              <button key={a} onClick={()=>toggleAddon(a)} style={{ ...chip(f.addons.includes(a)), padding:'8px 12px', fontWeight:500 }}>{f.addons.includes(a)?'☑':'☐'} {a}</button>
+              <button key={a} title={ADDON_DESC[a]||''} onClick={()=>toggleAddon(a)} style={{ ...chip(f.addons.includes(a)), padding:'8px 12px', fontWeight:500 }}>{f.addons.includes(a)?'☑':'☐'} {a}</button>
             ))}
           </div>
           <textarea style={{ ...INP, marginBottom:8, resize:'vertical' }} rows={2} placeholder="Comentarios (opcional)" value={f.comentarios} onChange={e=>setF({...f,comentarios:e.target.value})} />
