@@ -201,7 +201,7 @@ function PodFactoryLanding() {
       </header>
 
       {/* Hero */}
-      <section id="espacio" className="pf-hero" style={{ padding: '60px 80px 40px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 28, alignItems: 'center', maxWidth: 1100, margin: '0 auto' }}>
+      <section id="espacio" className="pf-hero" style={{ padding: '60px 80px 40px 32px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 28, alignItems: 'center' }}>
         <Reveal>
           <div style={{ fontSize: 11, fontFamily: PF.mono, letterSpacing: '0.18em', marginBottom: 18 }}>
             ▸ ESTUDIO DE PODCAST &amp; VODCAST · DESDE 2024
