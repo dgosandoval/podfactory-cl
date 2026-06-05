@@ -10,7 +10,7 @@ const PFB = {
 
 const CLP = (n) => '$' + Number(n).toLocaleString('es-CL');
 
-// Próximos N días abiertos (sin domingos). Devuelve [{iso, dow, dnum, mon}].
+// Próximos N días abiertos (sin domingos). Devuelve [{iso, dowLabel, dnum, monLabel, ts}].
 function upcomingDays(count, openDows) {
   const out = [];
   const d = new Date();
@@ -23,6 +23,7 @@ function upcomingDays(count, openDows) {
         dowLabel: d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', ''),
         dnum: d.getDate(),
         monLabel: d.toLocaleDateString('es-CL', { month: 'short' }).replace('.', ''),
+        ts: d.getTime(),
       });
     }
     d.setDate(d.getDate() + 1);
@@ -30,9 +31,41 @@ function upcomingDays(count, openDows) {
   return out;
 }
 
+// Lunes (00:00) de la semana que contiene el timestamp dado.
+function mondayOf(ts) {
+  const x = new Date(ts);
+  const day = x.getDay(); // 0=Dom
+  x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+// Agrupa los días en semanas (Lun–Sáb) con etiqueta y rango legible.
+function groupByWeek(days) {
+  const thisMon = mondayOf(Date.now());
+  const map = new Map();
+  for (const d of days) {
+    const wk = mondayOf(d.ts);
+    if (!map.has(wk)) map.set(wk, []);
+    map.get(wk).push(d);
+  }
+  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([wk, ds]) => {
+    const offset = Math.round((wk - thisMon) / (7 * 86400000));
+    const first = ds[0], last = ds[ds.length - 1];
+    const range = first.monLabel === last.monLabel
+      ? `${first.dnum}–${last.dnum} ${last.monLabel}`
+      : `${first.dnum} ${first.monLabel} – ${last.dnum} ${last.monLabel}`;
+    const label = offset <= 0 ? 'Esta semana'
+      : offset === 1 ? 'Próxima semana'
+      : `Semana del ${first.dnum} ${first.monLabel}`;
+    return { wk, label, range, days: ds };
+  });
+}
+
 function BookingCalendar() {
   const OPEN_DOWS = [1, 2, 3, 4, 5, 6]; // Lun–Sáb
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
+  const weeks = React.useMemo(() => groupByWeek(days), [days]);
   const [activeDate, setActiveDate] = React.useState(days[0]?.iso);
   const [data, setData] = React.useState(null);       // respuesta de availability
   const [loading, setLoading] = React.useState(false);
@@ -76,6 +109,7 @@ function BookingCalendar() {
 
   return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: '100%', overflow: 'hidden' }}>
+      <style>{`@media (max-width: 480px){ .pf-form-grid{ grid-template-columns: 1fr !important; } }`}</style>
       {/* Encabezado */}
       <div style={{ padding: '20px 24px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em' }}>
@@ -86,24 +120,31 @@ function BookingCalendar() {
         </div>
       </div>
 
-      {/* Selector de días — scroll horizontal dentro de la tarjeta */}
+      {/* Selector de días — semanas apiladas */}
       <div style={{ padding: '16px 24px 4px' }}>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
-          {days.map((d) => {
-            const on = d.iso === activeDate;
-            return (
-              <button key={d.iso} onClick={() => setActiveDate(d.iso)} style={{
-                flex: '0 0 auto', minWidth: 58, padding: '10px 8px', cursor: 'pointer',
-                border: `1.5px solid ${PFB.ink}`, background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink,
-                fontFamily: PFB.mono, textAlign: 'center', transition: 'all .15s',
-              }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.06em', opacity: 0.7, textTransform: 'uppercase' }}>{d.dowLabel}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, fontFamily: PFB.display, lineHeight: 1.1 }}>{d.dnum}</div>
-                <div style={{ fontSize: 9, letterSpacing: '0.06em', opacity: 0.7, textTransform: 'uppercase' }}>{d.monLabel}</div>
-              </button>
-            );
-          })}
-        </div>
+        {weeks.map((w) => (
+          <div key={w.wk} style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', marginBottom: 6, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontWeight: 700 }}>{w.label}</span>
+              <span style={{ opacity: 0.8 }}>{w.range}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 6 }}>
+              {w.days.map((d) => {
+                const on = d.iso === activeDate;
+                return (
+                  <button key={d.iso} onClick={() => setActiveDate(d.iso)} style={{
+                    padding: '8px 4px', cursor: 'pointer',
+                    border: `1.5px solid ${PFB.ink}`, background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink,
+                    fontFamily: PFB.mono, textAlign: 'center', transition: 'all .15s',
+                  }}>
+                    <div style={{ fontSize: 9, letterSpacing: '0.04em', opacity: 0.7, textTransform: 'uppercase' }}>{d.dowLabel}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: PFB.display, lineHeight: 1.15 }}>{d.dnum}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Bloques del día */}
@@ -147,9 +188,9 @@ function BookingCalendar() {
         {slot && (
           <div style={{ marginTop: 20, borderTop: `1.5px solid ${PFB.ink}22`, paddingTop: 18 }}>
             <div style={{ fontFamily: PFB.display, fontWeight: 700, fontSize: 15, marginBottom: 12 }}>
-              {days.find((d) => d.iso === activeDate)?.dowLabel} {days.find((d) => d.iso === activeDate)?.dnum} · {slot.label} hrs
+              {days.find((d) => d.iso === activeDate)?.dowLabel} {days.find((d) => d.iso === activeDate)?.dnum} {days.find((d) => d.iso === activeDate)?.monLabel} · {slot.label} hrs
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               {[['name', 'Nombre y apellido', 'text'], ['email', 'Email', 'email'], ['phone', 'Teléfono / WhatsApp', 'tel']].map(([k, ph, type]) => (
                 <input key={k} type={type} placeholder={ph} value={form[k]}
                   onChange={(e) => setForm({ ...form, [k]: e.target.value })}

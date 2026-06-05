@@ -29,10 +29,28 @@ function upcomingDays(count) {
     if ([1,2,3,4,5,6].includes(d.getDay())) out.push({
       iso: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
       dow: d.toLocaleDateString('es-CL',{weekday:'short'}).replace('.',''), dn: d.getDate(),
-      mon: d.toLocaleDateString('es-CL',{month:'short'}).replace('.','') });
+      mon: d.toLocaleDateString('es-CL',{month:'short'}).replace('.',''), ts: d.getTime() });
     d.setDate(d.getDate()+1);
   }
   return out;
+}
+
+function mondayOf(ts) {
+  const x = new Date(ts); const day = x.getDay();
+  x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day)); x.setHours(0,0,0,0);
+  return x.getTime();
+}
+
+function groupByWeek(days) {
+  const thisMon = mondayOf(Date.now()); const map = new Map();
+  for (const d of days) { const wk = mondayOf(d.ts); if (!map.has(wk)) map.set(wk, []); map.get(wk).push(d); }
+  return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([wk, ds]) => {
+    const offset = Math.round((wk - thisMon) / (7*86400000));
+    const first = ds[0], last = ds[ds.length-1];
+    const range = first.mon === last.mon ? `${first.dn}–${last.dn} ${last.mon}` : `${first.dn} ${first.mon} – ${last.dn} ${last.mon}`;
+    const label = offset <= 0 ? 'Esta semana' : offset === 1 ? 'Próxima semana' : `Semana del ${first.dn} ${first.mon}`;
+    return { wk, label, range, days: ds };
+  });
 }
 
 function Manage() {
@@ -43,6 +61,7 @@ function Manage() {
   const [busy, setBusy] = React.useState(false);
   const [mode, setMode] = React.useState(null); // null|cancel|reschedule
   const [days] = React.useState(() => upcomingDays(18));
+  const weeks = React.useMemo(() => groupByWeek(days), [days]);
   const [activeDate, setActiveDate] = React.useState(null);
   const [avail, setAvail] = React.useState(null);
 
@@ -129,16 +148,22 @@ function Manage() {
         {mode === 'reschedule' && (
           <div>
             <p style={{fontSize:14,marginTop:0}}>Elige el nuevo día y hora:</p>
-            <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:8}}>
-              {days.map(d => {
-                const on = d.iso === activeDate;
-                return <button key={d.iso} onClick={()=>setActiveDate(d.iso)} style={{flex:'0 0 auto',minWidth:54,padding:'8px 6px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,textAlign:'center',cursor:'pointer'}}>
-                  <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div>
-                  <div style={{fontSize:18,fontWeight:700,fontFamily:M.display}}>{d.dn}</div>
-                  <div style={{fontSize:8,opacity:.7,textTransform:'uppercase'}}>{d.mon}</div>
-                </button>;
-              })}
-            </div>
+            {weeks.map(w => (
+              <div key={w.wk} style={{marginBottom:12}}>
+                <div style={{fontFamily:M.mono,fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:M.ink+'99',marginBottom:6,display:'flex',justifyContent:'space-between',gap:8}}>
+                  <span style={{fontWeight:700}}>{w.label}</span><span style={{opacity:.8}}>{w.range}</span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(6, minmax(0, 1fr))',gap:6}}>
+                  {w.days.map(d => {
+                    const on = d.iso === activeDate;
+                    return <button key={d.iso} onClick={()=>setActiveDate(d.iso)} style={{padding:'8px 4px',border:`1.5px solid ${M.ink}`,background:on?M.ink:'#fff',color:on?'#fff':M.ink,fontFamily:M.mono,textAlign:'center',cursor:'pointer'}}>
+                      <div style={{fontSize:9,opacity:.7,textTransform:'uppercase'}}>{d.dow}</div>
+                      <div style={{fontSize:18,fontWeight:700,fontFamily:M.display,lineHeight:1.15}}>{d.dn}</div>
+                    </button>;
+                  })}
+                </div>
+              </div>
+            ))}
             {!avail && <p style={note}>Cargando bloques…</p>}
             {avail && !avail.open && <p style={note}>Día cerrado.</p>}
             {avail && avail.open && (
