@@ -108,37 +108,37 @@ function BookingCalendar() {
   const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8;
 
   return (
-    <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: '100%', overflow: 'hidden' }}>
+    <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: 560, overflow: 'hidden' }}>
       <style>{`@media (max-width: 480px){ .pf-form-grid{ grid-template-columns: 1fr !important; } }`}</style>
       {/* Encabezado */}
-      <div style={{ padding: '20px 24px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em' }}>
+      <div style={{ padding: '14px 18px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' }}>
           Reserva tu sesión
         </div>
-        <div style={{ fontFamily: PFB.mono, fontSize: 11, color: PFB.ink + '99', letterSpacing: '0.08em' }}>
+        <div style={{ fontFamily: PFB.mono, fontSize: 10, color: PFB.ink + '99', letterSpacing: '0.06em' }}>
           ADELANTO {CLP(deposit)} · SALDO EL DÍA DE LA SESIÓN
         </div>
       </div>
 
       {/* Selector de días — semanas apiladas */}
-      <div style={{ padding: '16px 24px 4px' }}>
+      <div style={{ padding: '12px 18px 2px' }}>
         {weeks.map((w) => (
-          <div key={w.wk} style={{ marginBottom: 14 }}>
-            <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', marginBottom: 6, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <div key={w.wk} style={{ marginBottom: 10 }}>
+            <div style={{ fontFamily: PFB.mono, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: PFB.ink + '99', marginBottom: 4, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <span style={{ fontWeight: 700 }}>{w.label}</span>
               <span style={{ opacity: 0.8 }}>{w.range}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 5 }}>
               {w.days.map((d) => {
                 const on = d.iso === activeDate;
                 return (
                   <button key={d.iso} onClick={() => setActiveDate(d.iso)} style={{
-                    padding: '8px 4px', cursor: 'pointer',
+                    padding: '5px 2px', cursor: 'pointer',
                     border: `1.5px solid ${PFB.ink}`, background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink,
                     fontFamily: PFB.mono, textAlign: 'center', transition: 'all .15s',
                   }}>
-                    <div style={{ fontSize: 9, letterSpacing: '0.04em', opacity: 0.7, textTransform: 'uppercase' }}>{d.dowLabel}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: PFB.display, lineHeight: 1.15 }}>{d.dnum}</div>
+                    <div style={{ fontSize: 8, letterSpacing: '0.04em', opacity: 0.7, textTransform: 'uppercase' }}>{d.dowLabel}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, fontFamily: PFB.display, lineHeight: 1.1 }}>{d.dnum}</div>
                   </button>
                 );
               })}
@@ -148,24 +148,24 @@ function BookingCalendar() {
       </div>
 
       {/* Bloques del día */}
-      <div style={{ padding: '16px 24px 24px' }}>
-        {loading && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '12px 0' }}>Cargando bloques…</div>}
+      <div style={{ padding: '12px 18px 18px' }}>
+        {loading && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Cargando bloques…</div>}
 
         {!loading && data && !data.open && (
-          <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '12px 0' }}>Día cerrado.</div>
+          <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Día cerrado.</div>
         )}
 
         {!loading && data?.open && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(82px, 1fr))', gap: 6 }}>
             {data.slots.map((s) => {
               const chosen = slot?.start === s.start;
               return (
                 <button key={s.start} disabled={!s.available} onClick={() => setSlot(s)} style={{
-                  padding: '12px 8px', cursor: s.available ? 'pointer' : 'not-allowed',
+                  padding: '9px 6px', cursor: s.available ? 'pointer' : 'not-allowed',
                   border: `1.5px solid ${s.available ? PFB.ink : PFB.ink + '33'}`,
                   background: chosen ? PFB.blue : s.available ? '#fff' : PFB.ink + '0a',
                   color: chosen ? '#fff' : s.available ? PFB.ink : PFB.ink + '55',
-                  fontFamily: PFB.mono, fontSize: 14, fontWeight: 700, transition: 'all .15s',
+                  fontFamily: PFB.mono, fontSize: 13, fontWeight: 700, transition: 'all .15s',
                   textDecoration: s.available ? 'none' : 'line-through',
                 }}>
                   {s.label}
