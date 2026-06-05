@@ -511,14 +511,50 @@ function PodFactoryLanding() {
           <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.ink + '99', marginBottom: 12, fontWeight: 700 }}>
             ③ RESERVA ONLINE · ELIGE DÍA Y HORA
           </div>
-          <BookingCalendar />
-        </Reveal>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {/* Calendario */}
+            <div style={{ flex: '0 1 560px', minWidth: 0 }}>
+              <BookingCalendar />
+            </div>
 
-        <Reveal delay={800} style={{ display: 'flex', gap: 12, marginTop: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.ink + '99', width: '100%', marginBottom: 4 }}>
-            ¿Dudas o prefieres coordinar por WhatsApp?
+            {/* Panel informativo — aprovecha el espacio a la derecha */}
+            <aside style={{ flex: '1 1 280px', minWidth: 240, background: PF.ink, color: PF.bg, border: `1.5px solid ${PF.ink}`, padding: '22px 24px' }}>
+              <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', color: PF.yellow, marginBottom: 16, fontWeight: 700 }}>
+                CÓMO FUNCIONA
+              </div>
+              {[
+                ['1', 'Elige día y hora', 'Bloques en vivo según la disponibilidad real del estudio.'],
+                ['2', 'Paga el adelanto', '$30.000 por MercadoPago para confirmar tu sesión.'],
+                ['3', 'Recibe tu confirmación', 'Te llega por correo, con opción de reagendar o cancelar.'],
+              ].map(([n, t, d]) => (
+                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+                  <div style={{ flexShrink: 0, width: 26, height: 26, border: `1.5px solid ${PF.bg}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: PF.mono, fontWeight: 700, fontSize: 13 }}>{n}</div>
+                  <div>
+                    <div style={{ fontFamily: PF.display, fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>{t}</div>
+                    <div style={{ fontSize: 12, color: PF.bg + 'aa', marginTop: 2, lineHeight: 1.4 }}>{d}</div>
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ borderTop: `1px solid ${PF.bg}22`, marginTop: 4, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  'Reagenda sin costo hasta 24 h antes.',
+                  'El adelanto se descuenta del total; el saldo se paga el día de la sesión.',
+                  'Estudio en Eduardo Marquina 3937, Vitacura · Santiago.',
+                ].map((t, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, lineHeight: 1.45, color: PF.bg + 'dd' }}>
+                    <span style={{ color: PF.yellow, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                    <span>{t}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: `1px solid ${PF.bg}22`, marginTop: 16, paddingTop: 16 }}>
+                <WhatsAppButton dim={44} waContext="tengo una duda sobre reservar en Pod Factory." />
+                <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.bg + 'cc', lineHeight: 1.4 }}>¿Dudas? Coordina por WhatsApp.</div>
+              </div>
+            </aside>
           </div>
-          <WhatsAppButton dim={48} waContext="tengo una duda sobre reservar en Pod Factory." />
         </Reveal>
       </section>
 
