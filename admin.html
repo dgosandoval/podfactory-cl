@@ -46,7 +46,7 @@ const chip = (on, available=true) => ({
 function upcomingDays(count) {
   const out = []; const d = new Date(); d.setHours(0,0,0,0);
   while (out.length < count) {
-    if ([1,2,3,4,5,6].includes(d.getDay())) out.push({
+    if ([1,2,3,4,5].includes(d.getDay())) out.push({
       iso:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
       dow:d.toLocaleDateString('es-CL',{weekday:'short'}).replace('.',''), dn:d.getDate(),
       mon:d.toLocaleDateString('es-CL',{month:'short'}).replace('.','') });

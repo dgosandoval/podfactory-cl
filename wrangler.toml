@@ -7,7 +7,7 @@ pages_build_output_dir = "."
 # --- Configuración del estudio (público, no son secretos) ---
 [vars]
 TIMEZONE = "America/Santiago"
-OPEN_DAYS = "1,2,3,4,5,6"        # 1=Lun ... 6=Sáb (0=Dom cerrado)
+OPEN_DAYS = "1,2,3,4,5"          # 1=Lun ... 5=Vie (sáb y dom cerrado)
 SLOT_STARTS = "10:00,11:30,13:00,14:30,16:00,17:30,19:00"
 SLOT_MINUTES = "80"              # 60 grabación + 20 setup
 HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga

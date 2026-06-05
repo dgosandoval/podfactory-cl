@@ -40,7 +40,7 @@ function mondayOf(ts) {
   return x.getTime();
 }
 
-// Agrupa los días en semanas (Lun–Sáb) con etiqueta y rango legible.
+// Agrupa los días en semanas (Lun–Vie) con etiqueta y rango legible.
 function groupByWeek(days) {
   const thisMon = mondayOf(Date.now());
   const map = new Map();
@@ -63,7 +63,7 @@ function groupByWeek(days) {
 }
 
 function BookingCalendar() {
-  const OPEN_DOWS = [1, 2, 3, 4, 5, 6]; // Lun–Sáb
+  const OPEN_DOWS = [1, 2, 3, 4, 5]; // Lun–Vie
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
   const monthLabel = React.useMemo(() => {
@@ -135,7 +135,7 @@ function BookingCalendar() {
         </div>
         {weeks.map((w) => (
           <div key={w.wk} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 5 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 5 }}>
               {w.days.map((d) => {
                 const on = d.iso === activeDate;
                 return (

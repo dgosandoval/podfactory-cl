@@ -4,7 +4,7 @@
 export function parseConfig(env) {
   return {
     timeZone: env.TIMEZONE || "America/Santiago",
-    openDays: (env.OPEN_DAYS || "1,2,3,4,5,6").split(",").map((n) => parseInt(n, 10)),
+    openDays: (env.OPEN_DAYS || "1,2,3,4,5").split(",").map((n) => parseInt(n, 10)),
     slotStarts: (env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
     slotMinutes: parseInt(env.SLOT_MINUTES || "80", 10),
     holdMinutes: parseInt(env.HOLD_MINUTES || "15", 10),

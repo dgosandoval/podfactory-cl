@@ -789,7 +789,7 @@ function PodFactoryLanding() {
             </p>
           </div>
           {[
-            ['ESTUDIO',  ['Eduardo Marquina 3937', 'Vitacura · Santiago', 'Lun–Sáb · Reserva online']],
+            ['ESTUDIO',  ['Eduardo Marquina 3937', 'Vitacura · Santiago', 'Lun–Vie · Reserva online']],
             ['RESERVAS', ['hola@doppel.cl', '+56 9 2797 0014', 'WhatsApp']],
             ['DOPPEL',   ['Agencia creativa 360°', 'Producción audiovisual', 'Ver doppel.cl ↗']],
           ].map(([h, items]) => (
