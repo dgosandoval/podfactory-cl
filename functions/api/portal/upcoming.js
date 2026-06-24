@@ -19,7 +19,7 @@ export async function onRequestGet({ request, env }) {
       .slice(0, 50)
       .map((b) => {
         const { fecha, hora } = formatSession(b.start, config.timeZone);
-        return { name: b.name, email: b.email, start: b.start, fecha, hora, tipo: b.tipo, personas: b.personas };
+        return { name: b.name, email: b.email, start: b.start, end: b.end, fecha, hora, tipo: b.tipo, personas: b.personas, brand: b.brand || "podfactory", projectName: b.projectName || null, token: b.token };
       });
   }
   return new Response(JSON.stringify({ upcoming }), {
