@@ -28,7 +28,9 @@ export async function onRequestPost({ request, env }) {
   }
   await deleteBooking(env, b.token);
 
-  // Aviso al cliente y al estudio — best-effort.
+  // Aviso al cliente y al estudio — best-effort. Se puede silenciar con notify:false
+  // (lo usa el portal al cancelar una grabación: el correo "Pod Factory" no aplica a Doppel).
+  if (body.notify === false) return json({ ok: true });
   try {
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     if (b.email) {
