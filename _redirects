@@ -1,0 +1,3 @@
+# Pod Factory ahora vive dentro de doppel.cl (la landing redirige; /reserva,
+# /admin y /api siguen vivos mientras el sistema de reservas siga operativo).
+/ https://doppel.cl/podfactory/ 301
