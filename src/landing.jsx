@@ -492,7 +492,7 @@ function PodFactoryLanding() {
           <Reveal delay={150} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 18, padding: '24px 26px', border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
             <div>
               <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.18em', marginBottom: 10, color: PF.ink + 'aa', fontWeight: 700 }}>📍 DIRECCIÓN</div>
-              <div style={{ fontWeight: 800, fontSize: 26, letterSpacing: '-0.025em', lineHeight: 1.1 }}>Eduardo Marquina 3937, Of. 906</div>
+              <div style={{ fontWeight: 800, fontSize: 26, letterSpacing: '-0.025em', lineHeight: 1.1 }}>Eduardo Marquina 3937</div>
               <div style={{ fontSize: 18, marginTop: 4, color: PF.ink + 'cc' }}>Vitacura · Santiago, Chile</div>
             </div>
             <div style={{ fontSize: 14, lineHeight: 1.55, color: PF.ink + 'cc' }}>
