@@ -1,11 +1,12 @@
 // GET /api/cron/reminders?key=<CRON_KEY>
-// Llamado cada hora por un cron externo (cron-job.org). Envía el recordatorio
-// a las reservas cuya sesión es dentro de las próximas 24 h y aún no avisadas.
+// Llamado cada hora por un cron externo (cron-job.org). Envía dos avisos por reserva:
+//  · 72 h antes: último aviso para cambiar la fecha (el plazo vence 48 h antes).
+//  · 24 h antes: recordatorio con las reglas del día de grabación.
 import { parseConfig } from "../../_lib/slots.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, reminderEmailHtml, whatsappLink } from "../../_lib/email.js";
+import { sendEmail, formatSession, reminderEmailHtml, reminder72EmailHtml, whatsappLink } from "../../_lib/email.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 export async function onRequestGet({ request, env }) {
   // Autenticación simple por clave compartida.
@@ -16,32 +17,47 @@ export async function onRequestGet({ request, env }) {
 
   const config = parseConfig(env);
   const origin = new URL(request.url).origin;
+  const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
+  const conditionsUrl = `${config.siteUrl}condiciones.pdf`;
   const now = Date.now();
   const bookings = await listBookings(env);
 
-  let sent = 0;
+  let sent72 = 0, sent24 = 0;
   for (const b of bookings) {
     const ms = Date.parse(b.start) - now;
-    if (b.reminded || ms <= 0 || ms > DAY_MS) continue; // ya avisada, pasada, o aún lejos
+    if (ms <= 0) continue;
+    const { fecha, hora } = formatSession(b.start, config.timeZone);
+    const wa = whatsappLink(env, `Hola Pod Factory, sobre mi grabación del ${fecha} a las ${hora} hrs:`);
     try {
-      const { fecha, hora } = formatSession(b.start, config.timeZone);
-      const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
-      if (b.email) {
-        await sendEmail(env, {
-          to: b.email,
-          subject: "Recordatorio: tu sesión en Pod Factory es mañana 🎙️",
-          html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`) }),
-        });
+      if (!b.reminded72 && ms <= 72 * HOUR_MS && ms > 49 * HOUR_MS) {
+        const dl = formatSession(new Date(Date.parse(b.start) - 48 * HOUR_MS).toISOString(), config.timeZone);
+        if (b.email) {
+          await sendEmail(env, {
+            to: b.email,
+            subject: "Tu grabación en Pod Factory es en 3 días 🎙️",
+            html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa }),
+          });
+        }
+        await saveBooking(env, { ...b, reminded72: true });
+        sent72++;
+      } else if (!b.reminded && ms <= 24 * HOUR_MS) {
+        if (b.email) {
+          await sendEmail(env, {
+            to: b.email,
+            subject: "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
+            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl }),
+          });
+        }
+        await saveBooking(env, { ...b, reminded: true });
+        sent24++;
       }
-      await saveBooking(env, { ...b, reminded: true });
-      sent++;
     } catch (e) {
-      // No marcamos reminded: se reintenta en la próxima corrida.
+      // No marcamos el aviso: se reintenta en la próxima corrida.
       console.log("reminder error:", b.token, String(e));
     }
   }
 
-  return new Response(JSON.stringify({ checked: bookings.length, sent }), {
+  return new Response(JSON.stringify({ checked: bookings.length, sent72, sent24 }), {
     status: 200,
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });

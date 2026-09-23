@@ -101,36 +101,56 @@ const waLine = (whatsappUrl) => whatsappUrl ? `
       <a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:11px 20px;font-weight:700;font-size:14px;border-radius:4px">Escríbenos por WhatsApp</a>
     </div>` : "";
 
-// Correo al cliente (confirmación)
-export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl }) {
+// Reglas del día de grabación (se repiten en confirmación y recordatorios).
+const guideBlock = (conditionsUrl) => `
+    <div style="margin:18px 0;padding:16px;border:1.5px solid #0A0A0A;border-radius:4px">
+      <p style="font-size:13px;font-weight:800;margin:0 0 8px">Para que todo salga bien</p>
+      <ul style="font-size:13px;line-height:1.55;color:#0A0A0Acc;margin:0;padding-left:18px">
+        <li>Llega <b>10 minutos antes</b>. La hora corre desde la hora reservada, aunque lleguen tarde.</li>
+        <li>Pueden grabar <b>hasta 4 personas</b>. La sesión es de 1 hora: el capítulo dura unos 30 a 40 minutos.</li>
+        <li>¿Necesitan más tiempo? Se contrata en bloques de <b>30 minutos ($100.000 + IVA)</b>, solo si no hay otra reserva después.</li>
+        <li>La edición simple incluye color, sonido, logo, música, nombres en pantalla y <b>hasta 3 cortes</b>. Entregamos en <b>5 días hábiles</b>.</li>
+        <li>Guardamos el material <b>1 semana</b> después de la entrega.</li>
+      </ul>
+      ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas (PDF)</a></p>` : ""}
+    </div>`;
+
+const changePolicy = `
+    <p style="font-size:12px;color:#0A0A0A99;line-height:1.5">
+      Puedes cambiar la fecha sin costo hasta <b>48 horas antes</b>. Con menos de 48 horas,
+      o si no llegas, el capítulo se da por grabado.
+    </p>`;
+
+// Correo al cliente (confirmación). deposit > 0 = pagó por la web; 0 = agendada por el estudio (temporada).
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl }) {
   return shell(`
-    <div style="font-size:22px;font-weight:800;margin-bottom:6px">¡Reserva confirmada! 🎙️</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">¡Grabación confirmada! 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, recibimos tu adelanto y tu sesión quedó agendada. Te esperamos:
+      Hola ${name}, ${deposit ? "recibimos tu pago y tu grabación quedó agendada" : "tu grabación quedó agendada"}. Te esperamos:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
       ${row("Hora", hora + " hrs")}
       ${row("Dirección", address)}
-      ${deposit ? row("Adelanto pagado", CLP(deposit)) : ""}
+      ${deposit ? row("Pagado", CLP(deposit) + " (IVA incluido)") : ""}
     </table>
     ${mapsBlock(address)}
+    ${deposit ? `
+    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
+      Si después del piloto contratas una temporada (desde 6 capítulos) dentro de 30 días,
+      el piloto pasa a ser tu capítulo 1 y su valor se descuenta del total.
+    </p>` : ""}
+    ${guideBlock(conditionsUrl)}
     ${portalUrl ? `
     <div style="margin:18px 0;padding:16px;background:#0A0A0A;border-radius:4px">
       <p style="font-size:13px;color:#F5EBD6;line-height:1.5;margin:0 0 10px">
-        Sigue tu sesión y recibe tu <b>entrega</b> (video y audio editado) en tu portal de cliente:
+        Sigue tu grabación y recibe tu <b>entrega</b> en tu portal de cliente:
       </p>
-      <a href="${portalUrl}" style="display:inline-block;background:#F4B81C;color:#0A0A0A;text-decoration:none;padding:11px 20px;font-weight:800;font-size:14px;border-radius:4px">Ver mi sesión en el portal</a>
+      <a href="${portalUrl}" style="display:inline-block;background:#F4B81C;color:#0A0A0A;text-decoration:none;padding:11px 20px;font-weight:800;font-size:14px;border-radius:4px">Ver mi grabación en el portal</a>
     </div>` : ""}
-    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      El saldo se paga el día de la sesión. Te enviaremos un recordatorio 24 horas antes.
-    </p>
     ${manageUrl ? `
-    <div style="margin:18px 0">${button(manageUrl, "Reagendar o cancelar")}</div>
-    <p style="font-size:12px;color:#0A0A0A99;line-height:1.5">
-      Puedes reagendar o cancelar sin costo hasta <b>24 horas antes</b> de tu sesión.
-      Pasado ese plazo, el adelanto no es reembolsable.
-    </p>` : ""}
+    <div style="margin:18px 0">${button(manageUrl, "Cambiar la fecha")}</div>
+    ${changePolicy}` : ""}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:18px">Nos vemos pronto,<br><b>Equipo Pod Factory</b></p>
   `);
@@ -139,9 +159,9 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
 // Correo al cliente (reserva reagendada)
 export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
   return shell(`
-    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva reagendada ✅</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Cambiamos tu fecha ✅</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, listo: movimos tu sesión. Tu adelanto sigue aplicado. Nueva cita:
+      Hola ${name}, listo: movimos tu grabación. Tu pago sigue aplicado. Nueva fecha:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
@@ -150,6 +170,7 @@ export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
     </table>
     ${mapsBlock(address)}
     ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, "Ver mi reserva")}</div>` : ""}
+    ${changePolicy}
     <p style="font-size:13px;margin-top:8px">Nos vemos,<br><b>Equipo Pod Factory</b></p>
   `);
 }
@@ -159,24 +180,46 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva cancelada</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, cancelamos tu sesión del <b>${fecha}</b> a las <b>${hora} hrs</b>.
+      Hola ${name}, cancelamos tu grabación del <b>${fecha}</b> a las <b>${hora} hrs</b>.
       El horario quedó liberado.
     </p>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Cuando quieras, puedes reservar una nueva sesión en
-      <a href="https://podfactory.cl" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>. ¡Te esperamos!
+      Cuando quieras volver a grabar, revisa las temporadas en
+      <a href="https://doppel.cl/podfactory/" style="color:#1F3FA3;font-weight:700;text-decoration:none">doppel.cl/podfactory</a>.
     </p>
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:14px"><b>Equipo Pod Factory</b></p>
   `);
 }
 
-// Correo recordatorio (24 h antes)
-export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl }) {
+// Recordatorio 72 h antes: último aviso para cambiar la fecha (el plazo vence a las 48 h).
+export function reminder72EmailHtml({ name, fecha, hora, deadline, address, manageUrl, whatsappUrl }) {
   return shell(`
-    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu sesión es mañana 🎙️</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es en 3 días 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, te recordamos tu sesión en Pod Factory:
+      Hola ${name}, te recordamos tu grabación en Pod Factory:
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0">
+      ${row("Fecha", fecha)}
+      ${row("Hora", hora + " hrs")}
+      ${row("Dirección", address)}
+    </table>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0A">
+      Si necesitas cambiar la fecha, puedes hacerlo sin costo hasta el <b>${deadline}</b>.
+      Después de eso, el capítulo se da por grabado aunque no vengas.
+    </p>
+    ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, "Cambiar la fecha")}</div>` : ""}
+    ${waLine(whatsappUrl)}
+    <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
+  `);
+}
+
+// Correo recordatorio (24 h antes)
+export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es mañana 🎙️</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, te recordamos tu grabación en Pod Factory:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
@@ -184,17 +227,14 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
       ${row("Dirección", address)}
     </table>
     ${mapsBlock(address)}
-    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Llega unos minutos antes para el setup. Recuerda traer el saldo de la sesión.
-    </p>
-    ${manageUrl ? `<p style="font-size:12px;color:#0A0A0A99">¿Algo cambió? <a href="${manageUrl}">Gestiona tu reserva</a> (hasta 24 h antes).</p>` : ""}
+    ${guideBlock(conditionsUrl)}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
   `);
 }
 
 // Correo de aviso al estudio
-export function studioEmailHtml({ name, email, phone, fecha, hora, deposit, tipo, personas, addons, comentarios }) {
+export function studioEmailHtml({ name, email, phone, fecha, hora, deposit, tipo, personas, addons, comentarios, rut, razonSocial, giro }) {
   return shell(`
     <div style="font-size:20px;font-weight:800;margin-bottom:6px">Nueva reserva ✅</div>
     <table style="width:100%;border-collapse:collapse;margin:14px 0">
@@ -207,8 +247,9 @@ export function studioEmailHtml({ name, email, phone, fecha, hora, deposit, tipo
       ${personas ? row("Personas", personas) : ""}
       ${addons && addons.length ? row("Adicionales", addons.join(", ")) : ""}
       ${comentarios ? row("Comentarios", comentarios) : ""}
-      ${row("Adelanto", CLP(deposit) + " (pagado)")}
+      ${row("Pagado", CLP(deposit) + " (IVA incluido)")}
+      ${rut ? row("Facturar a", `${razonSocial} · RUT ${rut}${giro ? ` · ${giro}` : ""}`) : ""}
     </table>
-    <p style="font-size:12px;color:#0A0A0A99">Ya está en tu Google Calendar (agenda Pod Factory — Reservas).</p>
+    <p style="font-size:12px;color:#0A0A0A99">Ya está en el Google Calendar del estudio. Falta emitir la factura.</p>
   `);
 }

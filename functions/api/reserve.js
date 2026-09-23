@@ -1,6 +1,7 @@
 // POST /api/reserve
-// Valida el bloque, lo "congela" en KV durante HOLD_MINUTES y crea la preferencia
-// de pago de MercadoPago. Devuelve { init_point } para redirigir al checkout.
+// Reserva del capítulo piloto (se paga completo, IVA incluido). Valida el bloque,
+// lo "congela" en KV durante HOLD_MINUTES y crea la preferencia de pago de
+// MercadoPago. Devuelve { init_point } para redirigir al checkout.
 import { parseConfig, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 
@@ -16,13 +17,18 @@ export async function onRequestPost({ request, env }) {
   if (!date || !start || !label || !name || !email || !phone) {
     return json({ error: "Faltan datos de la reserva" }, 400);
   }
-  // Servicios (opcionales) — saneados.
-  const ALLOWED_ADDONS = ["Teaser", "3 Reels adicionales"];
-  const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
+  const tipo = "Capítulo piloto";
   const personas = Math.min(4, Math.max(1, parseInt(body.personas, 10) || 1));
-  const addons = Array.isArray(body.addons) ? body.addons.filter((a) => ALLOWED_ADDONS.includes(a)) : [];
+  const addons = [];
   const comentarios = String(body.comentarios || "").slice(0, 500);
+  // Datos de facturación (la factura se emite con el pago).
+  const rut = String(body.rut || "").trim().slice(0, 20);
+  const razonSocial = String(body.razonSocial || "").trim().slice(0, 120);
+  const giro = String(body.giro || "").trim().slice(0, 120);
   if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
+  if (!/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(rut)) return json({ error: "RUT inválido (ej: 12.345.678-9)" }, 400);
+  if (!razonSocial) return json({ error: "Falta la razón social o el nombre para la factura" }, 400);
+  if (body.acepta !== true) return json({ error: "Debes aceptar las condiciones del estudio" }, 400);
 
   // 1) El bloque debe ser uno válido de la grilla y en día abierto.
   if (!config.openDays.includes(weekday(date, config.timeZone))) return json({ error: "Día no disponible" }, 400);
@@ -50,7 +56,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   // 3) Congelar el bloque (expira solo si no se paga).
-  const holdPayload = { start: slot.start, end: slot.end, label, name, email, phone, date, tipo, personas, addons, comentarios };
+  const holdPayload = { start: slot.start, end: slot.end, label, name, email, phone, date, tipo, personas, addons, comentarios, rut, razonSocial, giro };
   if (env.HOLDS) await env.HOLDS.put(holdKey, JSON.stringify(holdPayload), { expirationTtl: config.holdMinutes * 60 });
 
   // 4) Crear preferencia de pago en MercadoPago (Checkout Pro).
@@ -58,8 +64,8 @@ export async function onRequestPost({ request, env }) {
   const expiresAt = new Date(Date.now() + config.holdMinutes * 60000).toISOString();
   const pref = {
     items: [{
-      title: `Reserva Pod Factory · ${date} ${label} hrs`,
-      description: "Adelanto de sesión de grabación (se descuenta del total).",
+      title: `Capítulo piloto Pod Factory · ${date} ${label} hrs`,
+      description: "Pago total del capítulo piloto, IVA incluido.",
       quantity: 1,
       currency_id: "CLP",
       unit_price: config.depositCLP,
@@ -67,9 +73,9 @@ export async function onRequestPost({ request, env }) {
     payer: { name, email },
     external_reference: `${date}__${label}`,
     back_urls: {
-      success: `${origin}/?reserva=ok`,
-      failure: `${origin}/?reserva=error`,
-      pending: `${origin}/?reserva=pendiente`,
+      success: `${config.siteUrl}?reserva=ok`,
+      failure: `${config.siteUrl}?reserva=error`,
+      pending: `${config.siteUrl}?reserva=pendiente`,
     },
     auto_return: "approved",
     notification_url: `${origin}/api/mp-webhook`,

@@ -1,6 +1,6 @@
 // POST /api/reschedule  { id: token, date, start, label }
-// Mueve la reserva a un nuevo bloque (hasta 24 h antes de la sesión actual).
-// El adelanto ya pagado se mantiene. No cobra de nuevo.
+// Mueve la reserva a un nuevo bloque (hasta 48 h antes de la grabación actual).
+// El pago ya hecho se mantiene. No cobra de nuevo.
 import { parseConfig, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
 import { getBusy, patchEvent } from "../_lib/google.js";
@@ -19,7 +19,7 @@ export async function onRequestPost({ request, env }) {
   if (!b) return json({ error: "Reserva no encontrada" }, 404);
   const isAdmin = env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY;
   if (!isAdmin && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede reagendar (menos de 24 horas para la sesión)." }, 409);
+    return json({ error: "Ya no se puede reagendar (menos de 48 horas para la grabación)." }, 409);
   }
 
   // Validar el nuevo bloque

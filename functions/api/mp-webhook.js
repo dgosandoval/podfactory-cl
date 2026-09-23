@@ -60,6 +60,10 @@ export async function onRequestPost({ request, env }) {
   const personas = hold?.personas || 1;
   const addons = hold?.addons || [];
   const comentarios = hold?.comentarios || "";
+  const rut = hold?.rut || "";
+  const razonSocial = hold?.razonSocial || "";
+  const giro = hold?.giro || "";
+  const factTxt = rut ? `\nFacturar a: ${razonSocial} · RUT ${rut}${giro ? ` · Giro ${giro}` : ""}` : "";
   if (!start || !end) return ok(); // sin ventana horaria no podemos agendar
 
   const serviciosTxt = `Tipo: ${tipo} · Personas: ${personas}${addons.length ? ` · Adicionales: ${addons.join(", ")}` : ""}${comentarios ? `\nComentarios: ${comentarios}` : ""}`;
@@ -72,13 +76,13 @@ export async function onRequestPost({ request, env }) {
     const ev = await createEvent(env, {
       id: eventId,
       summary: `🎙️ Reserva: ${name}`,
-      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\n${serviciosTxt}\nAdelanto pagado: $${config.depositCLP.toLocaleString("es-CL")} (MercadoPago ${paymentId})\nSaldo a pagar el día de la sesión.\nGestión: ${date} ${label} · token ${token}`,
+      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\n${serviciosTxt}\nPagado: $${config.depositCLP.toLocaleString("es-CL")} IVA incluido (MercadoPago ${paymentId})${factTxt}\nGestión: ${date} ${label} · token ${token}`,
       startISO: start,
       endISO: end,
       timeZone: config.timeZone,
     });
     // Persistir la reserva para gestión (cancelar/reagendar) y recordatorio.
-    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, deposit: config.depositCLP, reminded: false });
+    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, rut, razonSocial, giro, deposit: config.depositCLP, reminded: false });
     if (env.HOLDS) await env.HOLDS.delete(holdKey);
   } catch (e) {
     // Notificación repetida: el evento ya existe → no reenviamos correos.
@@ -97,7 +101,7 @@ export async function onRequestPost({ request, env }) {
       const r = await fetch(env.PORTAL_INTAKE_URL, {
         method: "POST",
         headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
-        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios, deposit: config.depositCLP, paymentId }),
+        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios: comentarios + factTxt, deposit: config.depositCLP, paymentId }),
       });
       if (r.ok) { const j = await r.json(); portalUrl = j.loginUrl || j.projectUrl || null; }
       else console.log("portal intake non-ok:", r.status, await r.text());
@@ -114,13 +118,13 @@ export async function onRequestPost({ request, env }) {
       const ics = icsAttachment({
         uid: token, start, end,
         summary: "Sesión Pod Factory", location: address,
-        description: `Tu sesión de grabación en Pod Factory (${tipo}, ${personas} personas). Saldo a pagar el día de la sesión.`,
+        description: `Tu grabación en Pod Factory (${tipo}, ${personas} personas). Llega 10 minutos antes.`,
       });
       await sendEmail(env, {
         to: email,
-        subject: "Tu reserva en Pod Factory está confirmada 🎙️",
+        subject: "Tu capítulo piloto en Pod Factory está confirmado 🎙️",
         html: customerEmailHtml({
-          name, fecha, hora, deposit: config.depositCLP, address,
+          name, fecha, hora, deposit: config.depositCLP, address, conditionsUrl: `${config.siteUrl}condiciones.pdf`,
           manageUrl: manageUrl(origin, token),
           whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
           portalUrl,
@@ -132,7 +136,7 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: env.STUDIO_EMAIL,
         subject: `Nueva reserva: ${name} · ${fecha} ${hora} hrs`,
-        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP, tipo, personas, addons, comentarios }),
+        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP, tipo, personas, addons, comentarios, rut, razonSocial, giro }),
         replyTo: email,
       });
     }

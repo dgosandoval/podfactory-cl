@@ -8,7 +8,8 @@ export function parseConfig(env) {
     slotStarts: (env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
     slotMinutes: parseInt(env.SLOT_MINUTES || "80", 10),
     holdMinutes: parseInt(env.HOLD_MINUTES || "15", 10),
-    depositCLP: parseInt(env.DEPOSIT_CLP || "30000", 10),
+    depositCLP: parseInt(env.DEPOSIT_CLP || "30000", 10), // monto que se cobra al reservar (hoy: piloto completo con IVA)
+    siteUrl: env.SITE_URL || "https://doppel.cl/podfactory/",
   };
 }
 

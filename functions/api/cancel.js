@@ -1,6 +1,7 @@
 // POST /api/cancel  { id: token }
-// Cancela una reserva (hasta 24 h antes): borra el evento, libera el bloque,
-// elimina el registro y avisa al cliente. El adelanto no se reembolsa.
+// Cancela una reserva: borra el evento, libera el bloque, elimina el registro y
+// avisa al cliente. Sin ADMIN_KEY solo se permite hasta 48 h antes (hoy la web
+// no ofrece cancelar al cliente: las cancelaciones se gestionan por WhatsApp).
 import { parseConfig } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
 import { deleteEvent } from "../_lib/google.js";
@@ -18,7 +19,7 @@ export async function onRequestPost({ request, env }) {
   if (!b) return json({ error: "Reserva no encontrada" }, 404);
   const isAdmin = env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY;
   if (!isAdmin && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede cancelar (menos de 24 horas para la sesión)." }, 409);
+    return json({ error: "Ya no se puede cancelar (menos de 48 horas para la grabación)." }, 409);
   }
 
   try {

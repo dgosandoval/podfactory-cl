@@ -2,7 +2,7 @@
 // Clave: booking:<token>. Guarda lo necesario para gestionar/recordar la reserva.
 
 const KEY = (token) => `booking:${token}`;
-const MODIFY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 h
+const MODIFY_WINDOW_MS = 48 * 60 * 60 * 1000; // 48 h (condiciones del estudio, sep-2026)
 
 export function newToken() {
   return crypto.randomUUID().replace(/-/g, "");
@@ -39,7 +39,7 @@ export async function listBookings(env) {
   return out;
 }
 
-// ¿Aún se puede modificar/cancelar? (al menos 24 h antes del inicio)
+// ¿Aún se puede cambiar la fecha? (al menos 48 h antes del inicio)
 export function isModifiable(startISO, nowMs = Date.now()) {
   return Date.parse(startISO) - nowMs >= MODIFY_WINDOW_MS;
 }

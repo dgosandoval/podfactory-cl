@@ -86,7 +86,7 @@ function Manage() {
   }, [mode, activeDate]);
 
   async function doCancel() {
-    if (!window.confirm(`Vas a CANCELAR tu sesión del ${b.fecha} a las ${b.hora} hrs.\n\nEl adelanto de ${CLP(b.deposit)} no es reembolsable. ¿Confirmas la cancelación?`)) return;
+    if (!window.confirm(`Vas a CANCELAR tu sesión del ${b.fecha} a las ${b.hora} hrs.\n\n¿Confirmas la cancelación?`)) return;
     setBusy(true); setErr(null);
     try {
       const r = await fetch('/api/cancel', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: token }) });
@@ -111,9 +111,9 @@ function Manage() {
   const note = { fontFamily:M.mono, fontSize:12, color:M.ink+'99', lineHeight:1.5 };
 
   if (state === 'loading') return <div style={card}><div style={head}>POD FACTORY</div><div style={body}><p style={note}>Cargando tu reserva…</p></div></div>;
-  if (state === 'notfound') return <div style={card}><div style={head}>POD FACTORY</div><div style={body}><p>No encontramos esta reserva. El enlace puede haber expirado o la reserva fue cancelada.</p><a href="/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
-  if (state === 'cancelled') return <div style={card}><div style={{...head,background:M.red}}>RESERVA CANCELADA</div><div style={body}><p>Cancelamos tu sesión y liberamos el horario. Te enviamos un correo de confirmación.</p><a href="/" style={{color:M.blue}}>Reservar otra sesión</a></div></div>;
-  if (state === 'rescheduled') return <div style={card}><div style={{...head,background:M.green}}>RESERVA REAGENDADA</div><div style={body}><p>Listo, movimos tu sesión. Te enviamos el nuevo detalle por correo. ¡Nos vemos!</p><a href="/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
+  if (state === 'notfound') return <div style={card}><div style={head}>POD FACTORY</div><div style={body}><p>No encontramos esta reserva. El enlace puede haber expirado o la reserva fue cancelada.</p><a href="https://doppel.cl/podfactory/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
+  if (state === 'cancelled') return <div style={card}><div style={{...head,background:M.red}}>RESERVA CANCELADA</div><div style={body}><p>Cancelamos tu sesión y liberamos el horario. Te enviamos un correo de confirmación.</p><a href="https://doppel.cl/podfactory/" style={{color:M.blue}}>Reservar otra sesión</a></div></div>;
+  if (state === 'rescheduled') return <div style={card}><div style={{...head,background:M.green}}>RESERVA REAGENDADA</div><div style={body}><p>Listo, movimos tu sesión. Te enviamos el nuevo detalle por correo. ¡Nos vemos!</p><a href="https://doppel.cl/podfactory/" style={{color:M.blue}}>Volver al sitio</a></div></div>;
 
   // state === 'ready'
   return (
@@ -131,20 +131,22 @@ function Manage() {
 
         {b.pastSession && <p style={note}>Esta sesión ya pasó.</p>}
         {!b.pastSession && !b.modifiable && (
-          <p style={note}>Estás dentro de las 24 horas previas a tu sesión, por lo que ya no se puede reagendar ni cancelar. Si necesitas algo, escríbenos por WhatsApp.</p>
+          <p style={note}>Estás dentro de las 48 horas previas a tu grabación, así que ya no se puede cambiar la fecha. Si necesitas algo, escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
         )}
 
         {!b.pastSession && b.modifiable && !mode && (
+          <p style={note}>Puedes cambiar la fecha sin costo hasta 48 horas antes. Con menos de 48 horas, o si no llegas, el capítulo se da por grabado. ¿Necesitas cancelar? Escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
+        )}
+        {!b.pastSession && b.modifiable && !mode && (
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-            <button style={btn(M.ink,M.bg)} onClick={()=>{ setMode('reschedule'); setActiveDate(days[0].iso); }}>Reagendar</button>
-            <button style={btn('transparent',M.red)} onClick={()=>setMode('cancel')}>Cancelar</button>
+            <button style={btn(M.ink,M.bg)} onClick={()=>{ setMode('reschedule'); setActiveDate(days[0].iso); }}>Cambiar la fecha</button>
           </div>
         )}
 
         {mode === 'cancel' && (
           <div>
             <p style={{fontSize:14}}>¿Seguro que quieres <b>cancelar</b> tu sesión del {b.fecha} a las {b.hora} hrs?</p>
-            <p style={note}>El adelanto de {CLP(b.deposit)} no es reembolsable.</p>
+            
             <div style={{display:'flex',gap:10,marginTop:12}}>
               <button style={btn(M.red,'#fff')} disabled={busy} onClick={doCancel}>{busy?'Cancelando…':'Sí, cancelar'}</button>
               <button style={btn('transparent',M.ink)} disabled={busy} onClick={()=>setMode(null)}>Volver</button>
