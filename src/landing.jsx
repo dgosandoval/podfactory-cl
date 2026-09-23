@@ -463,14 +463,14 @@ function PodFactoryLanding() {
           </Reveal>
           <Reveal delay={220} style={{ border: `1.5px solid ${PF.bg}40`, padding: 28, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>EN LOCACIÓN · DONDE ESTÉS</div>
-            <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Llevamos el set completo</div>
+            <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Jornadas desde $950.000 + IVA</div>
             <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.bg + 'cc', marginTop: 8 }}>
               Cámaras, micrófonos, luces y operador en tu oficina, un evento, una casa, una viña o un set externo.
               En Santiago y regiones. Mientras más capítulos grabes en la jornada, menor el costo por capítulo.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
               {['Jornadas desde 2 capítulos', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
-              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifas distintas a las del estudio: se cotiza por jornada.</li>
+              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Mismo valor por capítulo que en el estudio ($200.000), más la jornada ($450.000) y el traslado ($100.000). Regiones V y VI: +$250.000.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
               <CTAButtons label="COTIZAR UNA LOCACIÓN" waContext="quiero cotizar una grabación en locación." />
@@ -847,7 +847,7 @@ function PodFactoryLanding() {
           {[
             {
               q: '¿Son un estudio o una productora?',
-              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con tarifas distintas que se cotizan por jornada.</>,
+              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con jornadas desde $950.000 + IVA (2 capítulos en Santiago).</>,
             },
             {
               q: '¿Puedo grabar un solo capítulo?',
