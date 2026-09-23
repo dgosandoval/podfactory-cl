@@ -13,4 +13,9 @@ printf "ReactDOM.createRoot(document.getElementById('root')).render(React.create
 "$ESBUILD" --loader=jsx --jsx-factory=React.createElement --jsx-fragment=React.Fragment \
   --minify --target=es2019 --log-level=warning < "$TMP" > app.js
 rm "$TMP"
-echo "app.js: $(wc -c < app.js) bytes"
+# Cache-busting: index.html apunta a app.js?v=<hash del contenido>. Sin esto el navegador
+# sigue mostrando la versión vieja (Pages no permite controlar bien el caché de app.js).
+HASH=$(shasum -a 256 app.js | cut -c1-10)
+sed -i '' -E "s/app\.js\?v=[A-Za-z0-9]+/app.js?v=$HASH/" index.html
+grep -q "app.js?v=$HASH" index.html || { echo "ERROR: no se actualizó la versión en index.html"; exit 1; }
+echo "app.js: $(wc -c < app.js) bytes · versión $HASH"
