@@ -3,12 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pod Factory by Doppel — Premium Podcast Studio</title>
+<title>Pod Factory — Estudio y productora de podcast en Vitacura, Santiago</title>
+<meta name="description" content="Estudio de podcast en Vitacura: set multicámara, audio broadcast y edición. Temporadas desde 6 capítulos, capítulo piloto reservable online y grabación en locación. Una productora de Doppel.">
+<link rel="canonical" href="https://podfactory.cl/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://podfactory.cl/">
+<meta property="og:title" content="Pod Factory — Tu podcast, en nuestro estudio. O donde estés.">
+<meta property="og:description" content="Estudio de podcast en Vitacura y productora. Temporadas desde 6 capítulos y capítulo piloto reservable online.">
+<meta property="og:image" content="https://podfactory.cl/assets/og-podfactory.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1">
 <link rel="apple-touch-icon" href="assets/favicon.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #F5EBD6; font-family: 'Archivo', sans-serif; }
   * { box-sizing: border-box; }
@@ -42,6 +50,10 @@
     .pf-stats > div:nth-child(odd) { border-right: 1.5px solid #0A0A0A !important; }
     .pf-stats > div:nth-child(n+3) { border-bottom: none !important; }
     .pf-stats > div > div:first-child { font-size: 38px !important; }
+    /* Secciones nuevas (productora, temporadas, piloto, condiciones) → 1 col */
+    .pf-steps, .pf-two, .pf-cond { grid-template-columns: 1fr !important; gap: 14px !important; }
+    .pf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pf-header + section h1 { font-size: clamp(40px, 11vw, 64px) !important; }
     /* Services / Productions / Tech specs / Pricing / Location grids → 1 col */
     .pf-services, .pf-productions, .pf-techspecs, .pf-pricing-grid, .pf-location-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
     .pf-location-grid > div:last-child { min-height: 280px !important; }
@@ -51,47 +63,49 @@
     section h2 { font-size: clamp(30px, 8vw, 42px) !important; }
     /* Booking calendar — horizontal scroll wrapper */
     .pf-calendar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .pf-calendar-wrap > div { min-width: 640px; }
+    .pf-calendar-wrap > div { min-width: 0; }
     /* Footer: stack */
     footer .pf-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
     footer .pf-footer-grid > div:first-child { grid-column: 1 / -1; }
   }
 </style>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"LocalBusiness","name":"Pod Factory","description":"Estudio y productora de podcast y vodcast en Vitacura, Santiago.","url":"https://podfactory.cl/","image":"https://podfactory.cl/assets/og-podfactory.jpg","telephone":"+56927970014","email":"hola@podfactory.cl","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Eduardo Marquina 3937, Of. 906","addressLocality":"Vitacura","addressRegion":"Región Metropolitana","addressCountry":"CL"},"geo":{"@type":"GeoCoordinates","latitude":-33.3998,"longitude":-70.5943},"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"20:20"}],"parentOrganization":{"@type":"Organization","name":"Doppel","url":"https://doppel.cl/"}}
+</script>
+<!-- Medición: completar los IDs para activar GA4 y el píxel de Meta (vacío = no se carga nada). -->
+<script>
+  window.PF_TRACKING = { ga4: '', metaPixel: '' };
+  (function (c) {
+    if (c.ga4) {
+      var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + c.ga4; document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
+      gtag('js', new Date()); gtag('config', c.ga4);
+    }
+    if (c.metaPixel) {
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', c.metaPixel); fbq('track', 'PageView');
+    }
+  })(window.PF_TRACKING);
+</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 </head>
 <body>
-<div id="root"></div>
-
-<script type="text/babel" src="shared.jsx?v=30"></script>
-<script type="text/babel" src="booking.jsx?v=36"></script>
-<script type="text/babel" src="pod-factory-landing.jsx?v=35"></script>
-<script type="text/babel">
-  ReactDOM.createRoot(document.getElementById('root')).render(<PodFactoryLanding />);
-</script>
-
-<!-- Aviso de retorno desde MercadoPago (?reserva=ok|error|pendiente) -->
-<script>
-(function () {
-  var estado = new URLSearchParams(location.search).get('reserva');
-  if (!estado) return;
-  var msg = {
-    ok: ['✓ ¡Reserva confirmada! Te llegará el detalle por correo. Nos vemos en el estudio.', '#1f7a3f'],
-    pendiente: ['⏳ Tu pago está pendiente de aprobación. Te avisaremos al confirmarse.', '#b8860b'],
-    error: ['✕ El pago no se completó. Tu bloque sigue libre, puedes intentar de nuevo.', '#D92E2E']
-  }[estado];
-  if (!msg) return;
-  var bar = document.createElement('div');
-  bar.textContent = msg[0];
-  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;padding:14px 20px;'
-    + 'background:' + msg[1] + ';color:#fff;font-family:Archivo,sans-serif;font-weight:600;'
-    + 'font-size:14px;text-align:center;box-shadow:0 2px 12px #0003;cursor:pointer';
-  bar.title = 'Cerrar';
-  bar.onclick = function () { bar.remove(); };
-  document.body.appendChild(bar);
-  history.replaceState(null, '', location.pathname);
-})();
-</script>
+<div id="root">
+  <!-- Contenido de respaldo (buscadores y navegadores sin JavaScript); React lo reemplaza al cargar. -->
+  <main style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:Archivo,Arial,sans-serif;color:#0A0A0A">
+    <h1>Pod Factory: tu podcast, en nuestro estudio en Vitacura. O donde estés.</h1>
+    <p>Estudio y productora de podcast y vodcast en Eduardo Marquina 3937, Of. 906, Vitacura, Santiago. Set multicámara, audio broadcast, dirección y edición.</p>
+    <h2>Temporadas desde 6 capítulos</h2>
+    <p>6 capítulos $1.200.000 + IVA · 8 capítulos $1.520.000 + IVA · 10 capítulos $1.800.000 + IVA · 12 capítulos $2.040.000 + IVA. Set Full con paneles de madera y televisor: +$100.000 por capítulo.</p>
+    <h2>Capítulo piloto</h2>
+    <p>$300.000 + IVA. Si contratas una temporada dentro de 30 días, se descuenta del total.</p>
+    <h2>Grabación en locación</h2>
+    <p>Llevamos el set a tu oficina, un evento o cualquier lugar, en Santiago y regiones. Tarifas por jornada.</p>
+    <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
+  </main>
+</div>
+<script src="app.js?v=1"></script>
 </body>
 </html>

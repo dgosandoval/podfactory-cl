@@ -1,6 +1,7 @@
-// Pod Factory — Calendario de reservas.
-// Lee disponibilidad de /api/availability (que consulta tu Google Calendar)
-// y, al elegir bloque + datos, inicia el pago del adelanto vía /api/reserve.
+// Pod Factory — Calendario de reserva del capítulo piloto (en doppel.cl/podfactory).
+// La API vive en podfactory.cl (Google Calendar + MercadoPago), por eso las
+// llamadas van a PF_API con CORS. El piloto se paga completo al reservar.
+const PF_API = 'https://podfactory.cl';
 
 const PFB = {
   bg: '#F5EBD6', ink: '#0A0A0A', blue: '#1F3FA3', red: '#D92E2E',
@@ -78,28 +79,27 @@ function BookingCalendar() {
   const [data, setData] = React.useState(null);       // respuesta de availability
   const [loading, setLoading] = React.useState(false);
   const [slot, setSlot] = React.useState(null);        // bloque elegido
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', tipo: 'Podcast', personas: 1, addons: [], comentarios: '' });
-  const toggleAddon = (a) => setForm((f) => ({ ...f, addons: f.addons.includes(a) ? f.addons.filter((x) => x !== a) : [...f.addons, a] }));
-  const ADDONS = [['Teaser', 99990], ['3 Reels adicionales', 99990]];
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', personas: 2, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
     if (!activeDate) return;
     setLoading(true); setSlot(null); setError(null);
-    fetch(`/api/availability?date=${activeDate}`)
+    fetch(`${PF_API}/api/availability?date=${activeDate}`)
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError('No pudimos cargar la disponibilidad. Reintenta.'))
       .finally(() => setLoading(false));
   }, [activeDate]);
 
-  const deposit = data?.depositCLP || 30000;
+  const deposit = data?.depositCLP || 357000; // piloto $300.000 + IVA
 
   async function reservar() {
     setSubmitting(true); setError(null);
+    window.pfTrack && window.pfTrack('begin_checkout', { value: deposit, currency: 'CLP', items: [{ item_name: 'Capítulo piloto', price: deposit }] });
     try {
-      const res = await fetch('/api/reserve', {
+      const res = await fetch(`${PF_API}/api/reserve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form }),
@@ -113,7 +113,8 @@ function BookingCalendar() {
     }
   }
 
-  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8;
+  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8
+    && /^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(form.rut.trim()) && form.razonSocial.trim() && form.acepta;
 
   return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: 560, overflow: 'hidden' }}>
@@ -121,10 +122,10 @@ function BookingCalendar() {
       {/* Encabezado */}
       <div style={{ padding: '14px 18px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
         <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' }}>
-          Reserva tu sesión
+          Reserva tu capítulo piloto
         </div>
         <div style={{ fontFamily: PFB.mono, fontSize: 10, color: PFB.ink + '99', letterSpacing: '0.06em' }}>
-          ADELANTO {CLP(deposit)} · SALDO EL DÍA DE LA SESIÓN
+          $300.000 + IVA · TOTAL {CLP(deposit)}
         </div>
       </div>
 
@@ -209,25 +210,9 @@ function BookingCalendar() {
               ))}
             </div>
 
-            {/* Tipo de sesión */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>TIPO DE SESIÓN</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['Podcast', 'Webinar / Streaming'].map((t) => {
-                  const on = form.tipo === t;
-                  return (
-                    <button key={t} onClick={() => setForm({ ...form, tipo: t })} style={{
-                      flex: 1, padding: '10px 8px', cursor: 'pointer', border: `1.5px solid ${PFB.ink}`,
-                      background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink, fontFamily: PFB.mono, fontSize: 12, fontWeight: 700,
-                    }}>{t}</button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* N° de personas */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>N° DE PERSONAS (HASTA 4)</div>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>N° DE PERSONAS EN EL SET (HASTA 4)</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[1, 2, 3, 4].map((n) => {
                   const on = form.personas === n;
@@ -241,43 +226,42 @@ function BookingCalendar() {
               </div>
             </div>
 
-            {/* Adicionales */}
+            {/* Facturación */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>ADICIONALES (OPCIONAL)</div>
-              <div style={{ display: 'grid', gap: 6 }}>
-                {ADDONS.map(([name, price]) => {
-                  const on = form.addons.includes(name);
-                  return (
-                    <button key={name} onClick={() => toggleAddon(name)} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left',
-                      padding: '10px 12px', cursor: 'pointer', border: `1.5px solid ${on ? PFB.ink : PFB.ink + '44'}`,
-                      background: on ? PFB.ink + '0d' : '#fff', color: PFB.ink, fontFamily: PFB.mono, fontSize: 12,
-                    }}>
-                      <span><span style={{ fontWeight: 700 }}>{on ? '☑' : '☐'} {name}</span></span>
-                      <span style={{ fontWeight: 700 }}>+{CLP(price)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, color: PFB.ink + '77', marginTop: 6, lineHeight: 1.4 }}>
-                Los adicionales se coordinan y pagan con el saldo; aquí solo quedan registrados.
+              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>DATOS PARA LA FACTURA</div>
+              <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[['rut', 'RUT (12.345.678-9)'], ['razonSocial', 'Razón social o nombre'], ['giro', 'Giro (opcional)']].map(([k, ph]) => (
+                  <input key={k} type="text" placeholder={ph} value={form[k]}
+                    onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                    style={{
+                      gridColumn: k === 'giro' ? '1 / -1' : 'auto',
+                      padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff',
+                      fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0,
+                    }} />
+                ))}
               </div>
             </div>
 
             {/* Comentarios */}
-            <textarea placeholder="Comentarios (cuéntanos de tu podcast o pide algo especial)" value={form.comentarios}
+            <textarea placeholder="Cuéntanos de tu podcast (tema, invitados, si ya tienes nombre)" value={form.comentarios}
               onChange={(e) => setForm({ ...form, comentarios: e.target.value })} rows={2}
-              style={{ width: '100%', padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0, marginBottom: 14, resize: 'vertical' }} />
+              style={{ width: '100%', padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0, marginBottom: 12, resize: 'vertical' }} />
+
+            {/* Aceptación de condiciones */}
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 14, fontFamily: PFB.mono, fontSize: 11.5, lineHeight: 1.5 }}>
+              <input type="checkbox" checked={form.acepta} onChange={(e) => setForm({ ...form, acepta: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
+              <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones del estudio</a>: cambio de fecha sin costo hasta 48 h antes; con menos de 48 h, o si no llego, el capítulo se da por grabado.</span>
+            </label>
 
             <button onClick={reservar} disabled={!valid || submitting} style={{
               width: '100%', padding: '15px', cursor: valid && !submitting ? 'pointer' : 'not-allowed',
               border: 'none', background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',
               fontFamily: PFB.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em',
             }}>
-              {submitting ? 'REDIRIGIENDO A MERCADOPAGO…' : `PAGAR ADELANTO ${CLP(deposit)}`}
+              {submitting ? 'REDIRIGIENDO A MERCADOPAGO…' : `PAGAR ${CLP(deposit)} Y RESERVAR`}
             </button>
             <div style={{ marginTop: 10, fontFamily: PFB.mono, fontSize: 10.5, color: PFB.ink + '88', lineHeight: 1.5 }}>
-              Reagenda sin costo hasta 24 h antes. El adelanto se descuenta del total de la sesión.
+              Pago seguro con MercadoPago. Si contratas una temporada dentro de 30 días, el piloto pasa a ser tu capítulo 1 y se descuenta del total.
             </div>
           </div>
         )}

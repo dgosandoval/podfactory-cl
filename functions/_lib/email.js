@@ -185,7 +185,7 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
     </p>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Cuando quieras volver a grabar, revisa las temporadas en
-      <a href="https://doppel.cl/podfactory/" style="color:#1F3FA3;font-weight:700;text-decoration:none">doppel.cl/podfactory</a>.
+      <a href="https://podfactory.cl/" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>.
     </p>
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:14px"><b>Equipo Pod Factory</b></p>
