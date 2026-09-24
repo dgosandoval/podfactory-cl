@@ -164,12 +164,6 @@ const Kicker = ({ children, color }) => (
 );
 const fmtCLP = (n) => '$' + Number(n).toLocaleString('es-CL');
 
-const TEMPORADAS = [
-  { caps: 6, dto: '—', base: 200000, full: 300000, min: true },
-  { caps: 8, dto: '−5%', base: 190000, full: 285000, star: true },
-  { caps: 10, dto: '−10%', base: 180000, full: 270000 },
-  { caps: 12, dto: '−15%', base: 170000, full: 255000 },
-];
 
 // Aviso al volver de MercadoPago (?reserva=ok|error|pendiente).
 function ReservaBanner() {
@@ -258,46 +252,12 @@ function EmpresasForm() {
 }
 
 
-// Tabla de temporadas. Bloqueada: los valores se ven como "$•••.•••" (no quedan en la página).
-function TemporadasTabla({ locked }) {
-  const v = (n) => (locked ? '$•••.•••' : fmtCLP(n));
-  return (
-    <div className="pf-table-wrap" style={{ border: `1.5px solid ${PF.ink}`, background: '#fff', filter: locked ? 'blur(3px)' : 'none', opacity: locked ? 0.55 : 1, pointerEvents: locked ? 'none' : 'auto' }} aria-hidden={locked ? 'true' : undefined}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, minWidth: 640 }}>
-            <thead>
-              <tr style={{ background: PF.ink, color: PF.bg }}>
-                {['Temporada', 'Descuento', 'Base · por capítulo', 'Base · total', 'Full · por capítulo', 'Full · total'].map((h, i) => (
-                  <th key={h} style={{ textAlign: i ? 'right' : 'left', padding: '14px 18px', fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.1em', fontWeight: 700 }}>{h.toUpperCase()}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TEMPORADAS.map((t) => (
-                <tr key={t.caps} style={{ background: t.star ? PF.yellow + '40' : 'transparent', borderTop: `1px solid ${PF.ink}20` }}>
-                  <td style={{ padding: '16px 18px', fontWeight: 800, fontSize: 18 }}>
-                    {t.caps} capítulos
-                    {t.min && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.ink, color: PF.bg, padding: '3px 8px', letterSpacing: '0.1em' }}>MÍNIMO</span>}
-                    {t.star && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.yellow, padding: '3px 8px', letterSpacing: '0.1em' }}>★ MÁS ELEGIDA</span>}
-                  </td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontFamily: PF.mono }}>{t.dto}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{v(t.base)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{v(t.base * t.caps)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{v(t.full)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{v(t.full * t.caps)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-    </div>
-  );
-}
-
-// "Ver todos los precios": pide nombre, email y perfil; desbloquea la tabla al tiro y el hub
-// le manda los precios por correo (si aceptó recibir correos). Queda recordado en el navegador.
+// "Recibe la lista de precios": los precios NO están en la página; llegan por correo
+// (así el correo que dejan es real). El envío de la lista es siempre; la secuencia y el
+// newsletter, solo si marcan la casilla de consentimiento.
 function PreciosGate() {
-  const [open, setOpen] = React.useState(() => { try { return localStorage.getItem('pf_precios') === '1'; } catch (e) { return false; } });
-  const [f, setF] = React.useState({ nombre: '', email: '', empresa: '', segment: 'empresa', horizonte: '1_3_meses', consent: false, website: '' });
-  const [estado, setEstado] = React.useState(null);
+  const [f, setF] = React.useState({ nombre: '', email: '', segment: 'empresa', horizonte: '1_3_meses', consent: false, website: '' });
+  const [estado, setEstado] = React.useState(null); // null | enviando | ok | error
   const [err, setErr] = React.useState('');
   const valid = f.nombre.trim() && /\S+@\S+\.\S+/.test(f.email);
   async function enviar(e) {
@@ -307,64 +267,63 @@ function PreciosGate() {
       const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'precios', ...f }) });
       const o = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(o.error || 'No se pudo enviar');
-      try { localStorage.setItem('pf_precios', '1'); } catch (e2) {}
-      setOpen(true); setEstado(f.consent ? 'ok-mail' : 'ok');
+      setEstado('ok');
       window.pfTrack && window.pfTrack('generate_lead', { lead_type: 'precios', segment: f.segment, horizonte: f.horizonte });
     } catch (e2) { setEstado('error'); setErr(String(e2.message || e2)); }
   }
   const inp = { padding: '12px 13px', border: `1.5px solid ${PF.ink}`, background: '#fff', fontFamily: PF.mono, fontSize: 13, outline: 'none', borderRadius: 0, width: '100%' };
-  if (open) return (
-    <div>
-      {estado === 'ok-mail' && <div style={{ fontFamily: PF.mono, fontSize: 12, marginBottom: 10 }}>✅ Listo. También te los enviamos a tu correo.</div>}
-      <TemporadasTabla locked={false} />
-    </div>
-  );
   const lbl = { fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.12em', color: PF.ink + '99', fontWeight: 700, marginBottom: 5, display: 'block' };
   return (
     <div className="pf-gate-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
-      {/* Izquierda: el gancho */}
       <div style={{ background: PF.ink, color: PF.bg, padding: '30px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>PRECIOS DE LAS TEMPORADAS</div>
-        <div style={{ fontWeight: 900, fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.03em' }}>
-          Desde $170.000 <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.yellow }}>por capítulo.</span>
+        <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>LISTA DE PRECIOS</div>
+        <div style={{ fontWeight: 900, fontSize: 32, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+          Te la enviamos <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.yellow }}>a tu correo.</span>
         </div>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 15, lineHeight: 1.7, color: PF.bg + 'dd' }}>
-          {['Temporadas de 6, 8, 10 y 12 capítulos', 'Set Base o Full (madera + televisor con tu logo)', 'Hasta 15% de descuento por temporada larga', 'Edición simple incluida en cada capítulo'].map((t) => <li key={t}>▸ {t}</li>)}
+          {['Temporadas de 6, 8, 10 y 12 capítulos', 'Set Base o Full (madera + televisor con tu logo)', 'Descuentos por temporada larga', 'Grabación en locación y adicionales'].map((t) => <li key={t}>▸ {t}</li>)}
         </ul>
-        <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.bg + '99', marginTop: 'auto' }}>Valores en pesos chilenos, más IVA.</div>
       </div>
-      {/* Derecha: el formulario */}
-      <form onSubmit={enviar} style={{ padding: '26px 26px 22px', display: 'grid', gap: 12, alignContent: 'start', position: 'relative' }}>
-        <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.25 }}>Déjanos tu correo y ves todos los precios al tiro.</div>
-        <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
-          <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+      {estado === 'ok' ? (
+        <div style={{ padding: '30px 26px', display: 'grid', gap: 14, alignContent: 'center' }}>
+          <div style={{ fontWeight: 900, fontSize: 24 }}>¡Listo! Revisa tu correo ✅</div>
+          <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>Te enviamos la lista de precios a <b>{f.email}</b>. Si no la ves en unos minutos, revisa la carpeta de spam.</p>
+          <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>Mientras, lo mejor es que vengas a conocer el estudio: 20 minutos, gratis.</p>
+          <div><PilotoButton label="AGENDAR UNA VISITA" /></div>
         </div>
-        <label><span style={lbl}>¿PARA QUIÉN ES?</span>
-          <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
-            <option value="empresa">Para una empresa o marca</option>
-            <option value="personal">Un proyecto personal</option>
-          </select>
-        </label>
-        <label><span style={lbl}>¿CUÁNDO QUIERES PARTIR?</span>
-          <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
-            <option value="este_mes">Este mes</option>
-            <option value="1_3_meses">En 1 a 3 meses</option>
-            <option value="mas_adelante">Más adelante</option>
-            <option value="mirando">Solo estoy mirando</option>
-          </select>
-        </label>
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13, lineHeight: 1.45, color: PF.ink + 'cc' }}>
-          <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }} />
-          <span>Envíenme los precios por correo y novedades de Pod Factory. Me puedo dar de baja cuando quiera.</span>
-        </label>
-        <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
-        <button type="submit" disabled={!valid || estado === 'enviando'} style={{
-          padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
-          fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
-        }}>{estado === 'enviando' ? 'UN SEGUNDO…' : 'VER TODOS LOS PRECIOS →'}</button>
-        {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
-      </form>
+      ) : (
+        <form onSubmit={enviar} style={{ padding: '26px 26px 22px', display: 'grid', gap: 12, alignContent: 'start', position: 'relative' }}>
+          <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.25 }}>¿A qué correo te la enviamos?</div>
+          <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
+            <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+          </div>
+          <label><span style={lbl}>¿PARA QUIÉN ES?</span>
+            <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
+              <option value="empresa">Para una empresa o marca</option>
+              <option value="personal">Un proyecto personal</option>
+            </select>
+          </label>
+          <label><span style={lbl}>¿CUÁNDO QUIERES PARTIR?</span>
+            <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
+              <option value="este_mes">Este mes</option>
+              <option value="1_3_meses">En 1 a 3 meses</option>
+              <option value="mas_adelante">Más adelante</option>
+              <option value="mirando">Solo estoy mirando</option>
+            </select>
+          </label>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13, lineHeight: 1.45, color: PF.ink + 'cc' }}>
+            <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }} />
+            <span>Además, quiero recibir consejos y novedades de Pod Factory (opcional; me puedo dar de baja cuando quiera).</span>
+          </label>
+          <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
+          <button type="submit" disabled={!valid || estado === 'enviando'} style={{
+            padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
+            fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
+          }}>{estado === 'enviando' ? 'ENVIANDO…' : 'ENVIARME LA LISTA DE PRECIOS →'}</button>
+          {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
+        </form>
+      )}
     </div>
   );
 }
@@ -629,7 +588,7 @@ function PodFactoryLanding() {
             <div style={{ aspectRatio: '16/7', background: `url(assets/set-full.jpg) center 40% / cover no-repeat` }} />
             <div style={{ padding: 24 }}>
               <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.red, fontWeight: 700 }}>EN NUESTRO ESTUDIO · VITACURA</div>
-              <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Temporadas desde {fmtCLP(1200000)} + IVA</div>
+              <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Temporadas desde 6 capítulos</div>
               <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.ink + 'bb', marginTop: 8 }}>
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
                 Desde 6 capítulos, con fechas agendadas desde el inicio.
@@ -639,14 +598,14 @@ function PodFactoryLanding() {
           </Reveal>
           <Reveal delay={220} style={{ border: `1.5px solid ${PF.bg}40`, padding: 28, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>EN LOCACIÓN · DONDE ESTÉS</div>
-            <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Jornadas desde $950.000 + IVA</div>
+            <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Llevamos el set completo</div>
             <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.bg + 'cc', marginTop: 8 }}>
               Cámaras, micrófonos, luces y operador en tu oficina, un evento, una casa, una viña o un set externo.
               En Santiago y regiones. Mientras más capítulos grabes en la jornada, menor el costo por capítulo.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
               {['Jornadas desde 2 capítulos', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
-              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Mismo valor por capítulo que en el estudio ($200.000), más la jornada ($450.000) y el traslado ($100.000). Regiones V y VI: +$250.000.</li>
+              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
               <CTAButtons label="COTIZAR UNA LOCACIÓN" waContext="quiero cotizar una grabación en locación." />
@@ -699,7 +658,7 @@ function PodFactoryLanding() {
             <H2>Tu podcast, <Serif color={PF.red}>por temporadas.</Serif></H2>
           </div>
           <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.ink + 'aa', maxWidth: 360, lineHeight: 1.6 }}>
-            Mientras más larga la temporada, menor el valor por capítulo. Valores en pesos, más IVA.
+            Mientras más larga la temporada, menor el valor por capítulo. La lista completa te la enviamos por correo.
           </div>
         </Reveal>
         <Reveal delay={60} style={{ aspectRatio: '4/1', marginBottom: 18, border: `1.5px solid ${PF.ink}`, background: `url(assets/set-full.jpg) center 45% / cover no-repeat` }} />
@@ -707,7 +666,7 @@ function PodFactoryLanding() {
         <div className="pf-steps" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 22 }}>
           {[
             ['Cada capítulo incluye', 'Bloque de 1 hora de estudio (el capítulo dura 30–40 min), hasta 4 personas, set multicámara, operador y edición simple.', PF.blue],
-            ['Set Base o Full', 'Full suma paneles de madera y un televisor con tu logo o tus gráficas: +$100.000 por capítulo.', PF.red],
+            ['Set Base o Full', 'Full suma paneles de madera y un televisor con tu logo o tus gráficas.', PF.red],
             ['Pago y agenda', '50% al contratar y 50% a mitad de temporada. Las fechas se agendan al inicio; te recomendamos un día fijo a la semana.', PF.orange],
           ].map(([t, d, c], i) => (
             <Reveal key={t} delay={150 + i * 90} style={{ borderTop: `5px solid ${c}`, paddingTop: 12 }}>
@@ -752,19 +711,19 @@ function PodFactoryLanding() {
           {[
             ['EDICIÓN', [
               ['Simple', 'Color, sonido, logo y música al inicio y al cierre, nombres en pantalla, hasta 3 cortes y 1 ronda de cambios.', 'Incluida'],
-              ['Con cortes', 'Hasta 10 cortes que pides después de grabar, indicando el minuto de cada uno.', '+$50.000'],
-              ['Pro', 'Cortes libres, reordenar partes, tráiler o teaser.', '+$150.000'],
-              ['Ronda de cambios extra', 'Cada ronda adicional a la incluida.', '+$50.000'],
+              ['Con cortes', 'Hasta 10 cortes que pides después de grabar, indicando el minuto de cada uno.', 'Opcional'],
+              ['Pro', 'Cortes libres, reordenar partes, tráiler o teaser.', 'Opcional'],
+              ['Ronda de cambios extra', 'Cada ronda adicional a la incluida.', 'Opcional'],
             ]],
             ['ADICIONALES', [
-              ['3 reels', 'Verticales, con subtítulos, listos para Instagram, TikTok y Shorts.', '$120.000'],
-              ['Archivos por cámara', 'Cada cámara por separado y sincronizada, más las pistas de audio. Para editar tus propios cortes.', '$50.000'],
-              ['Tiempo extra', 'Bloques de 30 minutos, solo si no hay otra reserva después.', '$100.000'],
+              ['3 reels', 'Verticales, con subtítulos, listos para Instagram, TikTok y Shorts.', 'Opcional'],
+              ['Archivos por cámara', 'Cada cámara por separado y sincronizada, más las pistas de audio. Para editar tus propios cortes.', 'Opcional'],
+              ['Tiempo extra', 'Bloques de 30 minutos, solo si no hay otra reserva después.', 'Opcional'],
             ]],
           ].map(([title, rows], k) => (
             <Reveal key={title} delay={120 + k * 120} style={{ border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
               <div style={{ background: k ? PF.blue : PF.ink, color: PF.bg, padding: '12px 18px', fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', fontWeight: 700 }}>
-                {title} · POR CAPÍTULO, + IVA
+                {title} · POR CAPÍTULO
               </div>
               {rows.map(([n, d, v]) => (
                 <div key={n} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '14px 18px', borderTop: `1px solid ${PF.ink}18` }}>
@@ -778,7 +737,8 @@ function PodFactoryLanding() {
             </Reveal>
           ))}
         </div>
-        <Reveal delay={300} style={{ marginTop: 18, background: PF.yellow, padding: '16px 20px', fontSize: 15, lineHeight: 1.5, border: `1.5px solid ${PF.ink}` }}>
+        <div style={{ fontFamily: PF.mono, fontSize: 12, marginTop: 14 }}>Los valores de cada opción van en la <a href="#temporadas" style={{ color: PF.blue, fontWeight: 700 }}>lista de precios</a>.</div>
+      <Reveal delay={300} style={{ marginTop: 18, background: PF.yellow, padding: '16px 20px', fontSize: 15, lineHeight: 1.5, border: `1.5px solid ${PF.ink}` }}>
           <b>La regla:</b> si pides cambiar el contenido o el orden del capítulo, ya no es edición simple.
           Te decimos qué nivel corresponde y su valor <b>antes</b> de editar, nunca después.
         </Reveal>
@@ -894,7 +854,7 @@ function PodFactoryLanding() {
           {[
             {
               q: '¿Son un estudio o una productora?',
-              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con jornadas desde $950.000 + IVA (2 capítulos en Santiago).</>,
+              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con tarifas por jornada que te enviamos junto a la lista de precios.</>,
             },
             {
               q: '¿Puedo probar antes de contratar una temporada?',
@@ -902,11 +862,11 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Qué pasa si nos pasamos de la hora?',
-              a: <>Cada capítulo es un bloque de 1 hora. Si necesitan más tiempo, se contrata en <b>bloques de 30 minutos ($100.000 + IVA)</b>, solo si no hay otra reserva después. Te avisamos a los 50 minutos de grabación.</>,
+              a: <>Cada capítulo es un bloque de 1 hora. Si necesitan más tiempo, se contrata en <b>bloques de 30 minutos</b>, solo si no hay otra reserva después. Te avisamos a los 50 minutos de grabación.</>,
             },
             {
               q: '¿Qué incluye la edición simple?',
-              a: <>Color, sonido, logo y música al inicio y al cierre, nombres en pantalla, <b>hasta 3 cortes</b> y 1 ronda de cambios. Si necesitas más cortes o reordenar el capítulo, tienes la edición con cortes (+$50.000) o la Pro (+$150.000). Siempre te lo decimos antes de editar.</>,
+              a: <>Color, sonido, logo y música al inicio y al cierre, nombres en pantalla, <b>hasta 3 cortes</b> y 1 ronda de cambios. Si necesitas más cortes o reordenar el capítulo, tienes la edición con cortes o la Pro. Siempre te lo decimos antes de editar.</>,
             },
             {
               q: '¿Y si necesito cambiar la fecha?',
