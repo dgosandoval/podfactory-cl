@@ -1,8 +1,10 @@
-// POST /api/lead — formulario "Para empresas" de la landing.
-// Avisa al estudio por correo (responder = responderle al lead) y, si está
-// configurado HUB_LEAD_URL, lo registra también en el hub como propuesta.
+// POST /api/lead — formularios de la landing que generan un lead:
+//  · tipo 'empresas': pide propuesta → correo al estudio + lead en el hub (estado propuesta).
+//  · tipo 'precios':  pide todos los precios → lead en el hub, que le manda los precios al
+//    instante y lo deja en la secuencia automática (si dio consentimiento).
 // Anti-spam: honeypot `website` + máximo 5 envíos por IP por hora.
 import { sendEmail } from "../_lib/email.js";
+import { toHub } from "../_lib/hub.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -13,6 +15,7 @@ export async function onRequestPost({ request, env }) {
   let b;
   try { b = await request.json(); } catch { return json({ error: "Datos inválidos" }, 400); }
   if (b.website) return json({ ok: true }); // bot: fingimos éxito y no hacemos nada
+  if (b.tipo === "precios") return preciosLead(request, env, b);
 
   const lead = {
     nombre: String(b.nombre || "").trim().slice(0, 100),
@@ -70,14 +73,30 @@ export async function onRequestPost({ request, env }) {
   if (!stored && !emailed) return json({ error: "No pudimos enviar tu solicitud" }, 502);
 
   // Registro en el hub (best-effort; no bloquea al lead si falla).
-  if (env.HUB_LEAD_URL && env.PORTAL_INTAKE_SECRET) {
-    try {
-      await fetch(env.HUB_LEAD_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
-        body: JSON.stringify({ ...lead, source: "podfactory.cl/empresas" }),
-      });
-    } catch (e) { console.log("hub lead error:", String(e)); }
-  }
+  await toHub(env, { email: lead.email, name: lead.nombre, empresa: lead.empresa, phone: lead.telefono, segment: "empresa",
+    capitulos: lead.capitulos, interes: lead.donde, notes: lead.mensaje, source: "empresas", consent: b.consent === true });
   return json({ ok: true, emailed });
+}
+
+// "Ver todos los precios": nombre + email + perfil + consentimiento.
+async function preciosLead(request, env, b) {
+  const email = String(b.email || "").trim().slice(0, 160);
+  const name = String(b.nombre || "").trim().slice(0, 120);
+  if (!name) return json({ error: "Falta tu nombre" }, 400);
+  if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
+  const segment = b.segment === "empresa" ? "empresa" : b.segment === "personal" ? "personal" : undefined;
+  const horizonte = ["este_mes", "1_3_meses", "mas_adelante", "mirando"].includes(b.horizonte) ? b.horizonte : undefined;
+  const ip = request.headers.get("cf-connecting-ip") || "0";
+  if (env.HOLDS) {
+    const k = `lead-rate:${ip}`;
+    const n = parseInt((await env.HOLDS.get(k)) || "0", 10);
+    if (n >= 5) return json({ error: "Demasiados envíos. Escríbenos por WhatsApp" }, 429);
+    await env.HOLDS.put(k, String(n + 1), { expirationTtl: 3600 });
+    // Respaldo, igual que los leads de empresas.
+    await env.HOLDS.put(`lead:${new Date().toISOString()}_${crypto.randomUUID().slice(0, 8)}`,
+      JSON.stringify({ tipo: "precios", email, name, segment, horizonte, consent: b.consent === true, ip, at: new Date().toISOString() }),
+      { expirationTtl: 180 * 86400 });
+  }
+  const hub = await toHub(env, { email, name, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true });
+  return json({ ok: true, hub: !!hub, sent: !!(hub && hub.sent) });
 }

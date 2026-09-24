@@ -203,7 +203,7 @@ function ReservaBanner() {
 
 // Camino para empresas: formulario corto → propuesta en 24 h (POST /api/lead).
 function EmpresasForm() {
-  const [f, setF] = React.useState({ nombre: '', empresa: '', email: '', telefono: '', capitulos: '8', donde: 'Estudio', mensaje: '', website: '' });
+  const [f, setF] = React.useState({ nombre: '', empresa: '', email: '', telefono: '', capitulos: '8', donde: 'Estudio', mensaje: '', website: '', consent: false });
   const [estado, setEstado] = React.useState(null); // null | enviando | ok | error
   const [err, setErr] = React.useState('');
   const valid = f.nombre.trim() && f.empresa.trim() && /\S+@\S+\.\S+/.test(f.email) && f.telefono.trim().length >= 8;
@@ -241,6 +241,10 @@ function EmpresasForm() {
         </select>
       </div>
       <textarea style={{ ...inp, resize: 'vertical' }} rows={3} placeholder="Cuéntanos del podcast: tema, a quién va dirigido, fecha en que quieren partir" value={f.mensaje} onChange={(e) => setF({ ...f, mensaje: e.target.value })} />
+      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontFamily: PF.mono, fontSize: 11.5, lineHeight: 1.5 }}>
+        <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
+        <span>Quiero recibir novedades de Pod Factory por correo (opcional).</span>
+      </label>
       {/* honeypot anti-spam: los humanos no lo ven */}
       <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
       <button type="submit" disabled={!valid || estado === 'enviando'} style={{
@@ -250,6 +254,106 @@ function EmpresasForm() {
       {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}. Puedes escribirnos por WhatsApp.</div>}
       <div style={{ fontFamily: PF.mono, fontSize: 10.5, color: PF.ink + '88' }}>Respondemos en menos de 24 horas hábiles. Sin spam.</div>
     </form>
+  );
+}
+
+
+// Tabla de temporadas. Bloqueada: los valores se ven como "$•••.•••" (no quedan en la página).
+function TemporadasTabla({ locked }) {
+  const v = (n) => (locked ? '$•••.•••' : fmtCLP(n));
+  return (
+    <div className="pf-table-wrap" style={{ border: `1.5px solid ${PF.ink}`, background: '#fff', filter: locked ? 'blur(3px)' : 'none', opacity: locked ? 0.55 : 1, pointerEvents: locked ? 'none' : 'auto' }} aria-hidden={locked ? 'true' : undefined}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, minWidth: 640 }}>
+            <thead>
+              <tr style={{ background: PF.ink, color: PF.bg }}>
+                {['Temporada', 'Descuento', 'Base · por capítulo', 'Base · total', 'Full · por capítulo', 'Full · total'].map((h, i) => (
+                  <th key={h} style={{ textAlign: i ? 'right' : 'left', padding: '14px 18px', fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.1em', fontWeight: 700 }}>{h.toUpperCase()}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TEMPORADAS.map((t) => (
+                <tr key={t.caps} style={{ background: t.star ? PF.yellow + '40' : 'transparent', borderTop: `1px solid ${PF.ink}20` }}>
+                  <td style={{ padding: '16px 18px', fontWeight: 800, fontSize: 18 }}>
+                    {t.caps} capítulos
+                    {t.min && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.ink, color: PF.bg, padding: '3px 8px', letterSpacing: '0.1em' }}>MÍNIMO</span>}
+                    {t.star && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.yellow, padding: '3px 8px', letterSpacing: '0.1em' }}>★ MÁS ELEGIDA</span>}
+                  </td>
+                  <td style={{ padding: '16px 18px', textAlign: 'right', fontFamily: PF.mono }}>{t.dto}</td>
+                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{v(t.base)}</td>
+                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{v(t.base * t.caps)}</td>
+                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{v(t.full)}</td>
+                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{v(t.full * t.caps)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+    </div>
+  );
+}
+
+// "Ver todos los precios": pide nombre, email y perfil; desbloquea la tabla al tiro y el hub
+// le manda los precios por correo (si aceptó recibir correos). Queda recordado en el navegador.
+function PreciosGate() {
+  const [open, setOpen] = React.useState(() => { try { return localStorage.getItem('pf_precios') === '1'; } catch (e) { return false; } });
+  const [f, setF] = React.useState({ nombre: '', email: '', empresa: '', segment: 'empresa', horizonte: '1_3_meses', consent: false, website: '' });
+  const [estado, setEstado] = React.useState(null);
+  const [err, setErr] = React.useState('');
+  const valid = f.nombre.trim() && /\S+@\S+\.\S+/.test(f.email);
+  async function enviar(e) {
+    e.preventDefault(); if (!valid) return;
+    setEstado('enviando'); setErr('');
+    try {
+      const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'precios', ...f }) });
+      const o = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(o.error || 'No se pudo enviar');
+      try { localStorage.setItem('pf_precios', '1'); } catch (e2) {}
+      setOpen(true); setEstado(f.consent ? 'ok-mail' : 'ok');
+      window.pfTrack && window.pfTrack('generate_lead', { lead_type: 'precios', segment: f.segment, horizonte: f.horizonte });
+    } catch (e2) { setEstado('error'); setErr(String(e2.message || e2)); }
+  }
+  const inp = { padding: '12px 13px', border: `1.5px solid ${PF.ink}`, background: '#fff', fontFamily: PF.mono, fontSize: 13, outline: 'none', borderRadius: 0, width: '100%' };
+  if (open) return (
+    <div>
+      {estado === 'ok-mail' && <div style={{ fontFamily: PF.mono, fontSize: 12, marginBottom: 10 }}>✅ Listo. También te los enviamos a tu correo.</div>}
+      <TemporadasTabla locked={false} />
+    </div>
+  );
+  return (
+    <div className="pf-gate-wrap" style={{ position: 'relative', minHeight: 380, display: 'flex', alignItems: 'center' }}>
+      <div className="pf-gate-blur" style={{ width: '100%' }}><TemporadasTabla locked /></div>
+      <form onSubmit={enviar} className="pf-gate" style={{
+        position: 'absolute', inset: 0, margin: 'auto', width: 'min(560px, 100%)', height: 'fit-content',
+        background: PF.bg, border: `1.5px solid ${PF.ink}`, boxShadow: `6px 6px 0 ${PF.ink}`, padding: 22, display: 'grid', gap: 10,
+      }}>
+        <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15 }}>Temporadas desde $170.000 por capítulo</div>
+        <div style={{ fontSize: 14, lineHeight: 1.5, color: PF.ink + 'bb' }}>Déjanos tu correo y ves todos los precios al tiro (set Base y Full, de 6 a 12 capítulos).</div>
+        <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <input style={inp} placeholder="Tu nombre" value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} />
+          <input style={inp} type="email" placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
+            <option value="empresa">Es para una empresa o marca</option>
+            <option value="personal">Es un proyecto personal</option>
+          </select>
+          <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
+            <option value="este_mes">Quiero partir este mes</option>
+            <option value="1_3_meses">En 1 a 3 meses</option>
+            <option value="mas_adelante">Más adelante</option>
+            <option value="mirando">Solo estoy mirando</option>
+          </select>
+        </div>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontFamily: PF.mono, fontSize: 11.5, lineHeight: 1.5 }}>
+          <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
+          <span>Envíenme los precios por correo y novedades de Pod Factory (me puedo dar de baja cuando quiera).</span>
+        </label>
+        <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
+        <button type="submit" disabled={!valid || estado === 'enviando'} style={{
+          padding: 15, border: 'none', cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
+          fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
+        }}>{estado === 'enviando' ? 'UN SEGUNDO…' : 'VER TODOS LOS PRECIOS'}</button>
+        {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
+      </form>
+    </div>
   );
 }
 
@@ -587,33 +691,7 @@ function PodFactoryLanding() {
           </div>
         </Reveal>
         <Reveal delay={60} style={{ aspectRatio: '4/1', marginBottom: 18, border: `1.5px solid ${PF.ink}`, background: `url(assets/set-full.jpg) center 45% / cover no-repeat` }} />
-        <Reveal delay={120} className="pf-table-wrap" style={{ border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, minWidth: 640 }}>
-            <thead>
-              <tr style={{ background: PF.ink, color: PF.bg }}>
-                {['Temporada', 'Descuento', 'Base · por capítulo', 'Base · total', 'Full · por capítulo', 'Full · total'].map((h, i) => (
-                  <th key={h} style={{ textAlign: i ? 'right' : 'left', padding: '14px 18px', fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.1em', fontWeight: 700 }}>{h.toUpperCase()}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TEMPORADAS.map((t) => (
-                <tr key={t.caps} style={{ background: t.star ? PF.yellow + '40' : 'transparent', borderTop: `1px solid ${PF.ink}20` }}>
-                  <td style={{ padding: '16px 18px', fontWeight: 800, fontSize: 18 }}>
-                    {t.caps} capítulos
-                    {t.min && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.ink, color: PF.bg, padding: '3px 8px', letterSpacing: '0.1em' }}>MÍNIMO</span>}
-                    {t.star && <span style={{ marginLeft: 10, fontFamily: PF.mono, fontSize: 10, background: PF.yellow, padding: '3px 8px', letterSpacing: '0.1em' }}>★ MÁS ELEGIDA</span>}
-                  </td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontFamily: PF.mono }}>{t.dto}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{fmtCLP(t.base)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{fmtCLP(t.base * t.caps)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right' }}>{fmtCLP(t.full)}</td>
-                  <td style={{ padding: '16px 18px', textAlign: 'right', fontWeight: 900 }}>{fmtCLP(t.full * t.caps)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Reveal>
+        <Reveal delay={120}><PreciosGate /></Reveal>
         <div className="pf-steps" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 22 }}>
           {[
             ['Cada capítulo incluye', 'Bloque de 1 hora de estudio (el capítulo dura 30–40 min), hasta 4 personas, set multicámara, operador y edición simple.', PF.blue],
@@ -701,10 +779,10 @@ function PodFactoryLanding() {
             <Kicker color={PF.yellow}>▸ CONDICIONES</Kicker>
             <H2>Las reglas, <Serif color={PF.yellow}>claras desde el inicio.</Serif></H2>
           </div>
-          <a href="condiciones.pdf" target="_blank" rel="noopener" style={{
+          <a href="#temporadas" style={{
             background: PF.bg, color: PF.ink, padding: '14px 22px', borderRadius: 999, textDecoration: 'none',
             fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
-          }}>DESCARGAR TARIFAS Y CONDICIONES (PDF)</a>
+          }}>VER TODOS LOS PRECIOS</a>
         </Reveal>
         <div className="pf-cond" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 22 }}>
           {[

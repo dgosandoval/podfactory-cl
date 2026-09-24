@@ -5,6 +5,7 @@
 import { createEvent } from "./google.js";
 import { newToken, saveBooking, manageUrl } from "./booking.js";
 import { SERVICES } from "./slots.js";
+import { toHub } from "./hub.js";
 import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "./email.js";
 
 // d = { tipo, start, end, date, label, name, email, phone, personas, comentarios, empresa,
@@ -55,6 +56,10 @@ export async function confirmBooking(env, config, origin, d) {
       else console.log("portal intake non-ok:", r.status, await r.text());
     } catch (e) { console.log("portal intake error:", String(e)); }
   }
+
+  // 3b) CRM de leads (estado visita/minipiloto: detiene la secuencia de nutrición).
+  await toHub(env, { email: d.email, name: d.name, empresa: d.empresa || undefined, phone: d.phone,
+    segment: d.empresa ? "empresa" : undefined, source: d.tipo, consent: d.consent === true });
 
   // 4) Correos (best-effort: un fallo aquí no revierte la reserva).
   try {

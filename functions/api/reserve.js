@@ -60,7 +60,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const origin = new URL(request.url).origin;
-  const data = { tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
+  const data = { consent: body.acepta === true, tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
 
   // Visita: confirmación inmediata.
   if (svc.key === "visita") {

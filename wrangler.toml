@@ -12,6 +12,7 @@ SLOT_STARTS = "10:00,11:30,13:00,14:30,16:00,17:30,19:00"
 SLOT_MINUTES = "80"              # 60 grabación + 20 setup
 HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga
 DEPOSIT_CLP = "357000"          # capítulo piloto: $300.000 + IVA, se paga completo al reservar
+HUB_LEAD_URL = "https://clientes.doppel.cl/api/intake/lead"  # CRM de leads en el hub
 SITE_URL = "https://podfactory.cl/"  # landing (vuelta de MercadoPago y links de los correos)
 GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fcd720f162@group.calendar.google.com"
 # Correos de confirmación (Resend). Plan gratis = 1 dominio (doppel.cl, ya
