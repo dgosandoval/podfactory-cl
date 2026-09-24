@@ -28,6 +28,8 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "No se pudo cancelar, intenta de nuevo", detail: String(e) }, 502);
   }
   await deleteBooking(env, b.token);
+  // La visita gratuita bloquea el correo hasta su fecha: al cancelarla, se libera.
+  if (b.tipo === "visita" && b.email && env.HOLDS) await env.HOLDS.delete(`visita-email:${b.email.toLowerCase()}`);
 
   // Aviso al cliente y al estudio — best-effort. Se puede silenciar con notify:false
   // (lo usa el portal al cancelar una grabación: el correo "Pod Factory" no aplica a Doppel).

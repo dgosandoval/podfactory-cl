@@ -4,16 +4,17 @@
 //
 // Eventos (nombre GA4 → evento estándar de Meta):
 //   whatsapp_click → Contact          · clic en cualquier link a wa.me
-//   piloto_cta     → ViewContent      · clic en un botón que baja al calendario
-//   begin_checkout → InitiateCheckout · "Pagar y reservar" (va a MercadoPago)
+//   piloto_cta     → ViewContent      · clic en un botón que baja al calendario (visita / mini-piloto)
+//   begin_checkout → InitiateCheckout · mini-piloto: "Pagar y reservar" (va a MercadoPago)
 //   purchase       → Purchase         · vuelta de MercadoPago con ?reserva=ok (una vez por pago)
 //   generate_lead  → Lead             · formulario de empresas enviado
+//   schedule_visit → Schedule         · visita al estudio agendada
 //   file_download  → (personalizado)  · descarga del PDF de condiciones
 (function () {
   const cfg = window.PF_TRACKING || {};
   const META = {
     whatsapp_click: 'Contact', piloto_cta: 'ViewContent', begin_checkout: 'InitiateCheckout',
-    purchase: 'Purchase', generate_lead: 'Lead',
+    purchase: 'Purchase', generate_lead: 'Lead', schedule_visit: 'Schedule',
   };
 
   window.pfTrack = function (name, params = {}) {

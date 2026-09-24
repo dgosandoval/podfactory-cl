@@ -1,7 +1,7 @@
 // POST /api/reschedule  { id: token, date, start, label }
 // Mueve la reserva a un nuevo bloque (hasta 48 h antes de la grabación actual).
 // El pago ya hecho se mantiene. No cobra de nuevo.
-import { parseConfig, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
+import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
 import { getBusy, patchEvent } from "../_lib/google.js";
 import { sendEmail, formatSession, rescheduleEmailHtml } from "../_lib/email.js";
@@ -24,8 +24,9 @@ export async function onRequestPost({ request, env }) {
 
   // Validar el nuevo bloque
   if (!date || !start || !label) return json({ error: "Falta el nuevo bloque" }, 400);
+  const cfg = configFor(config, b.tipo);
   if (!config.openDays.includes(weekday(date, config.timeZone))) return json({ error: "Día no disponible" }, 400);
-  const slot = buildSlots(date, config).find((s) => s.start === start && s.label === label);
+  const slot = buildSlots(date, cfg).find((s) => s.start === start && s.label === label);
   if (!slot) return json({ error: "Bloque no válido" }, 400);
   if (Date.parse(slot.start) <= Date.now()) return json({ error: "Ese bloque ya pasó" }, 400);
 

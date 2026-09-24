@@ -82,7 +82,7 @@ function Manage() {
   React.useEffect(() => {
     if (mode !== 'reschedule' || !activeDate) return;
     setAvail(null);
-    fetch(`/api/availability?date=${activeDate}`).then(r => r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
+    fetch(`/api/availability?date=${activeDate}${b && (b.tipo === 'visita' || b.tipo === 'minipiloto') ? `&tipo=${b.tipo}` : ''}`).then(r => r.json()).then(setAvail).catch(()=>setAvail({open:false,slots:[]}));
   }, [mode, activeDate]);
 
   async function doCancel() {

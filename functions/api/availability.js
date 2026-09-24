@@ -1,6 +1,6 @@
 // GET /api/availability?date=YYYY-MM-DD
 // Devuelve los bloques del día con su estado (disponible / ocupado).
-import { parseConfig, getOffset, availabilityForDate } from "../_lib/slots.js";
+import { parseConfig, getOffset, availabilityForDate, configFor, SERVICES } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 
 const json = (data, status = 200) =>
@@ -28,8 +28,10 @@ async function getHolds(env, dateStr) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const config = parseConfig(env);
-  const date = new URL(request.url).searchParams.get("date");
+  const url = new URL(request.url);
+  const tipo = url.searchParams.get("tipo");
+  const config = configFor(parseConfig(env), tipo);
+  const date = url.searchParams.get("date");
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return json({ error: "Parámetro 'date' inválido (YYYY-MM-DD)" }, 400);
   }
@@ -47,7 +49,8 @@ export async function onRequestGet({ request, env }) {
     busy = busy.concat(await getHolds(env, date));
 
     const result = availabilityForDate(date, config, busy, new Date().toISOString());
-    return json({ ...result, slotMinutes: config.slotMinutes, depositCLP: config.depositCLP });
+    const svc = SERVICES[tipo];
+    return json({ ...result, slotMinutes: config.slotMinutes, depositCLP: config.depositCLP, tipo: svc ? svc.key : null, price: svc ? svc.price : null });
   } catch (err) {
     return json({ error: "No se pudo consultar disponibilidad", detail: String(err) }, 500);
   }

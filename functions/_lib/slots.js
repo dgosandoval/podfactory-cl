@@ -8,9 +8,24 @@ export function parseConfig(env) {
     slotStarts: (env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
     slotMinutes: parseInt(env.SLOT_MINUTES || "80", 10),
     holdMinutes: parseInt(env.HOLD_MINUTES || "15", 10),
-    depositCLP: parseInt(env.DEPOSIT_CLP || "30000", 10), // monto que se cobra al reservar (hoy: piloto completo con IVA)
-    siteUrl: env.SITE_URL || "https://doppel.cl/podfactory/",
+    depositCLP: parseInt(env.DEPOSIT_CLP || "30000", 10), // (legado) monto del antiguo piloto
+    siteUrl: env.SITE_URL || "https://podfactory.cl/",
+    // Bloques cortos para la visita y el mini-piloto: empiezan en los mismos horarios que
+    // los bloques normales (así no desordenan la grilla de las temporadas).
+    shortStarts: (env.SHORT_STARTS || env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
   };
+}
+
+// Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis).
+export const SERVICES = {
+  visita: { key: "visita", label: "Visita al estudio", minutes: 30, price: 0, net: 0 },
+  minipiloto: { key: "minipiloto", label: "Mini-piloto (10 minutos)", minutes: 30, price: 35700, net: 30000 },
+};
+
+// Config con la duración y los horarios del servicio pedido (o la grilla normal si no hay servicio).
+export function configFor(config, tipo) {
+  const svc = SERVICES[tipo];
+  return svc ? { ...config, slotMinutes: svc.minutes, slotStarts: config.shortStarts } : config;
 }
 
 // Offset de la zona horaria para una fecha dada, ej: "-04:00" (invierno) o "-03:00" (verano).

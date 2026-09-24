@@ -1,10 +1,10 @@
 // POST /api/mp-webhook
-// MercadoPago notifica aquí cada cambio de pago. Si el pago está aprobado,
-// creamos el evento confirmado en Google Calendar y liberamos el hold.
+// MercadoPago notifica aquí cada cambio de pago. Si el pago está aprobado, se confirma
+// la reserva (mini-piloto) con confirmBooking y se libera el hold.
 import { parseConfig } from "../_lib/slots.js";
-import { createEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "../_lib/email.js";
-import { newToken, saveBooking, manageUrl } from "../_lib/booking.js";
+import { configFor } from "../_lib/slots.js";
+import { confirmBooking } from "../_lib/confirm.js";
+import { sendEmail } from "../_lib/email.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
 const ok = () => new Response("ok", { status: 200 });
@@ -50,99 +50,37 @@ export async function onRequestPost({ request, env }) {
 
   const holdKey = `hold:${date}:${label}`;
   const hold = env.HOLDS ? await env.HOLDS.get(holdKey, "json") : null;
-  // Reconstruir datos desde el hold (o desde el pago si el hold ya expiró).
-  const start = hold?.start;
-  const end = hold?.end;
-  const name = hold?.name || pay.payer?.first_name || "Cliente";
-  const email = hold?.email || pay.payer?.email || "";
-  const phone = hold?.phone || "";
-  const tipo = hold?.tipo || "Podcast";
-  const personas = hold?.personas || 1;
-  const addons = hold?.addons || [];
-  const comentarios = hold?.comentarios || "";
-  const rut = hold?.rut || "";
-  const razonSocial = hold?.razonSocial || "";
-  const giro = hold?.giro || "";
-  const factTxt = rut ? `\nFacturar a: ${razonSocial} · RUT ${rut}${giro ? ` · Giro ${giro}` : ""}` : "";
-  if (!start || !end) return ok(); // sin ventana horaria no podemos agendar
-
-  const serviciosTxt = `Tipo: ${tipo} · Personas: ${personas}${addons.length ? ` · Adicionales: ${addons.join(", ")}` : ""}${comentarios ? `\nComentarios: ${comentarios}` : ""}`;
-
-  const token = newToken();
-  // ID determinístico del evento = idempotencia fuerte (Google Calendar es
-  // consistente). Si la notificación llega repetida, el 2º insert da 409.
+  if (!hold?.start || !hold?.end) {
+    // El pago se aprobó después de que venció el bloqueo del horario (ej. pago tardío):
+    // no hay horario seguro. Se avisa al estudio para agendarlo a mano y se responde OK
+    // (reintentar no lo arreglaría). El pago queda registrado en el correo.
+    console.log("mp-webhook: pago aprobado sin hold", paymentId, date, label);
+    try {
+      await sendEmail(env, {
+        to: env.STUDIO_EMAIL || "hola@doppel.cl",
+        subject: `⚠️ Pago aprobado sin horario confirmado · ${date} ${label} hrs`,
+        html: `<p>MercadoPago aprobó un pago pero el bloqueo del horario ya había vencido, así que <b>no se agendó automáticamente</b>.</p>
+          <p>Pago: ${paymentId} · $${Number(pay.transaction_amount || 0).toLocaleString("es-CL")}<br>
+          Horario pedido: ${date} ${label} hrs<br>
+          Pagador: ${pay.payer?.email || "—"}</p>
+          <p>Revisa si el horario sigue libre y agéndalo desde el hub, o contacta al cliente.</p>`,
+      });
+    } catch (e) { console.log("aviso de pago sin hold falló:", String(e)); }
+    return ok();
+  }
+  const origin = new URL(request.url).origin;
+  // ID determinístico del evento = idempotencia fuerte (Google Calendar rechaza el 2º insert).
   const eventId = ("pf" + String(paymentId)).toLowerCase().replace(/[^a-v0-9]/g, "");
   try {
-    const ev = await createEvent(env, {
-      id: eventId,
-      summary: `🎙️ Reserva: ${name}`,
-      description: `Reserva confirmada vía web.\nCliente: ${name}\nEmail: ${email}\nTel: ${phone}\n${serviciosTxt}\nPagado: $${config.depositCLP.toLocaleString("es-CL")} IVA incluido (MercadoPago ${paymentId})${factTxt}\nGestión: ${date} ${label} · token ${token}`,
-      startISO: start,
-      endISO: end,
-      timeZone: config.timeZone,
+    await confirmBooking(env, configFor(config, hold.tipo), origin, {
+      ...hold, eventId, paid: Number(pay.transaction_amount) || hold.amount || 0, paymentId: String(paymentId),
+      name: hold.name || pay.payer?.first_name || "Cliente", email: hold.email || pay.payer?.email || "",
     });
-    // Persistir la reserva para gestión (cancelar/reagendar) y recordatorio.
-    await saveBooking(env, { token, eventId: ev.id, date, label, start, end, name, email, phone, tipo, personas, addons, comentarios, rut, razonSocial, giro, deposit: config.depositCLP, reminded: false });
     if (env.HOLDS) await env.HOLDS.delete(holdKey);
   } catch (e) {
-    // Notificación repetida: el evento ya existe → no reenviamos correos.
-    if (String(e.message) === "DUPLICATE_EVENT") return ok();
-    // Otro fallo: liberamos la marca para que MercadoPago pueda reintentar.
-    if (env.HOLDS) await env.HOLDS.delete(dedupeKey);
+    if (String(e.message) === "DUPLICATE_EVENT") return ok(); // notificación repetida
+    if (env.HOLDS) await env.HOLDS.delete(dedupeKey);          // que MercadoPago reintente
     return new Response(`retry: ${e}`, { status: 500 });
   }
-
-  const { fecha, hora } = formatSession(start, config.timeZone);
-
-  // Crear el proyecto del cliente en el portal de Doppel (best-effort).
-  let portalUrl = null;
-  if (env.PORTAL_INTAKE_URL && env.PORTAL_INTAKE_SECRET) {
-    try {
-      const r = await fetch(env.PORTAL_INTAKE_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
-        body: JSON.stringify({ name, email, phone, date, label, fecha, hora, tipo, personas, addons, comentarios: comentarios + factTxt, deposit: config.depositCLP, paymentId }),
-      });
-      if (r.ok) { const j = await r.json(); portalUrl = j.loginUrl || j.projectUrl || null; }
-      else console.log("portal intake non-ok:", r.status, await r.text());
-    } catch (e) {
-      console.log("portal intake error:", String(e));
-    }
-  }
-
-  // Correos de confirmación — best-effort: un fallo aquí NO debe revertir la reserva.
-  try {
-    const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
-    const origin = new URL(request.url).origin;
-    if (email) {
-      const ics = icsAttachment({
-        uid: token, start, end,
-        summary: "Sesión Pod Factory", location: address,
-        description: `Tu grabación en Pod Factory (${tipo}, ${personas} personas). Llega 10 minutos antes.`,
-      });
-      await sendEmail(env, {
-        to: email,
-        subject: "Tu capítulo piloto en Pod Factory está confirmado 🎙️",
-        html: customerEmailHtml({
-          name, fecha, hora, deposit: config.depositCLP, address, conditionsUrl: `${config.siteUrl}condiciones.pdf`,
-          manageUrl: manageUrl(origin, token),
-          whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
-          portalUrl,
-        }),
-        attachments: [ics],
-      });
-    }
-    if (env.STUDIO_EMAIL) {
-      await sendEmail(env, {
-        to: env.STUDIO_EMAIL,
-        subject: `Nueva reserva: ${name} · ${fecha} ${hora} hrs`,
-        html: studioEmailHtml({ name, email, phone, fecha, hora, deposit: config.depositCLP, tipo, personas, addons, comentarios, rut, razonSocial, giro }),
-        replyTo: email,
-      });
-    }
-  } catch (e) {
-    console.log("email error (reserva igual confirmada):", String(e));
-  }
-
   return ok();
 }

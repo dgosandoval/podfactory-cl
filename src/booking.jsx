@@ -1,6 +1,5 @@
-// Pod Factory — Calendario de reserva del capítulo piloto (en doppel.cl/podfactory).
-// La API vive en podfactory.cl (Google Calendar + MercadoPago), por eso las
-// llamadas van a PF_API con CORS. El piloto se paga completo al reservar.
+// Pod Factory — Calendario para reservar la visita al estudio (gratis) o el mini-piloto (pagado).
+// La API vive en podfactory.cl (Google Calendar + MercadoPago).
 const PF_API = 'https://podfactory.cl';
 
 const PFB = {
@@ -63,7 +62,13 @@ function groupByWeek(days) {
   });
 }
 
-function BookingCalendar() {
+// Productos reservables: la visita (gratis) y el mini-piloto (pagado por MercadoPago).
+const PRODUCTOS = {
+  visita: { label: 'Visita al estudio', sub: 'Gratis · 20 minutos', precio: 0, cta: 'AGENDAR VISITA' },
+  minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
+};
+
+function BookingCalendar({ initialTipo = 'visita' }) {
   const OPEN_DOWS = [1, 2, 3, 4, 5]; // Lun–Vie
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
@@ -75,65 +80,94 @@ function BookingCalendar() {
     const ml = cap(l.toLocaleDateString('es-CL', { month: 'long' }));
     return mf === ml ? `${mf} ${l.getFullYear()}` : `${mf} – ${ml} ${l.getFullYear()}`;
   }, [days]);
+  const [tipo, setTipo] = React.useState(initialTipo);
   const [activeDate, setActiveDate] = React.useState(days[0]?.iso);
-  const [data, setData] = React.useState(null);       // respuesta de availability
+  const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
-  const [slot, setSlot] = React.useState(null);        // bloque elegido
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', personas: 2, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
+  const [slot, setSlot] = React.useState(null);
+  const [form, setForm] = React.useState({ name: '', empresa: '', email: '', phone: '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [listo, setListo] = React.useState(null); // visita confirmada: { fecha, hora }
+  const P = PRODUCTOS[tipo];
+
+  // Los botones de la página pueden elegir el producto (evento 'pf-producto').
+  React.useEffect(() => {
+    const h = (e) => { if (PRODUCTOS[e.detail]) { setTipo(e.detail); setListo(null); } };
+    window.addEventListener('pf-producto', h);
+    return () => window.removeEventListener('pf-producto', h);
+  }, []);
 
   React.useEffect(() => {
     if (!activeDate) return;
     setLoading(true); setSlot(null); setError(null);
-    fetch(`${PF_API}/api/availability?date=${activeDate}`)
+    fetch(`${PF_API}/api/availability?date=${activeDate}&tipo=${tipo}`)
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError('No pudimos cargar la disponibilidad. Reintenta.'))
       .finally(() => setLoading(false));
-  }, [activeDate]);
-
-  const deposit = data?.depositCLP || 357000; // piloto $300.000 + IVA
+  }, [activeDate, tipo]);
 
   async function reservar() {
     setSubmitting(true); setError(null);
-    window.pfTrack && window.pfTrack('begin_checkout', { value: deposit, currency: 'CLP', items: [{ item_name: 'Capítulo piloto', price: deposit }] });
+    if (tipo === 'minipiloto' && window.pfTrack) window.pfTrack('begin_checkout', { value: P.precio, currency: 'CLP', items: [{ item_name: 'Mini-piloto', price: P.precio }] });
     try {
       const res = await fetch(`${PF_API}/api/reserve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form }),
+        body: JSON.stringify({ tipo, date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form }),
       });
       const out = await res.json();
-      if (!res.ok || !out.init_point) throw new Error(out.error || 'Error al iniciar el pago');
-      window.location.href = out.init_point; // a MercadoPago
+      if (!res.ok) throw new Error(out.error || 'No se pudo reservar');
+      if (tipo === 'visita') {
+        setListo({ fecha: out.fecha, hora: out.hora });
+        window.pfTrack && window.pfTrack('schedule_visit', { value: 0, currency: 'CLP' });
+        setSubmitting(false);
+      } else {
+        if (!out.init_point) throw new Error('No se pudo iniciar el pago');
+        window.location.href = out.init_point; // a MercadoPago
+      }
     } catch (e) {
       setError(String(e.message || e));
       setSubmitting(false);
     }
   }
 
-  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8
-    && /^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(form.rut.trim()) && form.razonSocial.trim() && form.acepta;
+  const rutOk = !form.rut.trim() || /^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(form.rut.trim());
+  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, '').length >= 8 && rutOk && form.acepta;
+  const inp = { padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0 };
+
+  if (listo) return (
+    <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 24, maxWidth: 560 }}>
+      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>¡Visita agendada! ✅</div>
+      <p style={{ fontFamily: PFB.display, fontSize: 15, lineHeight: 1.55, marginTop: 8 }}>
+        Te esperamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con la dirección exacta y un link por si necesitas cambiar la hora.
+      </p>
+    </div>
+  );
 
   return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: 560, overflow: 'hidden' }}>
       <style>{`@media (max-width: 480px){ .pf-form-grid{ grid-template-columns: 1fr !important; } }`}</style>
-      {/* Encabezado */}
-      <div style={{ padding: '14px 18px', borderBottom: `1.5px solid ${PFB.ink}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-        <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' }}>
-          Reserva tu capítulo piloto
-        </div>
-        <div style={{ fontFamily: PFB.mono, fontSize: 10, color: PFB.ink + '99', letterSpacing: '0.06em' }}>
-          $300.000 + IVA · TOTAL {CLP(deposit)}
-        </div>
+      {/* Selector de producto */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: `1.5px solid ${PFB.ink}` }}>
+        {Object.entries(PRODUCTOS).map(([k, v], i) => {
+          const on = k === tipo;
+          return (
+            <button key={k} onClick={() => { setTipo(k); setSlot(null); }} style={{
+              padding: '14px 12px', cursor: 'pointer', border: 'none', borderLeft: i ? `1.5px solid ${PFB.ink}` : 'none',
+              background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink, textAlign: 'left',
+            }}>
+              <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 15 }}>{v.label}</div>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10.5, marginTop: 3, opacity: 0.8 }}>{v.sub}</div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Selector de días — semanas apiladas */}
+      {/* Selector de días */}
       <div style={{ padding: '12px 18px 2px' }}>
-        <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', fontWeight: 700, marginBottom: 8 }}>
-          {monthLabel}
-        </div>
+        <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', fontWeight: 700, marginBottom: 8 }}>{monthLabel}</div>
         {weeks.map((w) => (
           <div key={w.wk} style={{ marginBottom: 8 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 5 }}>
@@ -141,9 +175,8 @@ function BookingCalendar() {
                 const on = d.iso === activeDate;
                 return (
                   <button key={d.iso} onClick={() => setActiveDate(d.iso)} style={{
-                    padding: '5px 2px', cursor: 'pointer',
-                    border: `1.5px solid ${PFB.ink}`, background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink,
-                    fontFamily: PFB.mono, textAlign: 'center', transition: 'all .15s',
+                    padding: '5px 2px', cursor: 'pointer', border: `1.5px solid ${PFB.ink}`,
+                    background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink, fontFamily: PFB.mono, textAlign: 'center',
                   }}>
                     <div style={{ fontSize: 8, letterSpacing: '0.04em', opacity: 0.7, textTransform: 'uppercase' }}>{d.dowLabel}</div>
                     <div style={{ fontSize: 15, fontWeight: 700, fontFamily: PFB.display, lineHeight: 1.1 }}>{d.dnum}</div>
@@ -155,14 +188,10 @@ function BookingCalendar() {
         ))}
       </div>
 
-      {/* Bloques del día */}
+      {/* Horarios del día */}
       <div style={{ padding: '12px 18px 18px' }}>
-        {loading && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Cargando bloques…</div>}
-
-        {!loading && data && !data.open && (
-          <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Día cerrado.</div>
-        )}
-
+        {loading && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Cargando horarios…</div>}
+        {!loading && data && !data.open && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Día cerrado.</div>}
         {!loading && data?.open && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(82px, 1fr))', gap: 6 }}>
             {data.slots.map((s) => {
@@ -173,95 +202,56 @@ function BookingCalendar() {
                   border: `1.5px solid ${s.available ? PFB.ink : PFB.ink + '33'}`,
                   background: chosen ? PFB.blue : s.available ? '#fff' : PFB.ink + '0a',
                   color: chosen ? '#fff' : s.available ? PFB.ink : PFB.ink + '55',
-                  fontFamily: PFB.mono, fontSize: 13, fontWeight: 700, transition: 'all .15s',
-                  textDecoration: s.available ? 'none' : 'line-through',
-                }}>
-                  {s.label}
-                </button>
+                  fontFamily: PFB.mono, fontSize: 13, fontWeight: 700, textDecoration: s.available ? 'none' : 'line-through',
+                }}>{s.label}</button>
               );
             })}
             {data.slots.every((s) => !s.available) && (
-              <div style={{ gridColumn: '1 / -1', fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', paddingTop: 8 }}>
-                Sin bloques disponibles este día. Prueba otra fecha.
-              </div>
+              <div style={{ gridColumn: '1 / -1', fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', paddingTop: 8 }}>Sin horarios este día. Prueba otra fecha.</div>
             )}
           </div>
         )}
+        {error && <div style={{ marginTop: 14, fontFamily: PFB.mono, fontSize: 12, color: PFB.red }}>{error}</div>}
 
-        {error && (
-          <div style={{ marginTop: 14, fontFamily: PFB.mono, fontSize: 12, color: PFB.red }}>{error}</div>
-        )}
-
-        {/* Datos + pago */}
+        {/* Datos */}
         {slot && (
           <div style={{ marginTop: 20, borderTop: `1.5px solid ${PFB.ink}22`, paddingTop: 18 }}>
             <div style={{ fontFamily: PFB.display, fontWeight: 700, fontSize: 15, marginBottom: 12 }}>
-              {days.find((d) => d.iso === activeDate)?.dowLabel} {days.find((d) => d.iso === activeDate)?.dnum} {days.find((d) => d.iso === activeDate)?.monLabel} · {slot.label} hrs
+              {P.label} · {days.find((d) => d.iso === activeDate)?.dowLabel} {days.find((d) => d.iso === activeDate)?.dnum} {days.find((d) => d.iso === activeDate)?.monLabel} · {slot.label} hrs
             </div>
-            <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-              {[['name', 'Nombre y apellido', 'text'], ['email', 'Email', 'email'], ['phone', 'Teléfono / WhatsApp', 'tel']].map(([k, ph, type]) => (
-                <input key={k} type={type} placeholder={ph} value={form[k]}
-                  onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-                  style={{
-                    gridColumn: k === 'name' ? '1 / -1' : 'auto',
-                    padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff',
-                    fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0,
-                  }} />
+            <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              {[['name', 'Nombre y apellido', 'text'], ['empresa', 'Empresa o proyecto (opcional)', 'text'], ['email', 'Email', 'email'], ['phone', 'Teléfono / WhatsApp', 'tel']].map(([k, ph, type]) => (
+                <input key={k} type={type} placeholder={ph} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} style={inp} />
               ))}
             </div>
-
-            {/* N° de personas */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>N° DE PERSONAS EN EL SET (HASTA 4)</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[1, 2, 3, 4].map((n) => {
-                  const on = form.personas === n;
-                  return (
-                    <button key={n} onClick={() => setForm({ ...form, personas: n })} style={{
-                      width: 44, height: 40, cursor: 'pointer', border: `1.5px solid ${PFB.ink}`,
-                      background: on ? PFB.blue : '#fff', color: on ? '#fff' : PFB.ink, fontFamily: PFB.mono, fontSize: 14, fontWeight: 700,
-                    }}>{n}</button>
-                  );
-                })}
+            {tipo === 'minipiloto' && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>¿QUIERES FACTURA? (OPCIONAL)</div>
+                <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[['rut', 'RUT (12.345.678-9)'], ['razonSocial', 'Razón social']].map(([k, ph]) => (
+                    <input key={k} type="text" placeholder={ph} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} style={inp} />
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Facturación */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>DATOS PARA LA FACTURA</div>
-              <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {[['rut', 'RUT (12.345.678-9)'], ['razonSocial', 'Razón social o nombre'], ['giro', 'Giro (opcional)']].map(([k, ph]) => (
-                  <input key={k} type="text" placeholder={ph} value={form[k]}
-                    onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-                    style={{
-                      gridColumn: k === 'giro' ? '1 / -1' : 'auto',
-                      padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff',
-                      fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0,
-                    }} />
-                ))}
-              </div>
-            </div>
-
-            {/* Comentarios */}
-            <textarea placeholder="Cuéntanos de tu podcast (tema, invitados, si ya tienes nombre)" value={form.comentarios}
+            )}
+            <textarea placeholder={tipo === 'visita' ? '¿Qué te gustaría ver o conversar? (opcional)' : 'Cuéntanos qué quieres grabar (opcional)'} value={form.comentarios}
               onChange={(e) => setForm({ ...form, comentarios: e.target.value })} rows={2}
-              style={{ width: '100%', padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0, marginBottom: 12, resize: 'vertical' }} />
-
-            {/* Aceptación de condiciones */}
+              style={{ ...inp, width: '100%', marginBottom: 12, resize: 'vertical' }} />
             <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 14, fontFamily: PFB.mono, fontSize: 11.5, lineHeight: 1.5 }}>
               <input type="checkbox" checked={form.acepta} onChange={(e) => setForm({ ...form, acepta: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
-              <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones del estudio</a>: cambio de fecha sin costo hasta 48 h antes; con menos de 48 h, o si no llego, el capítulo se da por grabado.</span>
+              <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones</a> y recibir información de Pod Factory por correo (puedo darme de baja cuando quiera).</span>
             </label>
-
             <button onClick={reservar} disabled={!valid || submitting} style={{
-              width: '100%', padding: '15px', cursor: valid && !submitting ? 'pointer' : 'not-allowed',
-              border: 'none', background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',
+              width: '100%', padding: '15px', cursor: valid && !submitting ? 'pointer' : 'not-allowed', border: 'none',
+              background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',
               fontFamily: PFB.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em',
             }}>
-              {submitting ? 'REDIRIGIENDO A MERCADOPAGO…' : `PAGAR ${CLP(deposit)} Y RESERVAR`}
+              {submitting ? (tipo === 'visita' ? 'AGENDANDO…' : 'REDIRIGIENDO A MERCADOPAGO…') : P.cta}
             </button>
             <div style={{ marginTop: 10, fontFamily: PFB.mono, fontSize: 10.5, color: PFB.ink + '88', lineHeight: 1.5 }}>
-              Pago seguro con MercadoPago. Si contratas una temporada dentro de 30 días, el piloto pasa a ser tu capítulo 1 y se descuenta del total.
+              {tipo === 'visita'
+                ? 'Te enviamos la dirección exacta por correo al confirmar.'
+                : 'Pago seguro con MercadoPago. Si después contratas una temporada, el mini-piloto se descuenta del total.'}
             </div>
           </div>
         )}

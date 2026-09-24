@@ -1,6 +1,6 @@
 // Pod Factory — sección de podcasts dentro de doppel.cl.
 // Posicionamiento: productora de podcasts que graba donde sea (estudio propio en
-// Vitacura o locación). Temporadas con precios publicados, piloto reservable con
+// Vitacura o locación). Temporadas con precios, visita gratis y mini-piloto reservables con
 // calendario (API en podfactory.cl) y condiciones claras. El resto va a WhatsApp.
 
 const PF = {
@@ -58,13 +58,14 @@ function CTAButtons({ size = 'md', waContext = 'quiero hacer mi podcast con Pod 
   );
 }
 
-// CTA principal del funnel: reservar el capítulo piloto (baja al calendario).
-function PilotoButton({ size = 'md', label = 'RESERVAR CAPÍTULO PILOTO', style = {} }) {
+// CTA del funnel: elige el producto del calendario (visita o mini-piloto) y baja a él.
+function PilotoButton({ size = 'md', label = 'AGENDA UNA VISITA AL ESTUDIO', producto = 'visita', ghost = false, style = {} }) {
   const pad = size === 'lg' ? '16px 26px' : size === 'sm' ? '11px 18px' : '14px 22px';
   return (
-    <a href="#reservar" style={{
+    <a href="#reservar" onClick={() => window.dispatchEvent(new CustomEvent('pf-producto', { detail: producto }))} style={{
       padding: pad, fontSize: size === 'sm' ? 12 : 13, fontWeight: 800, letterSpacing: '0.08em',
-      fontFamily: PF.display, textDecoration: 'none', borderRadius: 999, background: PF.red, color: PF.bg,
+      fontFamily: PF.display, textDecoration: 'none', borderRadius: 999,
+      background: ghost ? 'transparent' : PF.red, color: ghost ? PF.ink : PF.bg, border: ghost ? `1.5px solid ${PF.ink}` : 'none',
       display: 'inline-flex', alignItems: 'center', gap: 10, lineHeight: 1, ...style,
     }}>{label} →</a>
   );
@@ -181,12 +182,12 @@ function ReservaBanner() {
       const pid = q.get('payment_id') || q.get('collection_id') || 'sin-id';
       let seen = false;
       try { seen = localStorage.getItem('pf_purchase_' + pid) === '1'; localStorage.setItem('pf_purchase_' + pid, '1'); } catch (e) {}
-      if (!seen && window.pfTrack) window.pfTrack('purchase', { value: 357000, currency: 'CLP', transaction_id: pid, event_id: 'mp-' + pid, items: [{ item_name: 'Capítulo piloto', price: 357000 }] });
+      if (!seen && window.pfTrack) window.pfTrack('purchase', { value: 35700, currency: 'CLP', transaction_id: pid, event_id: 'mp-' + pid, items: [{ item_name: 'Mini-piloto', price: 35700 }] });
     }
   }, [estado]);
   if (!open || !estado) return null;
   const msg = {
-    ok: ['¡Listo! Tu capítulo piloto quedó reservado.', 'Te enviamos un correo con la confirmación, la dirección y el link para cambiar la fecha si lo necesitas.', '#1f7a3f'],
+    ok: ['¡Listo! Tu mini-piloto quedó reservado.', 'Te enviamos un correo con la confirmación, la dirección y el link para cambiar la fecha si lo necesitas.', '#1f7a3f'],
     pendiente: ['Tu pago está en proceso.', 'Apenas MercadoPago lo apruebe te llega el correo de confirmación.', PF.orange],
     error: ['El pago no se completó.', 'No se hizo ningún cargo. Puedes intentarlo de nuevo o escribirnos por WhatsApp.', PF.red],
   }[estado] || null;
@@ -300,7 +301,7 @@ function PodFactoryLanding() {
             ['Estudio', '#ubicacion'],
             ['Locación', '#donde'],
             ['Temporadas', '#temporadas'],
-            ['Piloto', '#reservar'],
+            ['Visita', '#reservar'],
             ['Empresas', '#empresas'],
             ['Condiciones', '#condiciones'],
             ['Preguntas', '#faq'],
@@ -308,7 +309,7 @@ function PodFactoryLanding() {
             <a key={l} href={h} style={{ color: PF.ink, textDecoration: 'none' }}>{l}</a>
           ))}
         </nav>
-        <div className="pf-header-cta"><PilotoButton size="sm" label="RESERVAR PILOTO" /></div>
+        <div className="pf-header-cta"><PilotoButton size="sm" label="AGENDA UNA VISITA" /></div>
       </header>
 
       {/* Hero */}
@@ -325,16 +326,16 @@ function PodFactoryLanding() {
             estudio. <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400 }}>O donde estés.</span>
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 560, marginTop: 22 }}>
-            Un estudio de podcast en Vitacura, listo para grabar: set multicámara, audio broadcast
-            y un director a cargo. Y como somos productora, también te ayudamos con el formato
-            y llevamos el set a tu oficina, a un evento o a donde lo necesites.
+            Cámaras Blackmagic, luz de cine y un director a cargo: tu podcast con un look que
+            se nota, en un estudio en Vitacura. Y como somos productora, también te ayudamos
+            con el formato y llevamos el set a tu oficina o a donde lo necesites.
           </p>
           <div className="pf-hero-cta" style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center', flexWrap: 'wrap' }}>
             <PilotoButton size="lg" />
-            <DudasButton size="lg" />
+            <PilotoButton size="lg" ghost producto="minipiloto" label="MINI-PILOTO · $30.000" />
           </div>
           <div style={{ fontFamily: PF.mono, fontSize: 12, marginTop: 14, color: PF.ink + 'aa' }}>
-            Piloto $300.000 + IVA · se descuenta si contratas la temporada · <a href="#temporadas" style={{ color: PF.blue }}>ver temporadas y precios</a>
+            Visita gratis de 20 minutos · mini-piloto de 10 minutos grabando, $30.000 + IVA · <a href={waLink('tengo una duda sobre Pod Factory.')} target="_blank" rel="noopener" style={{ color: PF.blue }}>¿dudas? WhatsApp</a>
           </div>
           <a href="#empresas" style={{ display: 'inline-block', marginTop: 10, fontWeight: 700, fontSize: 14, color: PF.ink }}>
             ¿Es para tu empresa? Te mandamos una propuesta en 24 horas →
@@ -366,9 +367,9 @@ function PodFactoryLanding() {
       }}>
         {[
           ['+300', 'episodios producidos', PF.blue],
-          ['Vitacura', 'estudio propio · o locación', PF.red],
+          ['6K', 'cámaras Blackmagic', PF.red],
           ['5 días', 'hábiles de entrega', PF.orange],
-          ['6+', 'capítulos por temporada', PF.yellow],
+          ['20 min', 'visita gratis al estudio', PF.yellow],
         ].map(([n, l, c], i) => (
           <Reveal key={i} delay={i * 120} style={{ padding: '30px 20px', borderRight: i < 3 ? `1.5px solid ${PF.ink}` : 'none', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6, background: c }} />
@@ -376,6 +377,104 @@ function PodFactoryLanding() {
             <div style={{ fontFamily: PF.mono, fontSize: 12, letterSpacing: '0.08em', marginTop: 6, color: PF.ink + 'aa' }}>{l.toUpperCase()}</div>
           </Reveal>
         ))}
+      </section>
+
+      {/* Productions showcase */}
+      <section id="producciones" style={{ padding: '40px 32px 60px', background: PF.ink, color: PF.bg }}>
+        <Reveal><PFRays height={10} gap={3} width={180} /></Reveal>
+        <Reveal delay={100} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 22, marginBottom: 20 }}>
+          <h2 style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 46, letterSpacing: '-0.035em', margin: 0 }}>
+            El look Blackmagic, <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.yellow }}>en capítulos reales.</span>
+          </h2>
+          <span style={{ fontFamily: PF.mono, fontSize: 11, color: PF.yellow, letterSpacing: '0.1em' }}>
+            GRABADOS EN EL ESTUDIO · MIRA EN YOUTUBE ↗
+          </span>
+        </Reveal>
+        <div className="pf-productions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {PODCASTS.map((p, i) => {
+            const bg = [PF.red, PF.blue, PF.orange, PF.yellow][i];
+            const fg = i === 3 ? PF.ink : PF.bg;
+            const Tag = p.url ? 'a' : 'div';
+            const linkProps = p.url ? { href: p.url, target: '_blank', rel: 'noopener' } : {};
+            if (p.image) {
+              return (
+                <Reveal key={i} delay={200 + i * 110}>
+                  <Tag {...linkProps} style={{
+                    textDecoration: 'none', display: 'block', color: PF.bg,
+                  }}>
+                    <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden', background: PF.ink }}>
+                      <img
+                        src={p.image}
+                        alt={p.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.15em', opacity: 0.7 }}>{p.ep}</div>
+                      <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', lineHeight: 1.05, marginTop: 6 }}>
+                        {p.title}
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: PF.mono, marginTop: 6, opacity: 0.7, lineHeight: 1.4 }}>
+                        CON {p.host.toUpperCase()}
+                      </div>
+                    </div>
+                  </Tag>
+                </Reveal>
+              );
+            }
+            // Placeholder color card (no image)
+            return (
+              <Reveal key={i} delay={200 + i * 110}>
+                <Tag {...linkProps} style={{
+                  padding: 18, aspectRatio: '1/1', position: 'relative',
+                  overflow: 'hidden', textDecoration: 'none', display: 'block',
+                  background: bg, color: fg,
+                }}>
+                  <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.15em', opacity: 0.8 }}>{p.ep}</div>
+                  <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1.05, marginTop: 8 }}>
+                    {p.title}
+                  </div>
+                  <div style={{ fontSize: 11, fontFamily: PF.mono, marginTop: 8, opacity: 0.85, lineHeight: 1.4 }}>
+                    CON {p.host.toUpperCase()}
+                  </div>
+                  <div style={{
+                    position: 'absolute', bottom: 14, right: 14, width: 28, height: 28, borderRadius: '50%',
+                    border: `1.5px solid ${fg}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg viewBox="0 0 20 20" width="10" height="10"><path d="M7 5 L15 10 L7 15 Z" fill={fg} /></svg>
+                  </div>
+                </Tag>
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Conoce el estudio: visita gratis o mini-piloto (calendario) */}
+      <section id="reservar" style={{ padding: '60px 32px', background: PF.yellow, borderTop: `2px solid ${PF.ink}`, borderBottom: `2px solid ${PF.ink}` }}>
+        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 560px)', gap: 40, alignItems: 'start' }}>
+          <Reveal>
+            <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
+            <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
+            <div style={{ display: 'grid', gap: 16, marginTop: 24 }}>
+              <div style={{ borderTop: `1.5px solid ${PF.ink}`, paddingTop: 12 }}>
+                <div style={{ fontWeight: 900, fontSize: 22 }}>Visita al estudio · <span style={{ color: PF.red }}>gratis</span></div>
+                <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 6 }}>20 minutos para conocer el set, ver el look en el monitor y conversar tu idea. Sin compromiso.</p>
+              </div>
+              <div style={{ borderTop: `1.5px solid ${PF.ink}`, paddingTop: 12 }}>
+                <div style={{ fontWeight: 900, fontSize: 22 }}>Mini-piloto · $30.000 <span style={{ fontSize: 14, fontWeight: 600 }}>+ IVA</span></div>
+                <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 6 }}>10 minutos grabando en el set, con las cámaras Blackmagic. Si después contratas una temporada, se descuenta del total.</p>
+              </div>
+            </div>
+            <p style={{ fontFamily: PF.mono, fontSize: 12, lineHeight: 1.6, marginTop: 16 }}>
+              Lunes a viernes, en Vitacura. ¿Prefieres escribir antes? <a href={waLink('quiero conocer el estudio.')} target="_blank" rel="noopener" style={{ color: PF.ink, fontWeight: 700 }}>WhatsApp</a>
+            </p>
+          </Reveal>
+          <Reveal delay={150} className="pf-calendar-wrap">
+            <BookingCalendar />
+          </Reveal>
+        </div>
       </section>
 
       {/* Cómo trabajamos — productora de punta a punta */}
@@ -463,7 +562,7 @@ function PodFactoryLanding() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="https://www.google.com/maps/dir/?api=1&destination=Pod+Factory+Premium+Podcast+Studio&destination_place_id=ChIJX7coTmnPYpYRahuOLfgXst0" target="_blank" rel="noopener"
                 style={{ background: PF.ink, color: PF.bg, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>CÓMO LLEGAR ↗</a>
-              <a href="#reservar" style={{ background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>RESERVAR UN PILOTO</a>
+              <a href="#reservar" style={{ background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>AGENDAR UNA VISITA</a>
             </div>
           </Reveal>
           <Reveal delay={250} style={{ position: 'relative', minHeight: 340, border: `1.5px solid ${PF.ink}`, overflow: 'hidden' }}>
@@ -529,7 +628,7 @@ function PodFactoryLanding() {
         </div>
         <Reveal delay={250} style={{ marginTop: 28 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <PilotoButton size="lg" label="PARTE CON UN PILOTO" />
+            <PilotoButton size="lg" label="PARTE CON UNA VISITA AL ESTUDIO" />
             <DudasButton size="lg" label="CONTRATAR LA TEMPORADA POR WHATSAPP" waContext="quiero contratar una temporada de mi podcast." />
           </div>
         </Reveal>
@@ -550,37 +649,6 @@ function PodFactoryLanding() {
             </ul>
           </Reveal>
           <Reveal delay={150} style={{ color: PF.ink }}><EmpresasForm /></Reveal>
-        </div>
-      </section>
-
-      {/* Piloto + calendario */}
-      <section id="reservar" style={{ padding: '60px 32px', background: PF.yellow, borderTop: `2px solid ${PF.ink}`, borderBottom: `2px solid ${PF.ink}` }}>
-        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 560px)', gap: 40, alignItems: 'start' }}>
-          <Reveal>
-            <Kicker>▸ ¿QUIERES PROBAR PRIMERO?</Kicker>
-            <H2>Graba un <Serif>capítulo piloto.</Serif></H2>
-            <div style={{ fontWeight: 900, fontSize: 44, letterSpacing: '-0.03em', marginTop: 22 }}>
-              $300.000 <span style={{ fontSize: 16, fontWeight: 600 }}>+ IVA</span>
-            </div>
-            <div style={{ fontFamily: PF.mono, fontSize: 12, marginTop: 4 }}>TOTAL $357.000 · SET BASE · SE PAGA AL RESERVAR</div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '22px 0 0', fontSize: 16, lineHeight: 1.6 }}>
-              {[
-                'Elige día y hora en el calendario y paga con MercadoPago.',
-                'Te llega la confirmación con la dirección y un link para cambiar la fecha.',
-                'Si contratas una temporada dentro de 30 días, el piloto pasa a ser tu capítulo 1 y se descuenta del total.',
-              ].map((t, i) => (
-                <li key={i} style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                  <span style={{ fontFamily: PF.mono, fontWeight: 700 }}>0{i + 1}</span><span>{t}</span>
-                </li>
-              ))}
-            </ul>
-            <p style={{ fontFamily: PF.mono, fontSize: 12, lineHeight: 1.6, marginTop: 16 }}>
-              Lunes a viernes. Cambio de fecha sin costo hasta 48 h antes.
-            </p>
-          </Reveal>
-          <Reveal delay={150} className="pf-calendar-wrap">
-            <BookingCalendar />
-          </Reveal>
         </div>
       </section>
 
@@ -652,78 +720,6 @@ function PodFactoryLanding() {
               <div style={{ fontSize: 15, lineHeight: 1.55, marginTop: 8, color: PF.bg + 'dd' }}>{d}</div>
             </Reveal>
           ))}
-        </div>
-      </section>
-
-      {/* Productions showcase */}
-      <section id="producciones" style={{ padding: '40px 32px 60px', background: PF.ink, color: PF.bg }}>
-        <Reveal><PFRays height={10} gap={3} width={180} /></Reveal>
-        <Reveal delay={100} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 22, marginBottom: 20 }}>
-          <h2 style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 46, letterSpacing: '-0.035em', margin: 0 }}>
-            Se grabó aquí
-          </h2>
-          <a style={{ fontFamily: PF.mono, fontSize: 11, color: PF.yellow, letterSpacing: '0.1em' }}>
-            VER TODAS →
-          </a>
-        </Reveal>
-        <div className="pf-productions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          {PODCASTS.map((p, i) => {
-            const bg = [PF.red, PF.blue, PF.orange, PF.yellow][i];
-            const fg = i === 3 ? PF.ink : PF.bg;
-            const Tag = p.url ? 'a' : 'div';
-            const linkProps = p.url ? { href: p.url, target: '_blank', rel: 'noopener' } : {};
-            if (p.image) {
-              return (
-                <Reveal key={i} delay={200 + i * 110}>
-                  <Tag {...linkProps} style={{
-                    textDecoration: 'none', display: 'block', color: PF.bg,
-                  }}>
-                    <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden', background: PF.ink }}>
-                      <img
-                        src={p.image}
-                        alt={p.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      />
-                    </div>
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.15em', opacity: 0.7 }}>{p.ep}</div>
-                      <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', lineHeight: 1.05, marginTop: 6 }}>
-                        {p.title}
-                      </div>
-                      <div style={{ fontSize: 11, fontFamily: PF.mono, marginTop: 6, opacity: 0.7, lineHeight: 1.4 }}>
-                        CON {p.host.toUpperCase()}
-                      </div>
-                    </div>
-                  </Tag>
-                </Reveal>
-              );
-            }
-            // Placeholder color card (no image)
-            return (
-              <Reveal key={i} delay={200 + i * 110}>
-                <Tag {...linkProps} style={{
-                  padding: 18, aspectRatio: '1/1', position: 'relative',
-                  overflow: 'hidden', textDecoration: 'none', display: 'block',
-                  background: bg, color: fg,
-                }}>
-                  <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.15em', opacity: 0.8 }}>{p.ep}</div>
-                  <div style={{ fontFamily: PF.display, fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1.05, marginTop: 8 }}>
-                    {p.title}
-                  </div>
-                  <div style={{ fontSize: 11, fontFamily: PF.mono, marginTop: 8, opacity: 0.85, lineHeight: 1.4 }}>
-                    CON {p.host.toUpperCase()}
-                  </div>
-                  <div style={{
-                    position: 'absolute', bottom: 14, right: 14, width: 28, height: 28, borderRadius: '50%',
-                    border: `1.5px solid ${fg}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <svg viewBox="0 0 20 20" width="10" height="10"><path d="M7 5 L15 10 L7 15 Z" fill={fg} /></svg>
-                  </div>
-                </Tag>
-              </Reveal>
-            );
-          })}
         </div>
       </section>
 
@@ -811,8 +807,8 @@ function PodFactoryLanding() {
               a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con jornadas desde $950.000 + IVA (2 capítulos en Santiago).</>,
             },
             {
-              q: '¿Puedo grabar un solo capítulo?',
-              a: <>Trabajamos por temporadas desde 6 capítulos. Si quieres probar antes, reserva un <b>capítulo piloto</b> ($300.000 + IVA): si contratas una temporada dentro de 30 días, el piloto pasa a ser tu capítulo 1 y se descuenta del total.</>,
+              q: '¿Puedo probar antes de contratar una temporada?',
+              a: <>Sí, de dos formas. Agenda una <b>visita gratis de 20 minutos</b> para conocer el estudio, o reserva un <b>mini-piloto</b> ($30.000 + IVA): 10 minutos grabando en el set. Si después contratas una temporada, el mini-piloto se descuenta del total.</>,
             },
             {
               q: '¿Qué pasa si nos pasamos de la hora?',

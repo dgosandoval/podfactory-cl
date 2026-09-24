@@ -22,6 +22,7 @@ export async function onRequestGet({ request, env }) {
     fecha,
     hora,
     deposit: b.deposit,
+    tipo: b.tipo || null,
     address: env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago",
     modifiable: isModifiable(b.start),
     pastSession: Date.parse(b.start) <= Date.now(),
