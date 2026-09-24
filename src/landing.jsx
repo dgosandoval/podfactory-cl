@@ -1,6 +1,6 @@
 // Pod Factory — sección de podcasts dentro de doppel.cl.
 // Posicionamiento: productora de podcasts que graba donde sea (estudio propio en
-// Vitacura o locación). Temporadas con precios, visita gratis y mini-piloto reservables con
+// Vitacura o locación). Un solo llamado a la acción: dejar el correo (el CRM manda la info);
 // calendario (API en podfactory.cl) y condiciones claras. El resto va a WhatsApp.
 
 const PF = {
@@ -89,7 +89,7 @@ function DudasButton({ size = 'md', label = '¿DUDAS? WHATSAPP', waContext = 'te
 function FloatingCTA() {
   const [show, setShow] = React.useState(false);
   React.useEffect(() => {
-    const onScroll = () => setShow(window.scrollY > 600);
+    const onScroll = () => setShow(true); // siempre visible: WhatsApp es para resolver dudas
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
@@ -195,68 +195,12 @@ function ReservaBanner() {
 }
 
 
-// Camino para empresas: formulario corto → propuesta en 24 h (POST /api/lead).
-function EmpresasForm() {
-  const [f, setF] = React.useState({ nombre: '', empresa: '', email: '', telefono: '', capitulos: '8', donde: 'Estudio', mensaje: '', website: '', consent: false });
-  const [estado, setEstado] = React.useState(null); // null | enviando | ok | error
-  const [err, setErr] = React.useState('');
-  const valid = f.nombre.trim() && f.empresa.trim() && /\S+@\S+\.\S+/.test(f.email) && f.telefono.trim().length >= 8;
-  async function enviar(e) {
-    e.preventDefault(); if (!valid) return;
-    setEstado('enviando'); setErr('');
-    try {
-      const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(f) });
-      const o = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(o.error || 'No se pudo enviar');
-      setEstado('ok');
-      window.pfTrack && window.pfTrack('generate_lead', { lead_type: 'empresa', capitulos: f.capitulos, donde: f.donde });
-    } catch (e2) { setEstado('error'); setErr(String(e2.message || e2)); }
-  }
-  const inp = { padding: '12px 13px', border: `1.5px solid ${PF.ink}`, background: '#fff', fontFamily: PF.mono, fontSize: 13, outline: 'none', borderRadius: 0, width: '100%' };
-  if (estado === 'ok') return (
-    <div style={{ background: '#fff', border: `1.5px solid ${PF.ink}`, padding: 28 }}>
-      <div style={{ fontWeight: 900, fontSize: 26 }}>¡Recibido! ✅</div>
-      <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 8 }}>Te enviamos la propuesta en menos de 24 horas hábiles. Si es urgente, escríbenos por WhatsApp.</p>
-      <DudasButton label="ESCRIBIR POR WHATSAPP" waContext="acabo de pedir una propuesta para mi empresa." />
-    </div>
-  );
-  return (
-    <form onSubmit={enviar} style={{ background: '#fff', border: `1.5px solid ${PF.ink}`, padding: 22, display: 'grid', gap: 10 }}>
-      <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <input style={inp} placeholder="Tu nombre" value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} />
-        <input style={inp} placeholder="Empresa" value={f.empresa} onChange={(e) => setF({ ...f, empresa: e.target.value })} />
-        <input style={inp} type="email" placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
-        <input style={inp} type="tel" placeholder="Teléfono / WhatsApp" value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} />
-        <select style={inp} value={f.capitulos} onChange={(e) => setF({ ...f, capitulos: e.target.value })}>
-          {['6', '8', '10', '12', 'Más de 12', 'Aún no sé'].map((o) => <option key={o} value={o}>{/^\d+$/.test(o) ? `${o} capítulos` : o}</option>)}
-        </select>
-        <select style={inp} value={f.donde} onChange={(e) => setF({ ...f, donde: e.target.value })}>
-          {['Estudio', 'Locación', 'Aún no sé'].map((o) => <option key={o} value={o}>{o === 'Aún no sé' ? 'Estudio o locación: aún no sé' : `En ${o.toLowerCase()}`}</option>)}
-        </select>
-      </div>
-      <textarea style={{ ...inp, resize: 'vertical' }} rows={3} placeholder="Cuéntanos del podcast: tema, a quién va dirigido, fecha en que quieren partir" value={f.mensaje} onChange={(e) => setF({ ...f, mensaje: e.target.value })} />
-      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontFamily: PF.mono, fontSize: 11.5, lineHeight: 1.5 }}>
-        <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
-        <span>Quiero recibir novedades de Pod Factory por correo (opcional).</span>
-      </label>
-      {/* honeypot anti-spam: los humanos no lo ven */}
-      <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
-      <button type="submit" disabled={!valid || estado === 'enviando'} style={{
-        padding: 15, border: 'none', cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.ink : PF.ink + '33', color: '#fff',
-        fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
-      }}>{estado === 'enviando' ? 'ENVIANDO…' : 'PEDIR PROPUESTA'}</button>
-      {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}. Puedes escribirnos por WhatsApp.</div>}
-      <div style={{ fontFamily: PF.mono, fontSize: 10.5, color: PF.ink + '88' }}>Respondemos en menos de 24 horas hábiles. Sin spam.</div>
-    </form>
-  );
-}
-
-
-// "Recibe la lista de precios": los precios NO están en la página; llegan por correo
-// (así el correo que dejan es real). El envío de la lista es siempre; la secuencia y el
-// newsletter, solo si marcan la casilla de consentimiento.
-function PreciosGate() {
-  const [f, setF] = React.useState({ nombre: '', email: '', segment: 'empresa', horizonte: '1_3_meses', consent: false, website: '' });
+// El ÚNICO formulario del funnel: "Recibe toda la información en tu correo".
+// Envía el lead al CRM (el hub manda al instante formatos, precios y cómo trabajamos, y
+// luego la secuencia). En la pantalla de gracias ofrece el segundo paso: agendar la visita
+// gratis o el mini-piloto, con el nombre y el correo ya llenos.
+function InfoForm({ id, compact = false }) {
+  const [f, setF] = React.useState({ nombre: '', email: '', segment: 'empresa', horizonte: '1_3_meses', website: '' });
   const [estado, setEstado] = React.useState(null); // null | enviando | ok | error
   const [err, setErr] = React.useState('');
   const valid = f.nombre.trim() && /\S+@\S+\.\S+/.test(f.email);
@@ -264,67 +208,97 @@ function PreciosGate() {
     e.preventDefault(); if (!valid) return;
     setEstado('enviando'); setErr('');
     try {
-      const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'precios', ...f }) });
+      const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tipo: 'precios', ...f, consent: true }) });
       const o = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(o.error || 'No se pudo enviar');
       setEstado('ok');
-      window.pfTrack && window.pfTrack('generate_lead', { lead_type: 'precios', segment: f.segment, horizonte: f.horizonte });
+      window.pfTrack && window.pfTrack('generate_lead', { lead_type: 'info', segment: f.segment, horizonte: f.horizonte, form: id });
     } catch (e2) { setEstado('error'); setErr(String(e2.message || e2)); }
   }
   const inp = { padding: '12px 13px', border: `1.5px solid ${PF.ink}`, background: '#fff', fontFamily: PF.mono, fontSize: 13, outline: 'none', borderRadius: 0, width: '100%' };
   const lbl = { fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.12em', color: PF.ink + '99', fontWeight: 700, marginBottom: 5, display: 'block' };
-  return (
-    <div className="pf-gate-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
-      <div style={{ background: PF.ink, color: PF.bg, padding: '30px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>LISTA DE PRECIOS</div>
-        <div style={{ fontWeight: 900, fontSize: 32, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
-          Te la enviamos <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.yellow }}>a tu correo.</span>
-        </div>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 15, lineHeight: 1.7, color: PF.bg + 'dd' }}>
-          {['Temporadas de 6, 8, 10 y 12 capítulos', 'Set Base o Full (madera + televisor con tu logo)', 'Descuentos por temporada larga', 'Grabación en locación y adicionales'].map((t) => <li key={t}>▸ {t}</li>)}
-        </ul>
-      </div>
-      {estado === 'ok' ? (
-        <div style={{ padding: '30px 26px', display: 'grid', gap: 14, alignContent: 'center' }}>
-          <div style={{ fontWeight: 900, fontSize: 24 }}>¡Listo! Revisa tu correo ✅</div>
-          <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>Te enviamos la lista de precios a <b>{f.email}</b>. Si no la ves en unos minutos, revisa la carpeta de spam.</p>
-          <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>Mientras, lo mejor es que vengas a conocer el estudio: 20 minutos, gratis.</p>
-          <div><PilotoButton label="AGENDAR UNA VISITA" /></div>
-        </div>
-      ) : (
-        <form onSubmit={enviar} style={{ padding: '26px 26px 22px', display: 'grid', gap: 12, alignContent: 'start', position: 'relative' }}>
-          <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.25 }}>¿A qué correo te la enviamos?</div>
-          <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
-            <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-          </div>
-          <label><span style={lbl}>¿PARA QUIÉN ES?</span>
-            <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
-              <option value="empresa">Para una empresa o marca</option>
-              <option value="personal">Un proyecto personal</option>
-            </select>
-          </label>
-          <label><span style={lbl}>¿CUÁNDO QUIERES PARTIR?</span>
-            <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
-              <option value="este_mes">Este mes</option>
-              <option value="1_3_meses">En 1 a 3 meses</option>
-              <option value="mas_adelante">Más adelante</option>
-              <option value="mirando">Solo estoy mirando</option>
-            </select>
-          </label>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13, lineHeight: 1.45, color: PF.ink + 'cc' }}>
-            <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }} />
-            <span>Además, quiero recibir consejos y novedades de Pod Factory (opcional; me puedo dar de baja cuando quiera).</span>
-          </label>
-          <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
-          <button type="submit" disabled={!valid || estado === 'enviando'} style={{
-            padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
-            fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
-          }}>{estado === 'enviando' ? 'ENVIANDO…' : 'ENVIARME LA LISTA DE PRECIOS →'}</button>
-          {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
-        </form>
-      )}
+  if (estado === 'ok') return (
+    <div id={id} style={{ background: '#fff', border: `1.5px solid ${PF.ink}`, boxShadow: `6px 6px 0 ${PF.ink}`, padding: 22 }}>
+      <div style={{ fontWeight: 900, fontSize: 24 }}>¡Listo, {f.nombre.split(' ')[0]}! Revisa tu correo ✅</div>
+      <p style={{ fontSize: 15, lineHeight: 1.55, margin: '8px 0 0' }}>Te enviamos toda la información a <b>{f.email}</b>. Si no la ves en unos minutos, revisa el spam.</p>
+      <div style={{ borderTop: `1.5px solid ${PF.ink}22`, margin: '18px 0 14px' }} />
+      <div style={{ fontWeight: 800, fontSize: 18 }}>¿Quieres conocer el estudio?</div>
+      <p style={{ fontSize: 14, lineHeight: 1.5, margin: '6px 0 12px', color: PF.ink + 'bb' }}>Agenda una visita gratis de 20 minutos, o un mini-piloto de 10 minutos grabando en el set.</p>
+      <BookingCalendar prefill={{ name: f.nombre, email: f.email }} />
     </div>
+  );
+  return (
+    <form id={id} onSubmit={enviar} style={{
+      background: '#fff', border: `1.5px solid ${PF.ink}`, boxShadow: `6px 6px 0 ${PF.ink}`, padding: compact ? 20 : 24,
+      display: 'grid', gap: 12, position: 'relative',
+    }}>
+      <div>
+        <div style={{ fontFamily: PF.mono, fontSize: 10.5, letterSpacing: '0.14em', color: PF.red, fontWeight: 700 }}>TODA LA INFORMACIÓN, EN TU CORREO</div>
+        <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15, marginTop: 6 }}>Formatos, precios y cómo trabajamos.</div>
+      </div>
+      <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
+        <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+      </div>
+      <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <label><span style={lbl}>¿PARA QUIÉN ES?</span>
+          <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
+            <option value="empresa">Empresa o marca</option>
+            <option value="personal">Proyecto personal</option>
+          </select>
+        </label>
+        <label><span style={lbl}>¿CUÁNDO QUIERES PARTIR?</span>
+          <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
+            <option value="este_mes">Este mes</option>
+            <option value="1_3_meses">En 1 a 3 meses</option>
+            <option value="mas_adelante">Más adelante</option>
+            <option value="mirando">Solo estoy mirando</option>
+          </select>
+        </label>
+      </div>
+      <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
+      <button type="submit" disabled={!valid || estado === 'enviando'} style={{
+        padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
+        fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
+      }}>{estado === 'enviando' ? 'ENVIANDO…' : 'RECIBIR LA INFORMACIÓN →'}</button>
+      {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
+      <div style={{ fontSize: 11.5, lineHeight: 1.45, color: PF.ink + '88' }}>
+        Te enviaremos la información y algunos correos para ayudarte a decidir. Te puedes dar de baja cuando quieras.
+      </div>
+    </form>
+  );
+}
+
+// Botón que lleva al formulario (el único llamado a la acción del funnel).
+function InfoButton({ size = 'md', label = 'RECIBE LA INFORMACIÓN', dark = false }) {
+  const pad = size === 'lg' ? '16px 26px' : size === 'sm' ? '11px 18px' : '14px 22px';
+  return (
+    <a href="#info" onClick={(e) => { e.preventDefault(); const el = document.getElementById('info'); el && el.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => el && el.querySelector('input')?.focus(), 500); }} style={{
+      padding: pad, fontSize: size === 'sm' ? 12 : 13, fontWeight: 800, letterSpacing: '0.08em', fontFamily: PF.display, textDecoration: 'none',
+      borderRadius: 999, background: dark ? PF.bg : PF.red, color: dark ? PF.ink : PF.bg, display: 'inline-flex', alignItems: 'center', gap: 10, lineHeight: 1,
+    }}>{label} →</a>
+  );
+}
+
+// Calendario para quien llega desde un correo de la secuencia (?agendar=1) o vuelve de
+// MercadoPago. En la página normal no aparece: el primer paso siempre es el correo.
+function AgendarDesdeCorreo() {
+  const q = React.useMemo(() => new URLSearchParams(window.location.search), []);
+  const show = q.get('agendar') === '1' || !!q.get('reserva');
+  React.useEffect(() => { if (show) setTimeout(() => document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth' }), 400); }, [show]);
+  if (!show) return null;
+  return (
+    <section id="reservar" style={{ padding: '50px 32px', background: PF.yellow, borderTop: `2px solid ${PF.ink}`, borderBottom: `2px solid ${PF.ink}` }}>
+      <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 560px)', gap: 40, alignItems: 'start' }}>
+        <div>
+          <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
+          <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
+          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
+        </div>
+        <BookingCalendar />
+      </div>
+    </section>
   );
 }
 
@@ -372,19 +346,16 @@ function PodFactoryLanding() {
         </div>
         <nav style={{ display: 'flex', gap: 24, fontSize: 13, fontWeight: 500 }}>
           {[
+            ['El look', '#producciones'],
             ['Cómo trabajamos', '#como'],
             ['Estudio', '#ubicacion'],
             ['Locación', '#donde'],
-            ['Temporadas', '#temporadas'],
-            ['Visita', '#reservar'],
-            ['Empresas', '#empresas'],
-            ['Condiciones', '#condiciones'],
             ['Preguntas', '#faq'],
           ].map(([l, h]) => (
             <a key={l} href={h} style={{ color: PF.ink, textDecoration: 'none' }}>{l}</a>
           ))}
         </nav>
-        <div className="pf-header-cta"><PilotoButton size="sm" label="AGENDA UNA VISITA" /></div>
+        <div className="pf-header-cta"><InfoButton size="sm" /></div>
       </header>
 
       {/* Hero */}
@@ -405,33 +376,11 @@ function PodFactoryLanding() {
             se nota, en un estudio en Vitacura. Y como somos productora, también te ayudamos
             con el formato y llevamos el set a tu oficina o a donde lo necesites.
           </p>
-          <div className="pf-hero-cta" style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center', flexWrap: 'wrap' }}>
-            <PilotoButton size="lg" />
-            <PilotoButton size="lg" ghost producto="minipiloto" label="MINI-PILOTO · $30.000" />
-          </div>
-          <div style={{ fontFamily: PF.mono, fontSize: 12, marginTop: 14, color: PF.ink + 'aa' }}>
-            Visita gratis de 20 minutos · mini-piloto de 10 minutos grabando, $30.000 + IVA · <a href={waLink('tengo una duda sobre Pod Factory.')} target="_blank" rel="noopener" style={{ color: PF.blue }}>¿dudas? WhatsApp</a>
-          </div>
-          <a href="#empresas" style={{ display: 'inline-block', marginTop: 10, fontWeight: 700, fontSize: 14, color: PF.ink }}>
-            ¿Es para tu empresa? Te mandamos una propuesta en 24 horas →
-          </a>
         </Reveal>
 
-        {/* Reel de portada */}
-        <Reveal delay={250} className="pf-reel" style={{ position: 'relative', width: 320 }}>
-          <div style={{ aspectRatio: '9/16', background: PF.ink, position: 'relative', overflow: 'hidden' }}>
-            <video src="assets/reel-portada.mp4" autoPlay muted loop playsInline
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            <div style={{
-              position: 'absolute', bottom: 14, left: 14, right: 14, background: PF.yellow, padding: '10px 14px',
-              fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, textAlign: 'center',
-            }}>
-              SET MULTICÁMARA · DONDE ESTÉS
-            </div>
-          </div>
-          <div style={{ position: 'absolute', top: -10, right: -10 }}>
-            <PFRays height={8} gap={3} width={80} />
-          </div>
+        {/* Formulario principal: visible sin bajar */}
+        <Reveal delay={200} className="pf-hero-form" style={{ width: 460 }}>
+          <InfoForm id="info" />
         </Reveal>
       </section>
 
@@ -453,6 +402,8 @@ function PodFactoryLanding() {
           </Reveal>
         ))}
       </section>
+
+      <AgendarDesdeCorreo />
 
       {/* Productions showcase */}
       <section id="producciones" style={{ padding: '40px 32px 60px', background: PF.ink, color: PF.bg }}>
@@ -526,32 +477,6 @@ function PodFactoryLanding() {
         </div>
       </section>
 
-      {/* Conoce el estudio: visita gratis o mini-piloto (calendario) */}
-      <section id="reservar" style={{ padding: '60px 32px', background: PF.yellow, borderTop: `2px solid ${PF.ink}`, borderBottom: `2px solid ${PF.ink}` }}>
-        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 560px)', gap: 40, alignItems: 'start' }}>
-          <Reveal>
-            <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
-            <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
-            <div style={{ display: 'grid', gap: 16, marginTop: 24 }}>
-              <div style={{ borderTop: `1.5px solid ${PF.ink}`, paddingTop: 12 }}>
-                <div style={{ fontWeight: 900, fontSize: 22 }}>Visita al estudio · <span style={{ color: PF.red }}>gratis</span></div>
-                <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 6 }}>20 minutos para conocer el set, ver el look en el monitor y conversar tu idea. Sin compromiso.</p>
-              </div>
-              <div style={{ borderTop: `1.5px solid ${PF.ink}`, paddingTop: 12 }}>
-                <div style={{ fontWeight: 900, fontSize: 22 }}>Mini-piloto · $30.000 <span style={{ fontSize: 14, fontWeight: 600 }}>+ IVA</span></div>
-                <p style={{ fontSize: 15, lineHeight: 1.55, marginTop: 6 }}>10 minutos grabando en el set, con las cámaras Blackmagic. Si después contratas una temporada, se descuenta del total.</p>
-              </div>
-            </div>
-            <p style={{ fontFamily: PF.mono, fontSize: 12, lineHeight: 1.6, marginTop: 16 }}>
-              Lunes a viernes, en Vitacura. ¿Prefieres escribir antes? <a href={waLink('quiero conocer el estudio.')} target="_blank" rel="noopener" style={{ color: PF.ink, fontWeight: 700 }}>WhatsApp</a>
-            </p>
-          </Reveal>
-          <Reveal delay={150} className="pf-calendar-wrap">
-            <BookingCalendar />
-          </Reveal>
-        </div>
-      </section>
-
       {/* Cómo trabajamos — productora de punta a punta */}
       <section id="como" style={{ padding: '70px 32px 60px' }}>
         <Reveal style={{ marginBottom: 30 }}>
@@ -563,7 +488,7 @@ function PodFactoryLanding() {
             ['01', 'Formato', 'Definimos contigo la idea, la estructura de cada capítulo, los invitados y la pauta.', PF.blue],
             ['02', 'Grabación', 'Set multicámara, audio broadcast y un operador en cada grabación. En el estudio o donde estés.', PF.red],
             ['03', 'Edición', 'Color, sonido, logo, música y nombres en pantalla. Reels para redes si los necesitas.', PF.orange],
-            ['04', 'Entrega', 'Cada capítulo listo para publicar en 5 días hábiles, con la misma calidad toda la temporada.', PF.yellow],
+            ['04', 'Entrega', 'Cada capítulo listo para publicar en 5 días hábiles, con la misma calidad de principio a fin.', PF.yellow],
           ].map(([n, t, d, c], i) => (
             <Reveal key={n} delay={120 + i * 100} style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
               <div style={{ height: 6, background: c }} />
@@ -588,12 +513,12 @@ function PodFactoryLanding() {
             <div style={{ aspectRatio: '16/7', background: `url(assets/set-full.jpg) center 40% / cover no-repeat` }} />
             <div style={{ padding: 24 }}>
               <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.red, fontWeight: 700 }}>EN NUESTRO ESTUDIO · VITACURA</div>
-              <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Temporadas desde 6 capítulos</div>
+              <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Un set listo para grabar</div>
               <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.ink + 'bb', marginTop: 8 }}>
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
                 Desde 6 capítulos, con fechas agendadas desde el inicio.
               </p>
-              <a href="#temporadas" style={{ display: 'inline-block', marginTop: 10, fontFamily: PF.mono, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: PF.blue }}>VER TEMPORADAS →</a>
+              <div style={{ marginTop: 14 }}><InfoButton label="RECIBE LA INFORMACIÓN" /></div>
             </div>
           </Reveal>
           <Reveal delay={220} style={{ border: `1.5px solid ${PF.bg}40`, padding: 28, display: 'flex', flexDirection: 'column' }}>
@@ -608,7 +533,7 @@ function PodFactoryLanding() {
               <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
-              <CTAButtons label="COTIZAR UNA LOCACIÓN" waContext="quiero cotizar una grabación en locación." />
+              <InfoButton label="RECIBE LA INFORMACIÓN" dark />
             </div>
           </Reveal>
         </div>
@@ -631,13 +556,13 @@ function PodFactoryLanding() {
               <div style={{ fontSize: 18, marginTop: 4, color: PF.ink + 'cc' }}>Vitacura · Santiago, Chile</div>
             </div>
             <div style={{ fontSize: 14, lineHeight: 1.55, color: PF.ink + 'cc' }}>
-              Set listo, iluminado y calibrado, con dos versiones: Base, o Full con paneles de madera y un televisor con tu logo.
+              Set listo, iluminado y calibrado, con paneles de madera y un televisor para tu logo.
               A pasos de Av. Vitacura, con estacionamiento en la calle.
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="https://www.google.com/maps/dir/?api=1&destination=Pod+Factory+Premium+Podcast+Studio&destination_place_id=ChIJX7coTmnPYpYRahuOLfgXst0" target="_blank" rel="noopener"
                 style={{ background: PF.ink, color: PF.bg, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>CÓMO LLEGAR ↗</a>
-              <a href="#reservar" style={{ background: 'transparent', color: PF.ink, border: `1.5px solid ${PF.ink}`, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>AGENDAR UNA VISITA</a>
+              <InfoButton size="sm" label="RECIBE LA INFORMACIÓN" />
             </div>
           </Reveal>
           <Reveal delay={250} style={{ position: 'relative', minHeight: 340, border: `1.5px solid ${PF.ink}`, overflow: 'hidden' }}>
@@ -647,129 +572,6 @@ function PodFactoryLanding() {
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, display: 'block', filter: 'grayscale(0.2) contrast(1.05)' }}
               loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
           </Reveal>
-        </div>
-      </section>
-
-      {/* Temporadas */}
-      <section id="temporadas" style={{ padding: '70px 32px 60px' }}>
-        <Reveal style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap', marginBottom: 26 }}>
-          <div>
-            <Kicker>▸ TEMPORADAS EN EL ESTUDIO</Kicker>
-            <H2>Tu podcast, <Serif color={PF.red}>por temporadas.</Serif></H2>
-          </div>
-          <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.ink + 'aa', maxWidth: 360, lineHeight: 1.6 }}>
-            Mientras más larga la temporada, menor el valor por capítulo. La lista completa te la enviamos por correo.
-          </div>
-        </Reveal>
-        <Reveal delay={60} style={{ aspectRatio: '4/1', marginBottom: 18, border: `1.5px solid ${PF.ink}`, background: `url(assets/set-full.jpg) center 45% / cover no-repeat` }} />
-        <Reveal delay={120}><PreciosGate /></Reveal>
-        <div className="pf-steps" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 22 }}>
-          {[
-            ['Cada capítulo incluye', 'Bloque de 1 hora de estudio (el capítulo dura 30–40 min), hasta 4 personas, set multicámara, operador y edición simple.', PF.blue],
-            ['Set Base o Full', 'Full suma paneles de madera y un televisor con tu logo o tus gráficas.', PF.red],
-            ['Pago y agenda', '50% al contratar y 50% a mitad de temporada. Las fechas se agendan al inicio; te recomendamos un día fijo a la semana.', PF.orange],
-          ].map(([t, d, c], i) => (
-            <Reveal key={t} delay={150 + i * 90} style={{ borderTop: `5px solid ${c}`, paddingTop: 12 }}>
-              <div style={{ fontWeight: 800, fontSize: 18 }}>{t}</div>
-              <div style={{ fontSize: 14, lineHeight: 1.5, marginTop: 6, color: PF.ink + 'aa' }}>{d}</div>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal delay={250} style={{ marginTop: 28 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <PilotoButton size="lg" label="PARTE CON UNA VISITA AL ESTUDIO" />
-            <DudasButton size="lg" label="CONTRATAR LA TEMPORADA POR WHATSAPP" waContext="quiero contratar una temporada de mi podcast." />
-          </div>
-        </Reveal>
-      </section>
-
-      {/* Empresas: propuesta en 24 h */}
-      <section id="empresas" style={{ padding: '60px 32px', background: PF.blue, color: PF.bg }}>
-        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 620px)', gap: 40, alignItems: 'start' }}>
-          <Reveal>
-            <Kicker color={PF.yellow}>▸ PARA EMPRESAS Y MARCAS</Kicker>
-            <H2>Una propuesta <Serif color={PF.yellow}>en 24 horas.</Serif></H2>
-            <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18, color: PF.bg + 'dd', maxWidth: 480 }}>
-              Si el podcast es de tu empresa, te armamos una propuesta con formato, calendario, set y valores,
-              con factura y orden de compra si la necesitas. Cuéntanos lo básico y te respondemos.
-            </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '18px 0 0', fontSize: 15, lineHeight: 1.9, color: PF.bg + 'dd' }}>
-              {['Temporadas desde 6 capítulos', 'En el estudio o en tus oficinas', 'Factura, orden de compra y HES'].map((t) => <li key={t}>▸ {t}</li>)}
-            </ul>
-          </Reveal>
-          <Reveal delay={150} style={{ color: PF.ink }}><EmpresasForm /></Reveal>
-        </div>
-      </section>
-
-      {/* Edición y adicionales */}
-      <section id="edicion" style={{ padding: '70px 32px 60px' }}>
-        <Reveal style={{ marginBottom: 26 }}>
-          <Kicker>▸ EDICIÓN Y ADICIONALES</Kicker>
-          <H2>Qué incluye <Serif color={PF.red}>cada capítulo.</Serif></H2>
-        </Reveal>
-        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          {[
-            ['EDICIÓN', [
-              ['Simple', 'Color, sonido, logo y música al inicio y al cierre, nombres en pantalla, hasta 3 cortes y 1 ronda de cambios.', 'Incluida'],
-              ['Con cortes', 'Hasta 10 cortes que pides después de grabar, indicando el minuto de cada uno.', 'Opcional'],
-              ['Pro', 'Cortes libres, reordenar partes, tráiler o teaser.', 'Opcional'],
-              ['Ronda de cambios extra', 'Cada ronda adicional a la incluida.', 'Opcional'],
-            ]],
-            ['ADICIONALES', [
-              ['3 reels', 'Verticales, con subtítulos, listos para Instagram, TikTok y Shorts.', 'Opcional'],
-              ['Archivos por cámara', 'Cada cámara por separado y sincronizada, más las pistas de audio. Para editar tus propios cortes.', 'Opcional'],
-              ['Tiempo extra', 'Bloques de 30 minutos, solo si no hay otra reserva después.', 'Opcional'],
-            ]],
-          ].map(([title, rows], k) => (
-            <Reveal key={title} delay={120 + k * 120} style={{ border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
-              <div style={{ background: k ? PF.blue : PF.ink, color: PF.bg, padding: '12px 18px', fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', fontWeight: 700 }}>
-                {title} · POR CAPÍTULO
-              </div>
-              {rows.map(([n, d, v]) => (
-                <div key={n} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '14px 18px', borderTop: `1px solid ${PF.ink}18` }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 16 }}>{n}</div>
-                    <div style={{ fontSize: 13.5, lineHeight: 1.45, color: PF.ink + 'aa', marginTop: 3 }}>{d}</div>
-                  </div>
-                  <div style={{ fontWeight: 900, fontSize: 17, whiteSpace: 'nowrap' }}>{v}</div>
-                </div>
-              ))}
-            </Reveal>
-          ))}
-        </div>
-        <div style={{ fontFamily: PF.mono, fontSize: 12, marginTop: 14 }}>Los valores de cada opción van en la <a href="#temporadas" style={{ color: PF.blue, fontWeight: 700 }}>lista de precios</a>.</div>
-      <Reveal delay={300} style={{ marginTop: 18, background: PF.yellow, padding: '16px 20px', fontSize: 15, lineHeight: 1.5, border: `1.5px solid ${PF.ink}` }}>
-          <b>La regla:</b> si pides cambiar el contenido o el orden del capítulo, ya no es edición simple.
-          Te decimos qué nivel corresponde y su valor <b>antes</b> de editar, nunca después.
-        </Reveal>
-      </section>
-
-      {/* Condiciones */}
-      <section id="condiciones" style={{ padding: '60px 32px', background: PF.ink, color: PF.bg }}>
-        <Reveal style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap', marginBottom: 28 }}>
-          <div>
-            <Kicker color={PF.yellow}>▸ CONDICIONES</Kicker>
-            <H2>Las reglas, <Serif color={PF.yellow}>claras desde el inicio.</Serif></H2>
-          </div>
-          <a href="#temporadas" style={{
-            background: PF.bg, color: PF.ink, padding: '14px 22px', borderRadius: 999, textDecoration: 'none',
-            fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
-          }}>VER TODOS LOS PRECIOS</a>
-        </Reveal>
-        <div className="pf-cond" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 22 }}>
-          {[
-            ['Cambios de fecha', 'Sin costo con más de 48 horas de aviso. Con menos de 48 horas, o si no llegan, el capítulo se da por grabado.'],
-            ['Puntualidad', 'La hora corre desde la hora reservada, aunque lleguen tarde. ¿Necesitan más? Bloques de 30 minutos.'],
-            ['Plazo de la temporada', '6 capítulos en 3 meses, 8 en 4, 10 en 5 y 12 en 6. Los capítulos no grabados en el plazo se pierden.'],
-            ['Entrega', '5 días hábiles después de grabar. Tienes 5 días hábiles para pedir tu ronda de cambios.'],
-            ['Material', 'Lo guardamos 1 semana después de la entrega. Para conservarlo completo, pide los archivos por cámara.'],
-            ['Facturación', 'Factura electrónica con cada pago. El contenido es 100% tuyo.'],
-          ].map(([t, d], i) => (
-            <Reveal key={t} delay={100 + i * 70} style={{ borderTop: `1.5px solid ${PF.bg}55`, paddingTop: 14 }}>
-              <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>{t.toUpperCase()}</div>
-              <div style={{ fontSize: 15, lineHeight: 1.55, marginTop: 8, color: PF.bg + 'dd' }}>{d}</div>
-            </Reveal>
-          ))}
         </div>
       </section>
 
@@ -814,6 +616,18 @@ function PodFactoryLanding() {
         </div>
       </section>
 
+      {/* Cierre: el mismo formulario */}
+      <section style={{ padding: '60px 32px', background: PF.ink, color: PF.bg }}>
+        <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(0, 520px)', gap: 40, alignItems: 'center' }}>
+          <div>
+            <Kicker color={PF.yellow}>▸ EL PRIMER PASO</Kicker>
+            <H2>Te enviamos <Serif color={PF.yellow}>todo a tu correo.</Serif></H2>
+            <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 16, color: PF.bg + 'cc', maxWidth: 460 }}>Formatos, precios, cómo trabajamos y cómo agendar una visita al estudio. Sin llamadas ni compromiso.</p>
+          </div>
+          <div style={{ color: PF.ink }}><InfoForm id="info-final" compact /></div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" style={{ padding: '70px 32px', borderTop: `1.5px solid ${PF.ink}` }}>
         <Reveal style={{ marginBottom: 36 }}>
@@ -854,23 +668,15 @@ function PodFactoryLanding() {
           {[
             {
               q: '¿Son un estudio o una productora?',
-              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> (Eduardo Marquina 3937), donde se graban las temporadas, y como productora te ayudamos con el formato, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b> (tu oficina, un evento o cualquier lugar, en Santiago y regiones), con tarifas por jornada que te enviamos junto a la lista de precios.</>,
+              a: <>Las dos cosas. Tenemos <b>estudio propio en Vitacura</b> y, como productora, te ayudamos con el formato, grabamos, editamos y entregamos cada capítulo listo para publicar. También grabamos <b>en locación</b>: tu oficina, un evento o cualquier lugar, en Santiago y regiones.</>,
             },
             {
-              q: '¿Puedo probar antes de contratar una temporada?',
-              a: <>Sí, de dos formas. Agenda una <b>visita gratis de 20 minutos</b> para conocer el estudio, o reserva un <b>mini-piloto</b> ($30.000 + IVA): 10 minutos grabando en el set. Si después contratas una temporada, el mini-piloto se descuenta del total.</>,
+              q: '¿Cuánto cuesta?',
+              a: <>Depende del formato, del set y de si grabas en el estudio o en locación. Te enviamos la <b>lista de precios completa a tu correo</b>: <a href="#info" style={{ color: PF.blue, fontWeight: 700 }}>déjanos tu correo aquí</a>.</>,
             },
             {
-              q: '¿Qué pasa si nos pasamos de la hora?',
-              a: <>Cada capítulo es un bloque de 1 hora. Si necesitan más tiempo, se contrata en <b>bloques de 30 minutos</b>, solo si no hay otra reserva después. Te avisamos a los 50 minutos de grabación.</>,
-            },
-            {
-              q: '¿Qué incluye la edición simple?',
-              a: <>Color, sonido, logo y música al inicio y al cierre, nombres en pantalla, <b>hasta 3 cortes</b> y 1 ronda de cambios. Si necesitas más cortes o reordenar el capítulo, tienes la edición con cortes o la Pro. Siempre te lo decimos antes de editar.</>,
-            },
-            {
-              q: '¿Y si necesito cambiar la fecha?',
-              a: <>Sin costo con más de <b>48 horas</b> de aviso, desde el link que te llega en el correo de confirmación. Con menos de 48 horas, o si no llegan, el capítulo se da por grabado.</>,
+              q: '¿Puedo conocer el estudio antes de decidir?',
+              a: <>Sí. Después de dejarnos tu correo puedes agendar una <b>visita gratis de 20 minutos</b> para conocer el set y ver el look en el monitor, o un <b>mini-piloto</b> de 10 minutos grabando.</>,
             },
             {
               q: '¿Hasta cuántas personas pueden grabar?',
@@ -878,11 +684,11 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Cuándo recibo el material?',
-              a: <>En <b>5 días hábiles</b> después de la grabación, en archivo MP4. Guardamos el material 1 semana después de la entrega; si lo quieres completo, pide los archivos por cámara.</>,
+              a: <>Cada capítulo se entrega editado en <b>5 días hábiles</b>, listo para YouTube, Spotify y redes.</>,
             },
             {
               q: '¿Hacen streaming en vivo?',
-              a: <>Sí, se cotiza aparte. Transmitimos multicámara en vivo a YouTube, LinkedIn, Zoom o la plataforma que prefieras.</>,
+              a: <>Sí. Transmitimos multicámara en vivo a YouTube, LinkedIn, Zoom o la plataforma que prefieras.</>,
             },
             {
               q: '¿Quién es dueño del contenido?',

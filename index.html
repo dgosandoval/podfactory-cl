@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pod Factory — Estudio y productora de podcast en Vitacura, Santiago</title>
-<meta name="description" content="Estudio de podcast en Vitacura: set multicámara, audio broadcast y edición. Cámaras Blackmagic, visita gratis al estudio y mini-piloto de 10 minutos. Temporadas desde 6 capítulos y grabación en locación. Una productora de Doppel.">
+<meta name="description" content="Estudio de podcast en Vitacura con cámaras Blackmagic, y productora que graba donde estés. Déjanos tu correo y te enviamos formatos, precios y cómo trabajamos.">
 <link rel="canonical" href="https://podfactory.cl/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://podfactory.cl/">
 <meta property="og:title" content="Pod Factory — Tu podcast, en nuestro estudio. O donde estés.">
-<meta property="og:description" content="Estudio de podcast en Vitacura y productora. Look Blackmagic, visita gratis al estudio y mini-piloto de 10 minutos.">
+<meta property="og:description" content="Estudio de podcast en Vitacura con cámaras Blackmagic. Recibe formatos, precios y cómo trabajamos en tu correo.">
 <meta property="og:image" content="https://podfactory.cl/assets/og-podfactory.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1">
@@ -23,6 +23,8 @@
   img, video { max-width: 100%; height: auto; }
   /* Responsive — mobile */
   @media (max-width: 1180px) {
+    .pf-hero { grid-template-columns: 1fr !important; }
+    .pf-hero .pf-hero-form { width: 100% !important; max-width: 620px; }
     .pf-header nav { display: none !important; }
     .pf-header-sub { display: none !important; }
     .pf-bb-hide-mobile { display: none !important; }
@@ -46,7 +48,7 @@
     .pf-hero { padding: 24px 18px 24px !important; grid-template-columns: 1fr !important; gap: 24px !important; }
     .pf-hero h1 { font-size: clamp(40px, 11vw, 64px) !important; line-height: 0.95 !important; }
     .pf-hero p { font-size: 15px !important; }
-    .pf-hero .pf-reel { width: 100% !important; max-width: 280px !important; justify-self: center !important; }
+    .pf-hero .pf-hero-form { width: 100% !important; }
     .pf-hero-cta { gap: 10px !important; }
     .pf-hero-cta a { padding: 12px 18px !important; font-size: 12px !important; }
     /* Stats strip: 2 cols on mobile */
@@ -55,10 +57,11 @@
     .pf-stats > div:nth-child(2) { border-right: none !important; }
     .pf-stats > div:nth-child(odd) { border-right: 1.5px solid #0A0A0A !important; }
     .pf-stats > div:nth-child(n+3) { border-bottom: none !important; }
-    .pf-stats > div > div:first-child { font-size: 30px !important; overflow-wrap: anywhere; }
+    .pf-stats > div > div:nth-child(2) { font-size: 28px !important; white-space: nowrap; }
     .pf-productions { grid-template-columns: 1fr 1fr !important; }
+    .pf-form-grid { grid-template-columns: 1fr !important; }
     .pf-gate-card { grid-template-columns: 1fr !important; }
-    /* Secciones nuevas (productora, temporadas, piloto, condiciones) → 1 col */
+    /* Secciones en una columna en celular */
     .pf-steps, .pf-two, .pf-cond { grid-template-columns: 1fr !important; gap: 14px !important; }
     .pf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .pf-header + section h1 { font-size: clamp(40px, 11vw, 64px) !important; }
@@ -105,15 +108,13 @@
   <main style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:Archivo,Arial,sans-serif;color:#0A0A0A">
     <h1>Pod Factory: tu podcast, en nuestro estudio en Vitacura. O donde estés.</h1>
     <p>Estudio y productora de podcast y vodcast en Eduardo Marquina 3937, Vitacura, Santiago. Set multicámara, audio broadcast, dirección y edición.</p>
-    <h2>Temporadas desde 6 capítulos</h2>
-    <p>Temporadas desde 6 capítulos, en set Base o Full (paneles de madera y televisor). Pide la lista de precios y te la enviamos por correo.</p>
-    <h2>Conoce el estudio</h2>
-    <p>Visita gratis de 20 minutos, o mini-piloto de 10 minutos grabando por $30.000 + IVA (se descuenta si contratas una temporada).</p>
+    <h2>Recibe toda la información</h2>
+    <p>Déjanos tu correo en esta página y te enviamos formatos, precios y cómo trabajamos. Después puedes agendar una visita gratis al estudio.</p>
     <h2>Grabación en locación</h2>
-    <p>Llevamos el set a tu oficina, un evento o cualquier lugar, en Santiago y regiones. Tarifa por jornada, a pedido.</p>
+    <p>Llevamos el set a tu oficina, un evento o cualquier lugar, en Santiago y regiones.</p>
     <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
   </main>
 </div>
-<script src="app.js?v=9f721ec061"></script>
+<script src="app.js?v=15b6e34714"></script>
 </body>
 </html>

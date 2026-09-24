@@ -38,7 +38,7 @@ const PODCASTS = [
   {
     title: 'Las Variables Ocultas',
     host: 'Carlos Granés, Leandro Santoro, Leonardo Padura y más',
-    ep: 'TEMPORADA EN CURSO',
+    ep: 'EN CURSO',
     image: 'assets/variables-ocultas.jpg',
     url: 'https://www.youtube.com/playlist?list=PLQ9nCoLmM3liuDRuJ_pPuBrfmGgoFDhMc',
   },

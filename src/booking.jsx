@@ -68,7 +68,7 @@ const PRODUCTOS = {
   minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
 };
 
-function BookingCalendar({ initialTipo = 'visita' }) {
+function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
   const OPEN_DOWS = [1, 2, 3, 4, 5]; // Lun–Vie
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
@@ -85,7 +85,7 @@ function BookingCalendar({ initialTipo = 'visita' }) {
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [slot, setSlot] = React.useState(null);
-  const [form, setForm] = React.useState({ name: '', empresa: '', email: '', phone: '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
+  const [form, setForm] = React.useState({ name: prefill?.name || '', empresa: '', email: prefill?.email || '', phone: '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [listo, setListo] = React.useState(null); // visita confirmada: { fecha, hora }
@@ -251,7 +251,7 @@ function BookingCalendar({ initialTipo = 'visita' }) {
             <div style={{ marginTop: 10, fontFamily: PFB.mono, fontSize: 10.5, color: PFB.ink + '88', lineHeight: 1.5 }}>
               {tipo === 'visita'
                 ? 'Te enviamos la dirección exacta por correo al confirmar.'
-                : 'Pago seguro con MercadoPago. Si después contratas una temporada, el mini-piloto se descuenta del total.'}
+                : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
             </div>
           </div>
         )}
