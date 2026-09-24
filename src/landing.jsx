@@ -359,13 +359,13 @@ function PodFactoryLanding() {
       </header>
 
       {/* Hero */}
-      <section id="espacio" className="pf-hero" style={{ padding: '60px 80px 40px 32px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 28, alignItems: 'center' }}>
+      <section id="espacio" className="pf-hero" style={{ padding: '60px 80px 40px 32px', display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 28, alignItems: 'center' }}>
         <Reveal>
           <div style={{ fontSize: 11, fontFamily: PF.mono, letterSpacing: '0.18em', marginBottom: 18 }}>
             ▸ ESTUDIO Y PRODUCTORA DE PODCAST · VITACURA · BY DOPPEL
           </div>
           <h1 style={{
-            fontFamily: PF.display, fontWeight: 900, fontSize: 76, lineHeight: 0.95,
+            fontFamily: PF.display, fontWeight: 900, fontSize: 'clamp(52px, 4.6vw, 76px)', lineHeight: 0.95,
             letterSpacing: '-0.04em', margin: 0,
           }}>
             Tu <span style={{ color: PF.red }}>podcast</span>, en nuestro<br />
@@ -376,6 +376,13 @@ function PodFactoryLanding() {
             se nota, en un estudio en Vitacura. Y como somos productora, también te ayudamos
             con el formato y llevamos el set a tu oficina o a donde lo necesites.
           </p>
+        </Reveal>
+
+        {/* Reel vertical: capítulos reales grabados en el estudio (sin marcas) */}
+        <Reveal delay={120} className="pf-hero-reel" style={{ width: 240 }}>
+          <video src="assets/reel-v2.mp4" poster="assets/reel-v2.jpg" autoPlay muted loop playsInline preload="metadata"
+            aria-label="Fragmentos de podcasts grabados en Pod Factory"
+            style={{ display: 'block', width: '100%', aspectRatio: '9 / 16', objectFit: 'cover', borderRadius: 14, border: `1.5px solid ${PF.ink}`, background: PF.ink }} />
         </Reveal>
 
         {/* Formulario principal: visible sin bajar */}
