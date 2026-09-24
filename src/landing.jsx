@@ -399,7 +399,7 @@ function PodFactoryLanding() {
         {[
           ['+300', 'episodios producidos', PF.blue],
           ['6K', 'cámaras Blackmagic', PF.red],
-          ['5 días', 'hábiles de entrega', PF.orange],
+          ['Rápida', 'entrega de cada capítulo', PF.orange],
           ['20 min', 'visita gratis al estudio', PF.yellow],
         ].map(([n, l, c], i) => (
           <Reveal key={i} delay={i * 120} style={{ padding: '30px 20px', borderRight: i < 3 ? `1.5px solid ${PF.ink}` : 'none', position: 'relative' }}>
@@ -495,7 +495,7 @@ function PodFactoryLanding() {
             ['01', 'Formato', 'Definimos contigo la idea, la estructura de cada capítulo, los invitados y la pauta.', PF.blue],
             ['02', 'Grabación', 'Set multicámara, audio broadcast y un operador en cada grabación. En el estudio o donde estés.', PF.red],
             ['03', 'Edición', 'Color, sonido, logo, música y nombres en pantalla. Reels para redes si los necesitas.', PF.orange],
-            ['04', 'Entrega', 'Cada capítulo listo para publicar en 5 días hábiles, con la misma calidad de principio a fin.', PF.yellow],
+            ['04', 'Entrega', 'Cada capítulo listo para publicar en pocos días, con la misma calidad de principio a fin.', PF.yellow],
           ].map(([n, t, d, c], i) => (
             <Reveal key={n} delay={120 + i * 100} style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
               <div style={{ height: 6, background: c }} />
@@ -679,11 +679,11 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Cuánto cuesta?',
-              a: <>Depende del formato, del set y de si grabas en el estudio o en locación. Te enviamos la <b>lista de precios completa a tu correo</b>: <a href="#info" style={{ color: PF.blue, fontWeight: 700 }}>déjanos tu correo aquí</a>.</>,
+              a: <>Depende del formato, del set y de si grabas en el estudio o en locación. <a href="#info" style={{ color: PF.blue, fontWeight: 700 }}>Pide tu cotización</a> y te llega al instante.</>,
             },
             {
               q: '¿Puedo conocer el estudio antes de decidir?',
-              a: <>Sí. Después de dejarnos tu correo puedes agendar una <b>visita gratis de 20 minutos</b> para conocer el set y ver el look en el monitor, o un <b>mini-piloto</b> de 10 minutos grabando.</>,
+              a: <>Sí. Puedes venir a una <b>visita gratis de 20 minutos</b> para conocer el set y ver el look en el monitor, o un <b>mini-piloto</b> de 10 minutos grabando.</>,
             },
             {
               q: '¿Hasta cuántas personas pueden grabar?',
@@ -691,7 +691,7 @@ function PodFactoryLanding() {
             },
             {
               q: '¿Cuándo recibo el material?',
-              a: <>Cada capítulo se entrega editado en <b>5 días hábiles</b>, listo para YouTube, Spotify y redes.</>,
+              a: <>Cada capítulo se entrega editado <b>en pocos días</b>, listo para YouTube, Spotify y redes.</>,
             },
             {
               q: '¿Hacen streaming en vivo?',
