@@ -111,3 +111,15 @@ export async function deleteEvent(env, eventId) {
   }
   return true;
 }
+
+// Eventos del calendario del estudio entre dos instantes (para el panel del estudio en el hub).
+export async function listEvents(env, timeMinISO, timeMaxISO) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const params = new URLSearchParams({ timeMin: timeMinISO, timeMax: timeMaxISO, singleEvents: "true", orderBy: "startTime", maxResults: "100" });
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events?${params}`;
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`listEvents error: ${res.status} ${await res.text()}`);
+  const json = await res.json();
+  return (json.items || []).filter((e) => e.status !== "cancelled");
+}
