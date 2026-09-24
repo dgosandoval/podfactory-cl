@@ -22,6 +22,12 @@
   * { box-sizing: border-box; }
   img, video { max-width: 100%; height: auto; }
   /* Responsive — mobile */
+  @media (max-width: 1180px) {
+    .pf-header nav { display: none !important; }
+    .pf-header-sub { display: none !important; }
+    .pf-bb-hide-mobile { display: none !important; }
+    .pf-brandbar span, .pf-brandbar a { white-space: nowrap; }
+  }
   @media (max-width: 720px) {
     html, body { overflow-x: hidden; }
     /* Top brand bar: stack vertically */
@@ -51,9 +57,7 @@
     .pf-stats > div:nth-child(n+3) { border-bottom: none !important; }
     .pf-stats > div > div:first-child { font-size: 30px !important; overflow-wrap: anywhere; }
     .pf-productions { grid-template-columns: 1fr 1fr !important; }
-    .pf-gate-wrap { display: block !important; min-height: 0 !important; }
-    .pf-gate-blur { display: none !important; }
-    .pf-gate { position: relative !important; inset: auto !important; box-shadow: 4px 4px 0 #0A0A0A !important; }
+    .pf-gate-card { grid-template-columns: 1fr !important; }
     /* Secciones nuevas (productora, temporadas, piloto, condiciones) → 1 col */
     .pf-steps, .pf-two, .pf-cond { grid-template-columns: 1fr !important; gap: 14px !important; }
     .pf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -110,6 +114,6 @@
     <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
   </main>
 </div>
-<script src="app.js?v=014d1e7743"></script>
+<script src="app.js?v=f5ee9afe60"></script>
 </body>
 </html>

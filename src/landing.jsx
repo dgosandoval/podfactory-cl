@@ -319,38 +319,50 @@ function PreciosGate() {
       <TemporadasTabla locked={false} />
     </div>
   );
+  const lbl = { fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.12em', color: PF.ink + '99', fontWeight: 700, marginBottom: 5, display: 'block' };
   return (
-    <div className="pf-gate-wrap" style={{ position: 'relative', minHeight: 380, display: 'flex', alignItems: 'center' }}>
-      <div className="pf-gate-blur" style={{ width: '100%' }}><TemporadasTabla locked /></div>
-      <form onSubmit={enviar} className="pf-gate" style={{
-        position: 'absolute', inset: 0, margin: 'auto', width: 'min(560px, 100%)', height: 'fit-content',
-        background: PF.bg, border: `1.5px solid ${PF.ink}`, boxShadow: `6px 6px 0 ${PF.ink}`, padding: 22, display: 'grid', gap: 10,
-      }}>
-        <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15 }}>Temporadas desde $170.000 por capítulo</div>
-        <div style={{ fontSize: 14, lineHeight: 1.5, color: PF.ink + 'bb' }}>Déjanos tu correo y ves todos los precios al tiro (set Base y Full, de 6 a 12 capítulos).</div>
+    <div className="pf-gate-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', border: `1.5px solid ${PF.ink}`, background: '#fff' }}>
+      {/* Izquierda: el gancho */}
+      <div style={{ background: PF.ink, color: PF.bg, padding: '30px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.yellow, fontWeight: 700 }}>PRECIOS DE LAS TEMPORADAS</div>
+        <div style={{ fontWeight: 900, fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.03em' }}>
+          Desde $170.000 <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400, color: PF.yellow }}>por capítulo.</span>
+        </div>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 15, lineHeight: 1.7, color: PF.bg + 'dd' }}>
+          {['Temporadas de 6, 8, 10 y 12 capítulos', 'Set Base o Full (madera + televisor con tu logo)', 'Hasta 15% de descuento por temporada larga', 'Edición simple incluida en cada capítulo'].map((t) => <li key={t}>▸ {t}</li>)}
+        </ul>
+        <div style={{ fontFamily: PF.mono, fontSize: 11, color: PF.bg + '99', marginTop: 'auto' }}>Valores en pesos chilenos, más IVA.</div>
+      </div>
+      {/* Derecha: el formulario */}
+      <form onSubmit={enviar} style={{ padding: '26px 26px 22px', display: 'grid', gap: 12, alignContent: 'start', position: 'relative' }}>
+        <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.25 }}>Déjanos tu correo y ves todos los precios al tiro.</div>
         <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <input style={inp} placeholder="Tu nombre" value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} />
-          <input style={inp} type="email" placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
+          <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+        </div>
+        <label><span style={lbl}>¿PARA QUIÉN ES?</span>
           <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>
-            <option value="empresa">Es para una empresa o marca</option>
-            <option value="personal">Es un proyecto personal</option>
+            <option value="empresa">Para una empresa o marca</option>
+            <option value="personal">Un proyecto personal</option>
           </select>
+        </label>
+        <label><span style={lbl}>¿CUÁNDO QUIERES PARTIR?</span>
           <select style={inp} value={f.horizonte} onChange={(e) => setF({ ...f, horizonte: e.target.value })}>
-            <option value="este_mes">Quiero partir este mes</option>
+            <option value="este_mes">Este mes</option>
             <option value="1_3_meses">En 1 a 3 meses</option>
             <option value="mas_adelante">Más adelante</option>
             <option value="mirando">Solo estoy mirando</option>
           </select>
-        </div>
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontFamily: PF.mono, fontSize: 11.5, lineHeight: 1.5 }}>
-          <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
-          <span>Envíenme los precios por correo y novedades de Pod Factory (me puedo dar de baja cuando quiera).</span>
+        </label>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13, lineHeight: 1.45, color: PF.ink + 'cc' }}>
+          <input type="checkbox" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }} />
+          <span>Envíenme los precios por correo y novedades de Pod Factory. Me puedo dar de baja cuando quiera.</span>
         </label>
         <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} aria-hidden="true" />
         <button type="submit" disabled={!valid || estado === 'enviando'} style={{
-          padding: 15, border: 'none', cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
+          padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
           fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
-        }}>{estado === 'enviando' ? 'UN SEGUNDO…' : 'VER TODOS LOS PRECIOS'}</button>
+        }}>{estado === 'enviando' ? 'UN SEGUNDO…' : 'VER TODOS LOS PRECIOS →'}</button>
         {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
       </form>
     </div>
