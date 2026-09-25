@@ -3,7 +3,7 @@
 //  · tipo 'precios':  pide todos los precios → lead en el hub, que le manda los precios al
 //    instante y lo deja en la secuencia automática (si dio consentimiento).
 // Anti-spam: honeypot `website` + máximo 5 envíos por IP por hora.
-import { sendEmail } from "../_lib/email.js";
+import { sendEmail, studioRecipients } from "../_lib/email.js";
 import { toHub } from "../_lib/hub.js";
 
 const json = (data, status = 200) =>
@@ -63,7 +63,7 @@ export async function onRequestPost({ request, env }) {
   let emailed = false;
   try {
     const r = await sendEmail(env, {
-      to: env.LEAD_EMAIL || env.STUDIO_EMAIL || "hola@doppel.cl",
+      to: env.LEAD_EMAIL ? env.LEAD_EMAIL.split(",").map((x) => x.trim()) : studioRecipients(env),
       subject: `Lead empresa: ${lead.empresa} · ${lead.capitulos} caps · ${lead.donde}`,
       html, replyTo: lead.email,
     });
@@ -98,5 +98,25 @@ async function preciosLead(request, env, b) {
       { expirationTtl: 180 * 86400 });
   }
   const hub = await toHub(env, { email, name, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true });
+
+  // Aviso al estudio (best-effort): quién pidió precios y si le llegó el correo.
+  const HZ = { este_mes: "Este mes", "1_3_meses": "En 1 a 3 meses", mas_adelante: "Más adelante", mirando: "Solo mirando" };
+  const rows = [
+    ["Nombre", name], ["Email", email], ["Para", segment === "empresa" ? "Empresa o marca" : segment === "personal" ? "Personal" : "—"],
+    ["Cuándo", HZ[horizonte] || "—"], ["Correos de seguimiento", b.consent === true ? "Sí" : "No"],
+    ["Lista de precios", hub && hub.sent ? "Enviada ✅" : "NO se pudo enviar ⚠️ (mándala a mano)"],
+  ].map(([k, v]) => `<tr><td style="padding:6px 10px;color:#666">${k}</td><td style="padding:6px 10px;font-weight:600">${esc(v)}</td></tr>`).join("");
+  try {
+    await sendEmail(env, {
+      to: studioRecipients(env),
+      subject: `Nuevo lead: ${name}${segment === "empresa" ? " (empresa)" : ""} · pidió precios`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:560px"><h2 style="margin:0 0 6px">Nuevo lead 🎙️</h2>
+        <p style="margin:0 0 14px;color:#444">Pidió la información y los precios en podfactory.cl.</p>
+        <table style="border-collapse:collapse;font-size:14px">${rows}</table>
+        <p style="margin-top:16px"><a href="https://clientes.doppel.cl/estudio">Ver en el panel del estudio →</a></p></div>`,
+      replyTo: email,
+    });
+  } catch (e) { console.log("lead precios aviso error:", String(e)); }
+
   return json({ ok: true, hub: !!hub, sent: !!(hub && hub.sent) });
 }
