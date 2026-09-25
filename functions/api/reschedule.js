@@ -4,7 +4,7 @@
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
 import { getBusy, patchEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, rescheduleEmailHtml } from "../_lib/email.js";
+import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -59,7 +59,7 @@ export async function onRequestPost({ request, env }) {
       });
     }
     if (env.STUDIO_EMAIL) {
-      await sendEmail(env, { to: env.STUDIO_EMAIL, subject: `Reserva REAGENDADA: ${b.name} · ${fecha} ${hora} hrs`, html: rescheduleEmailHtml({ name: b.name, fecha, hora, address }) });
+      await sendEmail(env, { to: studioRecipients(env), subject: `Reserva REAGENDADA: ${b.name} · ${fecha} ${hora} hrs`, html: rescheduleEmailHtml({ name: b.name, fecha, hora, address }) });
     }
   } catch (e) {
     console.log("email reschedule error:", String(e));

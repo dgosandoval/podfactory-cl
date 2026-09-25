@@ -6,7 +6,7 @@ import { createEvent } from "./google.js";
 import { newToken, saveBooking, manageUrl } from "./booking.js";
 import { SERVICES } from "./slots.js";
 import { toHub } from "./hub.js";
-import { sendEmail, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "./email.js";
+import { sendEmail, studioRecipients, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "./email.js";
 
 // d = { tipo, start, end, date, label, name, email, phone, personas, comentarios, empresa,
 //       rut, razonSocial, giro, paid (CLP con IVA), paymentId, eventId? }
@@ -82,7 +82,7 @@ export async function confirmBooking(env, config, origin, d) {
     }
     if (env.STUDIO_EMAIL) {
       await sendEmail(env, {
-        to: env.STUDIO_EMAIL,
+        to: studioRecipients(env),
         subject: `${d.tipo === "visita" ? "Nueva visita" : "Nuevo mini-piloto"}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""} · ${fecha} ${hora} hrs`,
         html: studioEmailHtml({
           name: d.name, email: d.email, phone: d.phone, fecha, hora, deposit: d.paid || 0, tipo: svc.label,

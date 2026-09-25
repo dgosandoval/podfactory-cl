@@ -19,6 +19,8 @@ GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fc
 # verificado). Enviamos desde @doppel.cl con nombre visible "Pod Factory".
 FROM_EMAIL = "Pod Factory <reservas@doppel.cl>"
 STUDIO_EMAIL = "hola@doppel.cl"
+# Quiénes reciben los avisos internos de reservas (nueva, cancelada, reagendada, pago sin horario).
+STUDIO_NOTIFY = "hola@doppel.cl,ivan.krug.s@gmail.com"
 # Dirección completa (con oficina) — solo se usa en correos/confirmación al cliente,
 # nunca en la web pública.
 STUDIO_ADDRESS = "Eduardo Marquina 3937, Oficina 906, Vitacura · Santiago"

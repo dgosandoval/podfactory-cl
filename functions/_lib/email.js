@@ -19,6 +19,12 @@ export async function sendEmail(env, { to, subject, html, replyTo, attachments }
   return res.json();
 }
 
+// Destinatarios de los avisos internos del estudio (STUDIO_NOTIFY, separados por coma).
+export function studioRecipients(env) {
+  const list = (env.STUDIO_NOTIFY || env.STUDIO_EMAIL || "hola@doppel.cl").split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length ? list : ["hola@doppel.cl"];
+}
+
 // Base64 (UTF-8) para adjuntos.
 function b64(str) {
   const bytes = new TextEncoder().encode(str);

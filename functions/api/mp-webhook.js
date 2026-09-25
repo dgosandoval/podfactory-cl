@@ -4,7 +4,7 @@
 import { parseConfig } from "../_lib/slots.js";
 import { configFor } from "../_lib/slots.js";
 import { confirmBooking } from "../_lib/confirm.js";
-import { sendEmail } from "../_lib/email.js";
+import { sendEmail, studioRecipients } from "../_lib/email.js";
 
 // MercadoPago espera 200 siempre que recibamos la notificación; reintenta si no.
 const ok = () => new Response("ok", { status: 200 });
@@ -57,7 +57,7 @@ export async function onRequestPost({ request, env }) {
     console.log("mp-webhook: pago aprobado sin hold", paymentId, date, label);
     try {
       await sendEmail(env, {
-        to: env.STUDIO_EMAIL || "hola@doppel.cl",
+        to: studioRecipients(env),
         subject: `⚠️ Pago aprobado sin horario confirmado · ${date} ${label} hrs`,
         html: `<p>MercadoPago aprobó un pago pero el bloqueo del horario ya había vencido, así que <b>no se agendó automáticamente</b>.</p>
           <p>Pago: ${paymentId} · $${Number(pay.transaction_amount || 0).toLocaleString("es-CL")}<br>

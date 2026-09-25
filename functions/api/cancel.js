@@ -5,7 +5,7 @@
 import { parseConfig } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
 import { deleteEvent } from "../_lib/google.js";
-import { sendEmail, formatSession, cancelEmailHtml, whatsappLink } from "../_lib/email.js";
+import { sendEmail, studioRecipients, formatSession, cancelEmailHtml, whatsappLink } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -43,7 +43,7 @@ export async function onRequestPost({ request, env }) {
       });
     }
     if (env.STUDIO_EMAIL) {
-      await sendEmail(env, { to: env.STUDIO_EMAIL, subject: `Reserva CANCELADA: ${b.name} · ${fecha} ${hora} hrs`, html: cancelEmailHtml({ name: b.name, fecha, hora }) });
+      await sendEmail(env, { to: studioRecipients(env), subject: `Reserva CANCELADA: ${b.name} · ${fecha} ${hora} hrs`, html: cancelEmailHtml({ name: b.name, fecha, hora }) });
     }
   } catch (e) {
     console.log("email cancel error:", String(e));
