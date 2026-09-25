@@ -523,7 +523,7 @@ function PodFactoryLanding() {
               <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Un set listo para grabar</div>
               <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.ink + 'bb', marginTop: 8 }}>
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
-                Desde 6 capítulos, con fechas agendadas desde el inicio.
+                Fechas agendadas desde el inicio y el mismo look en todos los capítulos.
               </p>
               <div style={{ marginTop: 14 }}><InfoButton label="RECIBE LA INFORMACIÓN" /></div>
             </div>
@@ -533,10 +533,10 @@ function PodFactoryLanding() {
             <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Llevamos el set completo</div>
             <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.bg + 'cc', marginTop: 8 }}>
               Cámaras, micrófonos, luces y operador en tu oficina, un evento, una casa, una viña o un set externo.
-              En Santiago y regiones. Mientras más capítulos grabes en la jornada, menor el costo por capítulo.
+              En Santiago y regiones.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
-              {['Jornadas desde 2 capítulos', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
+              {['Jornadas de hasta 3 capítulos', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
               <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
