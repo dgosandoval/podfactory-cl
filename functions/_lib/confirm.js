@@ -14,13 +14,13 @@ export async function confirmBooking(env, config, origin, d) {
   const svc = SERVICES[d.tipo] || { label: "Grabación", key: d.tipo || "grabacion" };
   const token = newToken();
   const fact = d.rut ? `\nFacturar a: ${d.razonSocial} · RUT ${d.rut}${d.giro ? ` · Giro ${d.giro}` : ""}` : "";
-  const pago = d.paid ? `\nPagado: $${Number(d.paid).toLocaleString("es-CL")} IVA incluido (MercadoPago ${d.paymentId})` : "\nSin pago (visita gratuita)";
+  const pago = d.paid ? `\nPagado: $${Number(d.paid).toLocaleString("es-CL")} IVA incluido (MercadoPago ${d.paymentId})` : "\nSin pago (gratis)";
 
   // 1) Evento en el calendario del estudio. Si viene eventId (idempotencia por pago), un 2º
   //    intento con el mismo id falla con DUPLICATE_EVENT y el llamador lo ignora.
   const ev = await createEvent(env, {
     id: d.eventId,
-    summary: `${d.tipo === "visita" ? "👀" : "🎙️"} ${svc.label}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""}`,
+    summary: `${d.tipo === "visita" ? "👀" : d.tipo === "llamada" ? "📞" : "🎙️"} ${svc.label}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""}`,
     description: `${svc.label} reservada vía web.\nCliente: ${d.name}${d.empresa ? `\nEmpresa: ${d.empresa}` : ""}\nEmail: ${d.email}\nTel: ${d.phone}\nPersonas: ${d.personas || 1}${d.comentarios ? `\nComentarios: ${d.comentarios}` : ""}${pago}${fact}\nGestión: ${d.date} ${d.label} · token ${token}`,
     startISO: d.start,
     endISO: d.end,
@@ -40,7 +40,7 @@ export async function confirmBooking(env, config, origin, d) {
 
   // 3) Hub (best-effort): crea/ubica al cliente y su proyecto.
   let portalUrl = null;
-  if (env.PORTAL_INTAKE_URL && env.PORTAL_INTAKE_SECRET) {
+  if (d.tipo !== "llamada" && env.PORTAL_INTAKE_URL && env.PORTAL_INTAKE_SECRET) { // una llamada no abre proyecto en el portal
     try {
       const r = await fetch(env.PORTAL_INTAKE_URL, {
         method: "POST",
@@ -63,11 +63,11 @@ export async function confirmBooking(env, config, origin, d) {
 
   // 4) Correos (best-effort: un fallo aquí no revierte la reserva).
   try {
-    const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
+    const address = d.tipo === "llamada" ? `Te llamamos al ${d.phone}` : (env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago");
     if (d.email) {
       await sendEmail(env, {
         to: d.email,
-        subject: d.tipo === "visita" ? "Tu visita a Pod Factory está confirmada 🎙️" : "Tu mini-piloto en Pod Factory está confirmado 🎙️",
+        subject: d.tipo === "visita" ? "Tu visita a Pod Factory está confirmada 🎙️" : d.tipo === "llamada" ? "Tu llamada con Pod Factory está agendada 📞" : "Tu mini-piloto en Pod Factory está confirmado 🎙️",
         html: customerEmailHtml({
           name: d.name, fecha, hora, deposit: d.paid || 0, address, tipo: d.tipo,
           manageUrl: manageUrl(origin, token), conditionsUrl: `${config.siteUrl}condiciones.pdf`,
@@ -76,14 +76,14 @@ export async function confirmBooking(env, config, origin, d) {
         }),
         attachments: [icsAttachment({
           uid: token, start: d.start, end: d.end, summary: `${svc.label} · Pod Factory`, location: address,
-          description: d.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)." : "Mini-piloto en Pod Factory: 10 minutos de grabación. Llega 10 minutos antes.",
+          description: d.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)." : d.tipo === "llamada" ? `Llamada con Domingo e Iván de Pod Factory (15 minutos). Te llamamos al ${d.phone}.` : "Mini-piloto en Pod Factory: 10 minutos de grabación. Llega 10 minutos antes.",
         })],
       });
     }
     if (env.STUDIO_EMAIL) {
       await sendEmail(env, {
         to: studioRecipients(env),
-        subject: `${d.tipo === "visita" ? "Nueva visita" : "Nuevo mini-piloto"}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""} · ${fecha} ${hora} hrs`,
+        subject: `${d.tipo === "visita" ? "Nueva visita" : d.tipo === "llamada" ? "📞 Nueva llamada" : "Nuevo mini-piloto"}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""} · ${fecha} ${hora} hrs`,
         html: studioEmailHtml({
           name: d.name, email: d.email, phone: d.phone, fecha, hora, deposit: d.paid || 0, tipo: svc.label,
           personas: d.personas || 1, addons: [], comentarios: [d.empresa ? `Empresa: ${d.empresa}` : "", d.comentarios || ""].filter(Boolean).join(" · "),

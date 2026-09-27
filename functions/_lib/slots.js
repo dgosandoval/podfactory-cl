@@ -19,6 +19,7 @@ export function parseConfig(env) {
 // Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis).
 export const SERVICES = {
   visita: { key: "visita", label: "Visita al estudio", minutes: 30, price: 0, net: 0 },
+  llamada: { key: "llamada", label: "Llamada con Domingo e Iván", minutes: 30, price: 0, net: 0 },
   minipiloto: { key: "minipiloto", label: "Mini-piloto (10 minutos)", minutes: 30, price: 35700, net: 30000 },
 };
 

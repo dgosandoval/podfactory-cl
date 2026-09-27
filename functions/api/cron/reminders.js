@@ -29,7 +29,7 @@ export async function onRequestGet({ request, env }) {
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     const wa = whatsappLink(env, `Hola Pod Factory, sobre mi grabación del ${fecha} a las ${hora} hrs:`);
     try {
-      if (!b.reminded72 && b.tipo !== "visita" && ms <= 72 * HOUR_MS && ms > 49 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
+      if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 72 * HOUR_MS && ms > 49 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
         const dl = formatSession(new Date(Date.parse(b.start) - 48 * HOUR_MS).toISOString(), config.timeZone);
         if (b.email) {
           await sendEmail(env, {
@@ -44,7 +44,7 @@ export async function onRequestGet({ request, env }) {
         if (b.email) {
           await sendEmail(env, {
             to: b.email,
-            subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es mañana 👀" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
+            subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es mañana 👀" : b.tipo === "llamada" ? "Recordatorio: tu llamada con Pod Factory es mañana 📞" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
             html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo }),
           });
         }

@@ -62,9 +62,10 @@ function groupByWeek(days) {
   });
 }
 
-// Productos reservables: la visita (gratis) y el mini-piloto (pagado por MercadoPago).
+// Productos reservables: la visita y la llamada (gratis) y el mini-piloto (pagado por MercadoPago).
 const PRODUCTOS = {
   visita: { label: 'Visita al estudio', sub: 'Gratis · 20 minutos', precio: 0, cta: 'AGENDAR VISITA' },
+  llamada: { label: 'Llamada', sub: 'Gratis · 15 min con Domingo e Iván', precio: 0, cta: 'AGENDAR LLAMADA' },
   minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
 };
 
@@ -119,9 +120,9 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
       });
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || 'No se pudo reservar');
-      if (tipo === 'visita') {
+      if (P.precio === 0) {
         setListo({ fecha: out.fecha, hora: out.hora });
-        window.pfTrack && window.pfTrack('schedule_visit', { value: 0, currency: 'CLP' });
+        window.pfTrack && window.pfTrack('schedule_visit', { value: 0, currency: 'CLP', tipo });
         setSubmitting(false);
       } else {
         if (!out.init_point) throw new Error('No se pudo iniciar el pago');
@@ -139,9 +140,11 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
 
   if (listo) return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 24, maxWidth: 560 }}>
-      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>¡Visita agendada! ✅</div>
+      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>{tipo === 'llamada' ? '¡Llamada agendada! ✅' : '¡Visita agendada! ✅'}</div>
       <p style={{ fontFamily: PFB.display, fontSize: 15, lineHeight: 1.55, marginTop: 8 }}>
-        Te esperamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con la dirección exacta y un link por si necesitas cambiar la hora.
+        {tipo === 'llamada'
+          ? <>Te llamamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con los detalles y un link por si necesitas cambiar la hora.</>
+          : <>Te esperamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con la dirección exacta y un link por si necesitas cambiar la hora.</>}
       </p>
     </div>
   );
@@ -150,7 +153,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 0, maxWidth: 560, overflow: 'hidden' }}>
       <style>{`@media (max-width: 480px){ .pf-form-grid{ grid-template-columns: 1fr !important; } }`}</style>
       {/* Selector de producto */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: `1.5px solid ${PFB.ink}` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', borderBottom: `1.5px solid ${PFB.ink}` }}>
         {Object.entries(PRODUCTOS).map(([k, v], i) => {
           const on = k === tipo;
           return (
@@ -234,7 +237,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
                 </div>
               </div>
             )}
-            <textarea placeholder={tipo === 'visita' ? '¿Qué te gustaría ver o conversar? (opcional)' : 'Cuéntanos qué quieres grabar (opcional)'} value={form.comentarios}
+            <textarea placeholder={tipo === 'minipiloto' ? 'Cuéntanos qué quieres grabar (opcional)' : 'Cuéntanos tu idea en pocas palabras (opcional)'} value={form.comentarios}
               onChange={(e) => setForm({ ...form, comentarios: e.target.value })} rows={2}
               style={{ ...inp, width: '100%', marginBottom: 12, resize: 'vertical' }} />
             <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 14, fontFamily: PFB.mono, fontSize: 11.5, lineHeight: 1.5 }}>
@@ -246,11 +249,13 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
               background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',
               fontFamily: PFB.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em',
             }}>
-              {submitting ? (tipo === 'visita' ? 'AGENDANDO…' : 'REDIRIGIENDO A MERCADOPAGO…') : P.cta}
+              {submitting ? (P.precio === 0 ? 'AGENDANDO…' : 'REDIRIGIENDO A MERCADOPAGO…') : P.cta}
             </button>
             <div style={{ marginTop: 10, fontFamily: PFB.mono, fontSize: 10.5, color: PFB.ink + '88', lineHeight: 1.5 }}>
               {tipo === 'visita'
                 ? 'Te enviamos la dirección exacta por correo al confirmar.'
+                : tipo === 'llamada'
+                ? 'Te llamamos al teléfono que dejes, a la hora que elijas.'
                 : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
             </div>
           </div>

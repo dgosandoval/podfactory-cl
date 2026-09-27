@@ -1,5 +1,5 @@
-// POST /api/reserve — reserva web de la visita al estudio (gratis) o del mini-piloto (pagado).
-//  · visita: se confirma al tiro (evento + correos), sin pago.
+// POST /api/reserve — reserva web de la visita al estudio o la llamada (gratis) o del mini-piloto (pagado).
+//  · visita / llamada: se confirman al tiro (evento + correos), sin pago.
 //  · minipiloto: "congela" el bloque en KV durante HOLD_MINUTES y crea la preferencia de
 //    MercadoPago; se confirma en /api/mp-webhook cuando el pago queda aprobado.
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy, SERVICES } from "../_lib/slots.js";
@@ -13,7 +13,7 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "JSON inválido" }, 400); }
   const svc = SERVICES[body?.tipo];
-  if (!svc) return json({ error: "Elige visita o mini-piloto" }, 400);
+  if (!svc) return json({ error: "Elige visita, llamada o mini-piloto" }, 400);
   const config = configFor(parseConfig(env), svc.key);
 
   const { date, start, label } = body;
@@ -32,15 +32,16 @@ export async function onRequestPost({ request, env }) {
   if (rut && !/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(rut)) return json({ error: "RUT inválido (ej: 12.345.678-9)" }, 400);
   if (body.acepta !== true) return json({ error: "Debes aceptar las condiciones" }, 400);
 
-  // Anti-abuso de la visita gratuita: máx. 3 por IP al día y 1 visita futura por correo.
-  if (svc.key === "visita" && env.HOLDS) {
+  // Anti-abuso de lo gratuito (visita, llamada): máx. 3 por IP al día y 1 futura por correo y tipo.
+  const gratis = svc.price === 0;
+  if (gratis && env.HOLDS) {
     const ip = request.headers.get("cf-connecting-ip") || "0";
     const k = `visita-rate:${ip}`;
     const n = parseInt((await env.HOLDS.get(k)) || "0", 10);
     if (n >= 3) return json({ error: "Demasiadas reservas desde esta conexión. Escríbenos por WhatsApp." }, 429);
     await env.HOLDS.put(k, String(n + 1), { expirationTtl: 86400 });
-    const ek = `visita-email:${email.toLowerCase()}`;
-    if (await env.HOLDS.get(ek)) return json({ error: "Ya tienes una visita agendada. Si necesitas cambiarla, usa el link del correo de confirmación." }, 409);
+    const ek = `${svc.key}-email:${email.toLowerCase()}`;
+    if (await env.HOLDS.get(ek)) return json({ error: `Ya tienes una ${svc.key === "llamada" ? "llamada" : "visita"} agendada. Si necesitas cambiarla, usa el link del correo de confirmación.` }, 409);
   }
 
   // 1) El bloque debe ser uno válido de la grilla del servicio, en día abierto y futuro.
@@ -62,14 +63,14 @@ export async function onRequestPost({ request, env }) {
   const origin = new URL(request.url).origin;
   const data = { consent: body.acepta === true, tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
 
-  // Visita: confirmación inmediata.
-  if (svc.key === "visita") {
+  // Visita o llamada: confirmación inmediata.
+  if (gratis) {
     try {
       const r = await confirmBooking(env, config, origin, { ...data, paid: 0 });
-      if (env.HOLDS) await env.HOLDS.put(`visita-email:${email.toLowerCase()}`, r.token, { expirationTtl: Math.max(60, Math.floor((Date.parse(slot.start) - Date.now()) / 1000)) });
+      if (env.HOLDS) await env.HOLDS.put(`${svc.key}-email:${email.toLowerCase()}`, r.token, { expirationTtl: Math.max(60, Math.floor((Date.parse(slot.start) - Date.now()) / 1000)) });
       return json({ ok: true, confirmed: true, fecha: r.fecha, hora: r.hora });
     } catch (e) {
-      return json({ error: "No pudimos agendar la visita", detail: String(e) }, 502);
+      return json({ error: "No pudimos agendarlo", detail: String(e) }, 502);
     }
   }
 

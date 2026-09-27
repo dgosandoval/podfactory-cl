@@ -285,7 +285,8 @@ function InfoButton({ size = 'md', label = 'RECIBE LA INFORMACIÓN', dark = fals
 // MercadoPago. En la página normal no aparece: el primer paso siempre es el correo.
 function AgendarDesdeCorreo() {
   const q = React.useMemo(() => new URLSearchParams(window.location.search), []);
-  const show = q.get('agendar') === '1' || !!q.get('reserva');
+  const agendar = q.get('agendar');
+  const show = agendar === '1' || agendar === 'llamada' || !!q.get('reserva');
   React.useEffect(() => { if (show) setTimeout(() => document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth' }), 400); }, [show]);
   if (!show) return null;
   return (
@@ -294,9 +295,9 @@ function AgendarDesdeCorreo() {
         <div>
           <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
-          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
+          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Llamada</b>: 15 minutos con Domingo e Iván, si prefieres conversar antes.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
         </div>
-        <BookingCalendar />
+        <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : 'visita'} />
       </div>
     </section>
   );
@@ -523,7 +524,7 @@ function PodFactoryLanding() {
               <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Un set listo para grabar</div>
               <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.ink + 'bb', marginTop: 8 }}>
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
-                Fechas agendadas desde el inicio y el mismo look en todos los capítulos.
+                Agendas cada grabación cuando te acomode, con el mismo look en todos los capítulos.
               </p>
               <div style={{ marginTop: 14 }}><InfoButton label="RECIBE LA INFORMACIÓN" /></div>
             </div>

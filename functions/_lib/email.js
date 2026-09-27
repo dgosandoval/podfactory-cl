@@ -130,27 +130,28 @@ const changePolicy = `
 // Correo al cliente (confirmación). tipo: 'visita' | 'minipiloto' | otro (grabación de temporada,
 // agendada por el estudio). deposit > 0 = pagó por la web.
 export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo }) {
-  const titulo = tipo === "visita" ? "¡Visita al estudio confirmada! 👀" : tipo === "minipiloto" ? "¡Mini-piloto confirmado! 🎙️" : "¡Grabación confirmada! 🎙️";
+  const titulo = tipo === "visita" ? "¡Visita al estudio confirmada! 👀" : tipo === "llamada" ? "¡Llamada agendada! 📞" : tipo === "minipiloto" ? "¡Mini-piloto confirmado! 🎙️" : "¡Grabación confirmada! 🎙️";
   const intro = tipo === "visita" ? "tu visita al estudio quedó agendada. Son unos 20 minutos para conocer el set, ver el monitor y conversar tu idea"
+    : tipo === "llamada" ? "quedó agendada tu llamada con Domingo e Iván. Son unos 15 minutos para conocer tu idea y ver cómo podemos ayudarte"
     : deposit ? "recibimos tu pago y tu grabación quedó agendada" : "tu grabación quedó agendada";
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">${titulo}</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, ${intro}. Te esperamos:
+      Hola ${name}, ${intro}.${tipo === "llamada" ? "" : " Te esperamos:"}
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
       ${row("Hora", hora + " hrs")}
-      ${row("Dirección", address)}
+      ${row(tipo === "llamada" ? "Teléfono" : "Dirección", address)}
       ${deposit ? row("Pagado", CLP(deposit) + " (IVA incluido)") : ""}
     </table>
-    ${mapsBlock(address)}
+    ${tipo === "llamada" ? "" : mapsBlock(address)}
     ${tipo === "minipiloto" ? `
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic. Llega 10 minutos antes.
       Si después contratas una temporada, el valor del mini-piloto se descuenta del total.
     </p>` : ""}
-    ${tipo === "visita" || tipo === "minipiloto" ? "" : guideBlock(conditionsUrl)}
+    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl)}
     ${portalUrl ? `
     <div style="margin:18px 0;padding:16px;background:#0A0A0A;border-radius:4px">
       <p style="font-size:13px;color:#F5EBD6;line-height:1.5;margin:0 0 10px">
@@ -226,19 +227,19 @@ export function reminder72EmailHtml({ name, fecha, hora, deadline, address, mana
 
 // Correo recordatorio (24 h antes)
 export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl, tipo }) {
-  const que = tipo === "visita" ? "Tu visita al estudio es mañana 👀" : "Tu grabación es mañana 🎙️";
+  const que = tipo === "visita" ? "Tu visita al estudio es mañana 👀" : tipo === "llamada" ? "Tu llamada con Pod Factory es mañana 📞" : "Tu grabación es mañana 🎙️";
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">${que}</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, te recordamos tu grabación en Pod Factory:
+      Hola ${name}, te recordamos tu ${tipo === "llamada" ? "llamada con" : tipo === "visita" ? "visita a" : "grabación en"} Pod Factory:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
       ${row("Hora", hora + " hrs")}
-      ${row("Dirección", address)}
+      ${tipo === "llamada" ? "" : row("Dirección", address)}
     </table>
-    ${mapsBlock(address)}
-    ${tipo === "visita" || tipo === "minipiloto" ? "" : guideBlock(conditionsUrl)}
+    ${tipo === "llamada" ? "" : mapsBlock(address)}
+    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl)}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
   `);
