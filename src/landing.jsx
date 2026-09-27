@@ -17,7 +17,8 @@ const PF = {
 
 const WA_PHONE = '56927970014';
 function waLink(context) {
-  const msg = encodeURIComponent(`Hola Pod Factory, ${context}`);
+  // "(desde la web)" permite a Iván saber que el contacto viene de podfactory.cl y registrarlo en el CRM.
+  const msg = encodeURIComponent(`Hola Pod Factory, ${context} (desde la web)`);
   return `https://wa.me/${WA_PHONE}?text=${msg}`;
 }
 
@@ -200,10 +201,11 @@ function ReservaBanner() {
 // luego la secuencia). En la pantalla de gracias ofrece el segundo paso: agendar la visita
 // gratis o el mini-piloto, con el nombre y el correo ya llenos.
 function InfoForm({ id, compact = false }) {
-  const [f, setF] = React.useState({ nombre: '', email: '', segment: 'empresa', horizonte: '1_3_meses', website: '' });
+  const [f, setF] = React.useState({ nombre: '', email: '', telefono: '', segment: 'empresa', horizonte: '1_3_meses', website: '' });
   const [estado, setEstado] = React.useState(null); // null | enviando | ok | error
   const [err, setErr] = React.useState('');
-  const valid = f.nombre.trim() && /\S+@\S+\.\S+/.test(f.email);
+  const telOk = !f.telefono.trim() || f.telefono.replace(/\D/g, '').length >= 8; // WhatsApp es opcional
+  const valid = f.nombre.trim() && /\S+@\S+\.\S+/.test(f.email) && telOk;
   async function enviar(e) {
     e.preventDefault(); if (!valid) return;
     setEstado('enviando'); setErr('');
@@ -225,7 +227,7 @@ function InfoForm({ id, compact = false }) {
       <div style={{ borderTop: `1.5px solid ${PF.ink}22`, margin: '18px 0 14px' }} />
       <div style={{ fontWeight: 800, fontSize: 18 }}>¿Quieres conocer el estudio?</div>
       <p style={{ fontSize: 14, lineHeight: 1.5, margin: '6px 0 12px', color: PF.ink + 'bb' }}>Agenda una visita gratis de 20 minutos, o un mini-piloto de 10 minutos grabando en el set.</p>
-      <BookingCalendar prefill={{ name: f.nombre, email: f.email }} />
+      <BookingCalendar prefill={{ name: f.nombre, email: f.email, phone: f.telefono }} />
     </div>
   );
   return (
@@ -241,6 +243,8 @@ function InfoForm({ id, compact = false }) {
         <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
         <label><span style={lbl}>CORREO</span><input style={inp} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
       </div>
+      <label><span style={lbl}>WHATSAPP <span style={{ fontWeight: 400 }}>(OPCIONAL, PARA RESOLVER DUDAS MÁS RÁPIDO)</span></span>
+        <input style={inp} type="tel" inputMode="tel" placeholder="+56 9 1234 5678" value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} /></label>
       <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <label><span style={lbl}>¿PARA QUIÉN ES?</span>
           <select style={inp} value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })}>

@@ -82,7 +82,9 @@ export async function onRequestPost({ request, env }) {
 async function preciosLead(request, env, b) {
   const email = String(b.email || "").trim().slice(0, 160);
   const name = String(b.nombre || "").trim().slice(0, 120);
+  const phone = String(b.telefono || "").trim().slice(0, 40);
   if (!name) return json({ error: "Falta tu nombre" }, 400);
+  if (phone && phone.replace(/\D/g, "").length < 8) return json({ error: "WhatsApp inválido" }, 400);
   if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
   const segment = b.segment === "empresa" ? "empresa" : b.segment === "personal" ? "personal" : undefined;
   const horizonte = ["este_mes", "1_3_meses", "mas_adelante", "mirando"].includes(b.horizonte) ? b.horizonte : undefined;
@@ -97,12 +99,12 @@ async function preciosLead(request, env, b) {
       JSON.stringify({ tipo: "precios", email, name, segment, horizonte, consent: b.consent === true, ip, at: new Date().toISOString() }),
       { expirationTtl: 180 * 86400 });
   }
-  const hub = await toHub(env, { email, name, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true, origen: String(b.origen || "").slice(0, 120) || undefined });
+  const hub = await toHub(env, { email, name, phone: phone || undefined, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true, origen: String(b.origen || "").slice(0, 120) || undefined });
 
   // Aviso al estudio (best-effort): quién pidió precios y si le llegó el correo.
   const HZ = { este_mes: "Este mes", "1_3_meses": "En 1 a 3 meses", mas_adelante: "Más adelante", mirando: "Solo mirando" };
   const rows = [
-    ["Nombre", name], ["Email", email], ["Para", segment === "empresa" ? "Empresa o marca" : segment === "personal" ? "Personal" : "—"],
+    ["Nombre", name], ["Email", email], ["WhatsApp", phone || "—"], ["Para", segment === "empresa" ? "Empresa o marca" : segment === "personal" ? "Personal" : "—"],
     ["Cuándo", HZ[horizonte] || "—"], ["Correos de seguimiento", b.consent === true ? "Sí" : "No"],
     ["Lista de precios", hub && hub.sent ? "Enviada ✅" : "NO se pudo enviar ⚠️ (mándala a mano)"],
   ].map(([k, v]) => `<tr><td style="padding:6px 10px;color:#666">${k}</td><td style="padding:6px 10px;font-weight:600">${esc(v)}</td></tr>`).join("");
@@ -113,6 +115,7 @@ async function preciosLead(request, env, b) {
       html: `<div style="font-family:Arial,sans-serif;max-width:560px"><h2 style="margin:0 0 6px">Nuevo lead 🎙️</h2>
         <p style="margin:0 0 14px;color:#444">Pidió la información y los precios en podfactory.cl.</p>
         <table style="border-collapse:collapse;font-size:14px">${rows}</table>
+        ${phone ? `<p style="margin-top:16px"><a href="https://wa.me/${phone.replace(/\D/g, "").replace(/^(?!56)/, "56")}" style="background:#25D366;color:#fff;padding:10px 16px;text-decoration:none;border-radius:4px;font-weight:700">Escribirle por WhatsApp</a></p>` : ""}
         <p style="margin-top:16px"><a href="https://clientes.doppel.cl/estudio">Ver en el panel del estudio →</a></p></div>`,
       replyTo: email,
     });

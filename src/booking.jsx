@@ -86,7 +86,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [slot, setSlot] = React.useState(null);
-  const [form, setForm] = React.useState({ name: prefill?.name || '', empresa: '', email: prefill?.email || '', phone: '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
+  const [form, setForm] = React.useState({ name: prefill?.name || '', empresa: '', email: prefill?.email || '', phone: prefill?.phone || '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [listo, setListo] = React.useState(null); // visita confirmada: { fecha, hora }
