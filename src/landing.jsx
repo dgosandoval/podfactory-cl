@@ -286,7 +286,9 @@ function InfoButton({ size = 'md', label = 'RECIBE LA INFORMACIÓN', dark = fals
 function AgendarDesdeCorreo() {
   const q = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const agendar = q.get('agendar');
-  const show = agendar === '1' || agendar === 'llamada' || !!q.get('reserva');
+  const show = agendar === '1' || agendar === 'llamada' || agendar === 'piloto' || !!q.get('reserva');
+  // Mini-piloto de regalo (link firmado desde los correos a leads).
+  const cortesia = agendar === 'piloto' && q.get('t') ? { e: q.get('e') || '', x: q.get('x') || '', t: q.get('t') } : null;
   React.useEffect(() => { if (show) setTimeout(() => document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth' }), 400); }, [show]);
   if (!show) return null;
   return (
@@ -297,7 +299,7 @@ function AgendarDesdeCorreo() {
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
           <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Llamada</b>: 15 minutos con Domingo e Iván, si prefieres conversar antes.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
         </div>
-        <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : 'visita'} />
+        <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={cortesia ? { email: cortesia.e } : null} />
       </div>
     </section>
   );

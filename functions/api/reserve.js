@@ -6,6 +6,12 @@ import { parseConfig, configFor, buildSlots, weekday, overlapsBusy, SERVICES } f
 import { getBusy } from "../_lib/google.js";
 import { confirmBooking } from "../_lib/confirm.js";
 
+async function pilotoSig(secret, email, exp) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`piloto|${email.toLowerCase()}|${exp}`));
+  return Array.from(new Uint8Array(sig)).slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -32,8 +38,21 @@ export async function onRequestPost({ request, env }) {
   if (rut && !/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(rut)) return json({ error: "RUT inválido (ej: 12.345.678-9)" }, 400);
   if (body.acepta !== true) return json({ error: "Debes aceptar las condiciones" }, 400);
 
+  // Mini-piloto de regalo: link firmado desde los correos del hub (correo + vencimiento), una vez por correo.
+  let cortesiaKey = null;
+  if (svc.key === "minipiloto" && body.cortesia) {
+    const c = body.cortesia;
+    const ok = c && c.e && c.x && c.t && env.PORTAL_INTAKE_SECRET
+      && String(c.e).toLowerCase() === email.toLowerCase()
+      && /^\d{4}-\d{2}-\d{2}$/.test(c.x) && c.x >= new Date().toISOString().slice(0, 10)
+      && (await pilotoSig(env.PORTAL_INTAKE_SECRET, email, c.x)) === c.t;
+    if (!ok) return json({ error: "La invitación no es válida o ya venció. Usa el mismo correo al que te llegó, o escríbenos por WhatsApp." }, 400);
+    cortesiaKey = `cortesia-piloto:${email.toLowerCase()}`;
+    if (env.HOLDS && (await env.HOLDS.get(cortesiaKey))) return json({ error: "Ya usaste tu mini-piloto de regalo. Si necesitas cambiar la hora, usa el link del correo de confirmación." }, 409);
+  }
+
   // Anti-abuso de lo gratuito (visita, llamada): máx. 3 por IP al día y 1 futura por correo y tipo.
-  const gratis = svc.price === 0;
+  const gratis = svc.price === 0 || !!cortesiaKey;
   if (gratis && env.HOLDS) {
     const ip = request.headers.get("cf-connecting-ip") || "0";
     const k = `visita-rate:${ip}`;
@@ -66,7 +85,8 @@ export async function onRequestPost({ request, env }) {
   // Visita o llamada: confirmación inmediata.
   if (gratis) {
     try {
-      const r = await confirmBooking(env, config, origin, { ...data, paid: 0 });
+      const r = await confirmBooking(env, config, origin, { ...data, paid: 0, cortesia: !!cortesiaKey });
+      if (cortesiaKey && env.HOLDS) await env.HOLDS.put(cortesiaKey, r.token, { expirationTtl: 365 * 86400 });
       if (env.HOLDS) await env.HOLDS.put(`${svc.key}-email:${email.toLowerCase()}`, r.token, { expirationTtl: Math.max(60, Math.floor((Date.parse(slot.start) - Date.now()) / 1000)) });
       return json({ ok: true, confirmed: true, fecha: r.fecha, hora: r.hora });
     } catch (e) {

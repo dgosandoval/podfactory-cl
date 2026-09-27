@@ -69,7 +69,7 @@ const PRODUCTOS = {
   minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
 };
 
-function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
+function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = null }) {
   const OPEN_DOWS = [1, 2, 3, 4, 5]; // Lun–Vie
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
@@ -90,7 +90,9 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [listo, setListo] = React.useState(null); // visita confirmada: { fecha, hora }
-  const P = PRODUCTOS[tipo];
+  // Con invitación válida, el mini-piloto es gratis (el servidor lo vuelve a validar).
+  const gratisPiloto = !!cortesia && tipo === 'minipiloto';
+  const P = gratisPiloto ? { ...PRODUCTOS.minipiloto, sub: 'Gratis con tu invitación 🎁', precio: 0, cta: 'AGENDAR MI MINI-PILOTO GRATIS' } : PRODUCTOS[tipo];
 
   // Los botones de la página pueden elegir el producto (evento 'pf-producto').
   React.useEffect(() => {
@@ -111,12 +113,12 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
 
   async function reservar() {
     setSubmitting(true); setError(null);
-    if (tipo === 'minipiloto' && window.pfTrack) window.pfTrack('begin_checkout', { value: P.precio, currency: 'CLP', items: [{ item_name: 'Mini-piloto', price: P.precio }] });
+    if (tipo === 'minipiloto' && !gratisPiloto && window.pfTrack) window.pfTrack('begin_checkout', { value: P.precio, currency: 'CLP', items: [{ item_name: 'Mini-piloto', price: P.precio }] });
     try {
       const res = await fetch(`${PF_API}/api/reserve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tipo, date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form }),
+        body: JSON.stringify({ tipo, date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form, ...(gratisPiloto ? { cortesia } : {}) }),
       });
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || 'No se pudo reservar');
@@ -140,7 +142,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
 
   if (listo) return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 24, maxWidth: 560 }}>
-      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>{tipo === 'llamada' ? '¡Llamada agendada! ✅' : '¡Visita agendada! ✅'}</div>
+      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>{tipo === 'llamada' ? '¡Llamada agendada! ✅' : tipo === 'minipiloto' ? '¡Mini-piloto agendado! ✅' : '¡Visita agendada! ✅'}</div>
       <p style={{ fontFamily: PFB.display, fontSize: 15, lineHeight: 1.55, marginTop: 8 }}>
         {tipo === 'llamada'
           ? <>Te llamamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con los detalles y un link por si necesitas cambiar la hora.</>
@@ -162,7 +164,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
               background: on ? PFB.ink : '#fff', color: on ? '#fff' : PFB.ink, textAlign: 'left',
             }}>
               <div style={{ fontFamily: PFB.display, fontWeight: 800, fontSize: 15 }}>{v.label}</div>
-              <div style={{ fontFamily: PFB.mono, fontSize: 10.5, marginTop: 3, opacity: 0.8 }}>{v.sub}</div>
+              <div style={{ fontFamily: PFB.mono, fontSize: 10.5, marginTop: 3, opacity: 0.8 }}>{k === 'minipiloto' && cortesia ? 'Gratis con tu invitación 🎁' : v.sub}</div>
             </button>
           );
         })}
@@ -227,7 +229,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
                 <input key={k} type={type} placeholder={ph} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} style={inp} />
               ))}
             </div>
-            {tipo === 'minipiloto' && (
+            {tipo === 'minipiloto' && !gratisPiloto && (
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', color: PFB.ink + '99', marginBottom: 6 }}>¿QUIERES FACTURA? (OPCIONAL)</div>
                 <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -256,7 +258,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null }) {
                 ? 'Te enviamos la dirección exacta por correo al confirmar.'
                 : tipo === 'llamada'
                 ? 'Te llamamos al teléfono que dejes, a la hora que elijas.'
-                : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
+                : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
             </div>
           </div>
         )}

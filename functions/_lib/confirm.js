@@ -14,7 +14,7 @@ export async function confirmBooking(env, config, origin, d) {
   const svc = SERVICES[d.tipo] || { label: "Grabación", key: d.tipo || "grabacion" };
   const token = newToken();
   const fact = d.rut ? `\nFacturar a: ${d.razonSocial} · RUT ${d.rut}${d.giro ? ` · Giro ${d.giro}` : ""}` : "";
-  const pago = d.paid ? `\nPagado: $${Number(d.paid).toLocaleString("es-CL")} IVA incluido (MercadoPago ${d.paymentId})` : "\nSin pago (gratis)";
+  const pago = d.paid ? `\nPagado: $${Number(d.paid).toLocaleString("es-CL")} IVA incluido (MercadoPago ${d.paymentId})` : d.cortesia ? "\nSin pago: mini-piloto de regalo (invitación por correo)" : "\nSin pago (gratis)";
 
   // 1) Evento en el calendario del estudio. Si viene eventId (idempotencia por pago), un 2º
   //    intento con el mismo id falla con DUPLICATE_EVENT y el llamador lo ignora.
@@ -83,7 +83,7 @@ export async function confirmBooking(env, config, origin, d) {
     if (env.STUDIO_EMAIL) {
       await sendEmail(env, {
         to: studioRecipients(env),
-        subject: `${d.tipo === "visita" ? "Nueva visita" : d.tipo === "llamada" ? "📞 Nueva llamada" : "Nuevo mini-piloto"}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""} · ${fecha} ${hora} hrs`,
+        subject: `${d.tipo === "visita" ? "Nueva visita" : d.tipo === "llamada" ? "📞 Nueva llamada" : d.cortesia ? "🎁 Nuevo mini-piloto de regalo" : "Nuevo mini-piloto"}: ${d.name}${d.empresa ? ` (${d.empresa})` : ""} · ${fecha} ${hora} hrs`,
         html: studioEmailHtml({
           name: d.name, email: d.email, phone: d.phone, fecha, hora, deposit: d.paid || 0, tipo: svc.label,
           personas: d.personas || 1, addons: [], comentarios: [d.empresa ? `Empresa: ${d.empresa}` : "", d.comentarios || ""].filter(Boolean).join(" · "),

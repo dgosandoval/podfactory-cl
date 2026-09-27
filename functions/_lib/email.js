@@ -149,7 +149,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
     ${tipo === "minipiloto" ? `
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic. Llega 10 minutos antes.
-      Si después contratas una temporada, el valor del mini-piloto se descuenta del total.
+      Si después contratas un plan, el valor del mini-piloto se descuenta del total.
     </p>` : ""}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl)}
     ${portalUrl ? `
