@@ -261,7 +261,7 @@ function InfoForm({ id, compact = false }) {
       <button type="submit" disabled={!valid || estado === 'enviando'} style={{
         padding: 15, border: 'none', borderRadius: 999, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? PF.red : PF.ink + '33', color: '#fff',
         fontFamily: PF.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.06em',
-      }}>{estado === 'enviando' ? 'ENVIANDO…' : 'RECIBIR LA INFORMACIÓN →'}</button>
+      }}>{estado === 'enviando' ? 'ENVIANDO…' : 'RECIBIR INFORMACIÓN Y PRECIOS →'}</button>
       {estado === 'error' && <div style={{ fontFamily: PF.mono, fontSize: 12, color: PF.red }}>{err}</div>}
       <div style={{ fontSize: 11.5, lineHeight: 1.45, color: PF.ink + '88' }}>
         Te enviaremos la información y algunos correos para ayudarte a decidir. Te puedes dar de baja cuando quieras.
@@ -271,7 +271,7 @@ function InfoForm({ id, compact = false }) {
 }
 
 // Botón que lleva al formulario (el único llamado a la acción del funnel).
-function InfoButton({ size = 'md', label = 'RECIBE LA INFORMACIÓN', dark = false }) {
+function InfoButton({ size = 'md', label = 'INFORMACIÓN Y PRECIOS', dark = false }) {
   const pad = size === 'lg' ? '16px 26px' : size === 'sm' ? '11px 18px' : '14px 22px';
   return (
     <a href="#info" onClick={(e) => { e.preventDefault(); const el = document.getElementById('info'); el && el.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => el && el.querySelector('input')?.focus(), 500); }} style={{
@@ -377,10 +377,12 @@ function PodFactoryLanding() {
             Tu <span style={{ color: PF.red }}>podcast</span>, en nuestro<br />
             estudio. <span style={{ fontFamily: PF.serif, fontStyle: 'italic', fontWeight: 400 }}>O donde estés.</span>
           </h1>
+          {/* En celular: una tira de capítulos reales antes del formulario (en computador está el reel). */}
+          <div className="pf-hero-strip" aria-hidden="true" style={{ display: 'none', marginTop: 18, height: 120, border: `1.5px solid ${PF.ink}`, background: `${PF.ink} url(assets/email/collage-capitulos.jpg) center 30% / cover no-repeat` }} />
           <p style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 560, marginTop: 22 }}>
-            Cámaras Blackmagic, luz de cine y un director a cargo: tu podcast con un look que
-            se nota, en un estudio en Vitacura. Y como somos productora, también te ayudamos
-            con el formato y llevamos el set a tu oficina o a donde lo necesites.
+            Te ayudamos a crear un podcast que se vea profesional y te posicione: formato,
+            grabación con 4 cámaras Blackmagic y un operador, y edición lista para publicar.
+            En nuestro estudio en Vitacura o donde lo necesites.
           </p>
         </Reveal>
 
@@ -404,7 +406,7 @@ function PodFactoryLanding() {
       }}>
         {[
           ['+300', 'episodios producidos', PF.blue],
-          ['6K', 'cámaras Blackmagic', PF.red],
+          ['4', 'cámaras Blackmagic', PF.red],
           ['Rápida', 'entrega de cada capítulo', PF.orange],
           ['20 min', 'visita gratis al estudio', PF.yellow],
         ].map(([n, l, c], i) => (
@@ -531,7 +533,7 @@ function PodFactoryLanding() {
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
                 Agendas cada grabación cuando te acomode, con el mismo look en todos los capítulos.
               </p>
-              <div style={{ marginTop: 14 }}><InfoButton label="RECIBE LA INFORMACIÓN" /></div>
+              <div style={{ marginTop: 14 }}><InfoButton label="INFORMACIÓN Y PRECIOS" /></div>
             </div>
           </Reveal>
           <Reveal delay={220} style={{ border: `1.5px solid ${PF.bg}40`, padding: 28, display: 'flex', flexDirection: 'column' }}>
@@ -546,7 +548,7 @@ function PodFactoryLanding() {
               <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
-              <InfoButton label="RECIBE LA INFORMACIÓN" dark />
+              <InfoButton label="INFORMACIÓN Y PRECIOS" dark />
             </div>
           </Reveal>
         </div>
@@ -575,7 +577,7 @@ function PodFactoryLanding() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="https://www.google.com/maps/dir/?api=1&destination=Pod+Factory+Premium+Podcast+Studio&destination_place_id=ChIJX7coTmnPYpYRahuOLfgXst0" target="_blank" rel="noopener"
                 style={{ background: PF.ink, color: PF.bg, padding: '12px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textDecoration: 'none', borderRadius: 999 }}>CÓMO LLEGAR ↗</a>
-              <InfoButton size="sm" label="RECIBE LA INFORMACIÓN" />
+              <InfoButton size="sm" label="INFORMACIÓN Y PRECIOS" />
             </div>
           </Reveal>
           <Reveal delay={250} style={{ position: 'relative', minHeight: 340, border: `1.5px solid ${PF.ink}`, overflow: 'hidden' }}>
@@ -752,18 +754,19 @@ function PodFactoryLanding() {
           </div>
           {[
             ['PRODUCCIÓN', ['Productora de podcast & vodcast', 'Estudio en Vitacura + locación', 'Formato · grabación · edición']],
-            ['CONTACTO',   ['hola@doppel.cl', '+56 9 2797 0014', 'WhatsApp']],
+            ['CONTACTO',   [['hola@podfactory.cl', 'mailto:hola@podfactory.cl'], ['+56 9 2797 0014 · WhatsApp', 'https://wa.me/56927970014']]],
             ['DOPPEL',     ['Estudio creativo + Lab', 'Audiovisual · 3D · Apps', 'Volver a doppel.cl ↗']],
           ].map(([h, items]) => (
             <div key={h}>
               <div style={{ fontFamily: PF.mono, fontSize: 10, letterSpacing: '0.15em', color: PF.yellow, marginBottom: 10 }}>{h}</div>
-              {items.map(it => <div key={it} style={{ fontSize: 12, marginBottom: 5, color: PF.bg + 'dd' }}>{it}</div>)}
+              {items.map(it => Array.isArray(it)
+                ? <a key={it[0]} href={it[1]} style={{ display: 'block', fontSize: 12, marginBottom: 5, color: PF.bg + 'dd', textDecoration: 'none' }}>{it[0]}</a>
+                : <div key={it} style={{ fontSize: 12, marginBottom: 5, color: PF.bg + 'dd' }}>{it}</div>)}
             </div>
           ))}
         </Reveal>
         <Reveal delay={300} style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', fontSize: 10, fontFamily: PF.mono, letterSpacing: '0.08em', color: PF.bg + '88' }}>
           <span>© DOPPEL · 2011—2026 · POD FACTORY</span>
-          <span>IG · YOUTUBE · SPOTIFY · TIKTOK</span>
         </Reveal>
       </footer>
 
