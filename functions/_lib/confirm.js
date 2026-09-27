@@ -59,7 +59,7 @@ export async function confirmBooking(env, config, origin, d) {
 
   // 3b) CRM de leads (estado visita/minipiloto: detiene la secuencia de nutrición).
   await toHub(env, { email: d.email, name: d.name, empresa: d.empresa || undefined, phone: d.phone,
-    segment: d.empresa ? "empresa" : undefined, source: d.tipo, consent: d.consent === true });
+    segment: d.empresa ? "empresa" : undefined, source: d.tipo, consent: d.consent === true, origen: d.origen });
 
   // 4) Correos (best-effort: un fallo aquí no revierte la reserva).
   try {

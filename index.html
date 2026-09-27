@@ -98,6 +98,20 @@
       if (Object.keys(o).length) { window.PF_LINK = o; history.replaceState(null, '', u.pathname + u.search + u.hash); }
     } catch (e) {}
   })();
+  // Origen del visitante (primera visita, 30 días): utm_source/utm_campaign, clic de Google Ads
+  // o Meta, o el sitio desde el que llegó. Se manda con cada formulario para medir cada canal.
+  (function () {
+    try {
+      var u = new URL(location.href), p = u.searchParams, o = null, now = Date.now();
+      var prev = JSON.parse(localStorage.getItem('pf_origen') || 'null');
+      if (p.get('gclid') || p.get('gbraid') || p.get('wbraid')) o = 'google-ads';
+      else if (p.get('fbclid')) o = 'meta';
+      if (p.get('utm_source')) o = [p.get('utm_source'), p.get('utm_medium'), p.get('utm_campaign')].filter(Boolean).join('/');
+      if (!o && document.referrer) { var h = new URL(document.referrer).hostname.replace(/^www\./, ''); if (h && h !== location.hostname) o = h; }
+      if (prev && now - prev.t < 30 * 86400000) window.PF_ORIGEN = prev.o;
+      else { window.PF_ORIGEN = o || 'directo'; localStorage.setItem('pf_origen', JSON.stringify({ o: window.PF_ORIGEN, t: now })); }
+    } catch (e) { window.PF_ORIGEN = window.PF_ORIGEN || 'directo'; }
+  })();
   window.PF_TRACKING = { ga4: 'G-72H6EQVLPN', metaPixel: '2983646091994283' };
   (function (c) {
     if (c.ga4) {
@@ -127,6 +141,6 @@
     <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
   </main>
 </div>
-<script src="app.js?v=be7e3288d9"></script>
+<script src="app.js?v=a008564f10"></script>
 </body>
 </html>

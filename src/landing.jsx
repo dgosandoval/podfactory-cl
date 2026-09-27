@@ -209,7 +209,7 @@ function InfoForm({ id, compact = false }) {
     setEstado('enviando'); setErr('');
     try {
       const r = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tipo: 'precios', ...f, consent: true }) });
+        body: JSON.stringify({ tipo: 'precios', ...f, consent: true, origen: window.PF_ORIGEN }) });
       const o = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(o.error || 'No se pudo enviar');
       setEstado('ok');

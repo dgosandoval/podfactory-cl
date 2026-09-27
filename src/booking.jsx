@@ -118,7 +118,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
       const res = await fetch(`${PF_API}/api/reserve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tipo, date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form, ...(gratisPiloto ? { cortesia } : {}) }),
+        body: JSON.stringify({ tipo, date: activeDate, start: slot.start, end: slot.end, label: slot.label, ...form, origen: window.PF_ORIGEN, ...(gratisPiloto ? { cortesia } : {}) }),
       });
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || 'No se pudo reservar');

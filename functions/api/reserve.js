@@ -80,7 +80,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const origin = new URL(request.url).origin;
-  const data = { consent: body.acepta === true, tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
+  const data = { origen: String(body.origen || "").slice(0, 120) || undefined, consent: body.acepta === true, tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
 
   // Visita o llamada: confirmación inmediata.
   if (gratis) {

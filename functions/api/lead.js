@@ -97,7 +97,7 @@ async function preciosLead(request, env, b) {
       JSON.stringify({ tipo: "precios", email, name, segment, horizonte, consent: b.consent === true, ip, at: new Date().toISOString() }),
       { expirationTtl: 180 * 86400 });
   }
-  const hub = await toHub(env, { email, name, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true });
+  const hub = await toHub(env, { email, name, empresa: String(b.empresa || "").slice(0, 120) || undefined, segment, horizonte, source: "precios", consent: b.consent === true, origen: String(b.origen || "").slice(0, 120) || undefined });
 
   // Aviso al estudio (best-effort): quién pidió precios y si le llegó el correo.
   const HZ = { este_mes: "Este mes", "1_3_meses": "En 1 a 3 meses", mas_adelante: "Más adelante", mirando: "Solo mirando" };
