@@ -36,7 +36,7 @@ export async function onRequestPost({ request, env }) {
   if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
   if (phone.replace(/\D/g, "").length < 8) return json({ error: "Teléfono inválido" }, 400);
   if (rut && !/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(rut)) return json({ error: "RUT inválido (ej: 12.345.678-9)" }, 400);
-  if (body.acepta !== true) return json({ error: "Debes aceptar las condiciones" }, 400);
+  if (svc.key === "minipiloto" && body.acepta !== true) return json({ error: "Debes aceptar las condiciones" }, 400);
 
   // Mini-piloto de regalo: link firmado desde los correos del hub (correo + vencimiento), una vez por correo.
   let cortesiaKey = null;

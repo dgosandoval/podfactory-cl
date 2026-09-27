@@ -65,7 +65,7 @@ function groupByWeek(days) {
 // Productos reservables: la visita y la llamada (gratis) y el mini-piloto (pagado por MercadoPago).
 const PRODUCTOS = {
   visita: { label: 'Visita al estudio', sub: 'Gratis · 20 minutos', precio: 0, cta: 'AGENDAR VISITA' },
-  llamada: { label: 'Llamada', sub: 'Gratis · 15 min con Domingo e Iván', precio: 0, cta: 'AGENDAR LLAMADA' },
+  llamada: { label: 'Llamada', sub: 'Gratis · 15 min', precio: 0, cta: 'AGENDAR LLAMADA' },
   minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
 };
 
@@ -137,7 +137,8 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
   }
 
   const rutOk = !form.rut.trim() || /^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(form.rut.trim());
-  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, '').length >= 8 && rutOk && form.acepta;
+  // Las condiciones solo se aceptan para el mini-piloto; en visita y llamada la casilla es opcional (recibir correos).
+  const valid = form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, '').length >= 8 && rutOk && (tipo !== 'minipiloto' || form.acepta);
   const inp = { padding: '11px 12px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 13, outline: 'none', borderRadius: 0 };
 
   if (listo) return (
@@ -244,7 +245,9 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
               style={{ ...inp, width: '100%', marginBottom: 12, resize: 'vertical' }} />
             <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 14, fontFamily: PFB.mono, fontSize: 11.5, lineHeight: 1.5 }}>
               <input type="checkbox" checked={form.acepta} onChange={(e) => setForm({ ...form, acepta: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
-              <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones</a> y recibir información de Pod Factory por correo (puedo darme de baja cuando quiera).</span>
+              {tipo === 'minipiloto'
+                ? <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones</a> y recibir información de Pod Factory por correo (puedo darme de baja cuando quiera).</span>
+                : <span>Quiero recibir información de Pod Factory por correo (opcional, puedo darme de baja cuando quiera).</span>}
             </label>
             <button onClick={reservar} disabled={!valid || submitting} style={{
               width: '100%', padding: '15px', cursor: valid && !submitting ? 'pointer' : 'not-allowed', border: 'none',

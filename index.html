@@ -87,6 +87,16 @@
 </script>
 <!-- Medición: completar los IDs para activar GA4 y el píxel de Meta (vacío = no se carga nada). -->
 <script>
+  // Datos personales que llegan en los links de los correos (e=correo, n=nombre, x/t=invitación):
+  // se guardan en memoria y se BORRAN de la dirección antes de cargar Google Analytics y Meta,
+  // para que nunca se envíen a esas plataformas.
+  (function () {
+    try {
+      var u = new URL(location.href), o = {}, k = ['e', 'n', 'x', 't'];
+      k.forEach(function (p) { if (u.searchParams.has(p)) { o[p] = u.searchParams.get(p); u.searchParams.delete(p); } });
+      if (Object.keys(o).length) { window.PF_LINK = o; history.replaceState(null, '', u.pathname + u.search + u.hash); }
+    } catch (e) {}
+  })();
   window.PF_TRACKING = { ga4: 'G-72H6EQVLPN', metaPixel: '2983646091994283' };
   (function (c) {
     if (c.ga4) {
@@ -116,6 +126,6 @@
     <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
   </main>
 </div>
-<script src="app.js?v=8d32fea7f8"></script>
+<script src="app.js?v=e5ff2bd3f8"></script>
 </body>
 </html>

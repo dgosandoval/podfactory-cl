@@ -288,7 +288,10 @@ function AgendarDesdeCorreo() {
   const agendar = q.get('agendar');
   const show = agendar === '1' || agendar === 'llamada' || agendar === 'piloto' || !!q.get('reserva');
   // Mini-piloto de regalo (link firmado desde los correos a leads).
-  const cortesia = agendar === 'piloto' && q.get('t') ? { e: q.get('e') || '', x: q.get('x') || '', t: q.get('t') } : null;
+  // Los datos personales del link los guardó index.html en window.PF_LINK (ya no están en la URL).
+  const L = window.PF_LINK || {};
+  const cortesia = agendar === 'piloto' && L.t ? { e: L.e || '', x: L.x || '', t: L.t } : null;
+  const prefill = L.e || L.n ? { email: L.e || '', name: L.n || '' } : null;
   React.useEffect(() => { if (show) setTimeout(() => document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth' }), 400); }, [show]);
   if (!show) return null;
   return (
@@ -299,7 +302,7 @@ function AgendarDesdeCorreo() {
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
           <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Llamada</b>: 15 minutos con Domingo e Iván, si prefieres conversar antes.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
         </div>
-        <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={cortesia ? { email: cortesia.e } : null} />
+        <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={prefill} />
       </div>
     </section>
   );
