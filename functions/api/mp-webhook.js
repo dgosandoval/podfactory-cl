@@ -37,6 +37,21 @@ export async function onRequestPost({ request, env }) {
   const pay = await payRes.json();
   if (pay.status !== "approved") return ok();
 
+  // Compra de capítulos desde el portal del hub: external_reference = "hubcompra:<id>:<cuota>".
+  // El hub confirma el pago (idempotente) y habilita agendar. Si el hub falla, 500 → MercadoPago reintenta.
+  const ref = String(pay.external_reference || "");
+  if (ref.startsWith("hubcompra:")) {
+    const [, compraId, cuota] = ref.split(":");
+    if (!env.HUB_LEAD_URL || !env.PORTAL_INTAKE_SECRET) return new Response("hub no configurado", { status: 500 });
+    const r = await fetch(new URL("/api/intake/pago-compra", env.HUB_LEAD_URL).toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
+      body: JSON.stringify({ compraId: Number(compraId), cuota: Number(cuota), paymentId: String(paymentId), amount: Number(pay.transaction_amount) || 0 }),
+    }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
+    if (!r.ok) return new Response(`retry: hub ${r.status} ${(await r.text()).slice(0, 200)}`, { status: 500 });
+    return ok();
+  }
+
   // external_reference = "YYYY-MM-DD__HH:MM"
   const [date, label] = String(pay.external_reference || "").split("__");
   if (!date || !label) return ok();
