@@ -8,6 +8,7 @@ import { parseConfig, getOffset, overlapsBusy } from "../../_lib/slots.js";
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsAttachment, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
+import { salidaDe, deadlineDe } from "../../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -81,7 +82,7 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: email,
         subject: `Tu grabación de ${projectName} está agendada 🎬`,
-        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.projectUrl || null }),
+        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, salida: salidaDe(slot.start, config.timeZone), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.projectUrl || null }),
         attachments: [ics],
       });
     } catch (e) { console.log("schedule email error:", String(e)); }

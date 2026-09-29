@@ -4,7 +4,7 @@
 //  · 24 h antes: recordatorio con las reglas del día de grabación.
 import { parseConfig } from "../../_lib/slots.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, reminderEmailHtml, reminder72EmailHtml, whatsappLink } from "../../_lib/email.js";
+import { sendEmail, formatSession, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -28,6 +28,12 @@ export async function onRequestGet({ request, env }) {
     if (ms <= 0) continue;
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     const wa = whatsappLink(env, `Hola Pod Factory, sobre mi grabación del ${fecha} a las ${hora} hrs:`);
+    // Grabaciones (no visita/llamada/mini-piloto): horario de llegada y salida + pedido de confirmación.
+    const esGrabacion = b.tipo !== "visita" && b.tipo !== "llamada" && b.tipo !== "minipiloto";
+    const extra = esGrabacion ? {
+      salida: salidaDe(b.start, config.timeZone), confirmUrl: confirmUrlDe(origin, b.token), confirmado: !!b.confirmedAt,
+      waConfirmUrl: whatsappLink(env, `Confirmo mi grabación del ${fecha} a las ${hora} hrs (reserva ${String(b.token).slice(0, 6)}).`),
+    } : {};
     try {
       if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 72 * HOUR_MS && ms > 49 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
         const dl = formatSession(new Date(Date.parse(b.start) - 48 * HOUR_MS).toISOString(), config.timeZone);
@@ -35,7 +41,7 @@ export async function onRequestGet({ request, env }) {
           await sendEmail(env, {
             to: b.email,
             subject: "Tu grabación en Pod Factory es en 3 días 🎙️",
-            html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa }),
+            html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, ...extra }),
           });
         }
         await saveBooking(env, { ...b, reminded72: true });
@@ -45,8 +51,17 @@ export async function onRequestGet({ request, env }) {
           await sendEmail(env, {
             to: b.email,
             subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es mañana 👀" : b.tipo === "llamada" ? "Recordatorio: tu llamada con Pod Factory es mañana 📞" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
-            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo }),
+            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, ...extra }),
           });
+        }
+        // Grabación sin confirmar a 24 h: aviso al equipo para llamar o escribir por WhatsApp.
+        if (esGrabacion && !b.confirmedAt) {
+          const tel = String(b.phone || "").replace(/\D/g, "");
+          const waCliente = tel ? `https://wa.me/${tel.length === 9 ? "56" + tel : tel}?text=${encodeURIComponent(`Hola ${b.name || ""}, te escribimos de Pod Factory para confirmar tu grabación de mañana ${fecha}: llegada ${hora} y salida ${extra.salida} hrs. ¿Nos confirmas?`)}` : "";
+          try {
+            await sendEmail(env, { to: studioRecipients(env), subject: `Sin confirmar: ${b.projectName || b.name} mañana ${hora} hrs`,
+              html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5"><p><b>${b.projectName || b.name}</b> no ha confirmado su grabación de mañana <b>${fecha}, ${hora} a ${extra.salida} hrs</b>.</p><p>Contacto: ${b.name || "—"} · ${b.email || "—"} · ${b.phone || "sin teléfono"}</p>${waCliente ? `<p><a href="${waCliente}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:700">Escribirle por WhatsApp</a></p>` : ""}</div>` });
+          } catch (e) { console.log("aviso sin confirmar error:", String(e)); }
         }
         await saveBooking(env, { ...b, reminded: true });
         sent24++;

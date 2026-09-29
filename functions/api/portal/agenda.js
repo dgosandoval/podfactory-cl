@@ -41,7 +41,7 @@ export async function onRequestGet({ request, env }) {
       id: e.id, title: e.summary || "(sin título)", start, end, allDay,
       dia: fKey.format(d), diaLabel: fDia.format(d),
       hora: allDay ? "Todo el día" : fHora.format(d), horaFin: end ? fHora.format(new Date(end)) : null,
-      reserva: b ? { tipo: b.tipo, name: b.name, email: b.email, phone: b.phone, personas: b.personas, empresa: b.empresa || "", pagado: b.deposit || 0, comentarios: b.comentarios || "" } : null,
+      reserva: b ? { tipo: b.tipo, name: b.name, email: b.email, phone: b.phone, personas: b.personas, empresa: b.empresa || "", pagado: b.deposit || 0, comentarios: b.comentarios || "", confirmada: b.confirmedAt ? (b.confirmedVia || "sí") : null } : null,
     };
   });
   return json({ events, days });

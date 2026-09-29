@@ -6,6 +6,7 @@ import { parseConfig, buildSlots, weekday, overlapsBusy, getOffset } from "../..
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, customerEmailHtml, icsAttachment, whatsappLink } from "../../_lib/email.js";
+import { salidaDe, deadlineDe } from "../../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -99,7 +100,7 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: email,
         subject: "Tu reserva en Pod Factory está confirmada 🎙️",
-        html: customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`), portalUrl }),
+        html: customerEmailHtml({ name, fecha, hora, deposit, address, salida: salidaDe(slot.start, config.timeZone), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`), portalUrl }),
         attachments: [ics],
       });
     } catch (e) { console.log("email (manual) error:", String(e)); }
