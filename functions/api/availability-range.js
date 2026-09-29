@@ -19,7 +19,13 @@ export async function onRequestGet({ request, env }) {
   }
   const config = parseConfig(env);
   try {
-    const busy = await getBusy(env, `${from}T00:00:00${getOffset(from, config.timeZone)}`, `${to}T23:59:59${getOffset(to, config.timeZone)}`);
+    // Google responde a veces 5xx pasajeros (ej. 520): hasta 3 intentos antes de dar error.
+    const tMin = `${from}T00:00:00${getOffset(from, config.timeZone)}`, tMax = `${to}T23:59:59${getOffset(to, config.timeZone)}`;
+    let busy;
+    for (let i = 0; ; i++) {
+      try { busy = await getBusy(env, tMin, tMax); break; }
+      catch (e) { if (i >= 2) throw e; await new Promise((r) => setTimeout(r, 400 * (i + 1))); }
+    }
     // Holds (reservas en proceso de pago): una sola lectura del prefijo.
     if (env.HOLDS) {
       const list = await env.HOLDS.list({ prefix: "hold:" });
