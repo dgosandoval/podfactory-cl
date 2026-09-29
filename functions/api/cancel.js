@@ -18,6 +18,9 @@ export async function onRequestPost({ request, env }) {
   const b = await getBooking(env, body?.id);
   if (!b) return json({ error: "Reserva no encontrada" }, 404);
   const isAdmin = env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY;
+  const esHub = env.PORTAL_INTAKE_SECRET && request.headers.get("x-intake-secret") === env.PORTAL_INTAKE_SECRET;
+  // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
+  if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
   if (!isAdmin && !isModifiable(b.start)) {
     return json({ error: "Ya no se puede cancelar (menos de 48 horas para la grabación)." }, 409);
   }

@@ -26,5 +26,6 @@ export async function onRequestGet({ request, env }) {
     address: env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago",
     modifiable: isModifiable(b.start),
     pastSession: Date.parse(b.start) <= Date.now(),
+    portalUrl: b.compraId ? b.portalUrl || null : null,
   });
 }

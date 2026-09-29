@@ -82,9 +82,10 @@ const row = (label, value) =>
   `<tr><td style="padding:6px 0;font-size:12px;color:#0A0A0A99;width:120px">${label}</td>
        <td style="padding:6px 0;font-size:14px;font-weight:700">${value}</td></tr>`;
 
+// Botones (mismo sistema en todos los correos): principal rojo, secundario negro, WhatsApp verde; siempre píldora.
 const button = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#0A0A0A;color:#F5EBD6;text-decoration:none;
-    padding:12px 22px;font-weight:700;font-size:14px;border-radius:2px">${label}</a>`;
+    padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px">${label}</a>`;
 
 // Botones "Cómo llegar" (Waze + Google Maps) a partir de la dirección.
 // Quita la oficina para que el geocoding apunte bien al edificio.
@@ -96,27 +97,28 @@ const mapsBlock = (address) => {
   return `
     <div style="margin:-6px 0 6px">
       <span style="font-size:11px;color:#0A0A0A99;font-family:Arial,sans-serif">CÓMO LLEGAR:</span><br>
-      <a href="${waze}" style="display:inline-block;background:#33ccff;color:#0A0A0A;text-decoration:none;padding:9px 16px;font-weight:700;font-size:13px;border-radius:4px;margin:6px 8px 0 0">Abrir en Waze</a>
-      <a href="${gmaps}" style="display:inline-block;background:#ffffff;border:1.5px solid #0A0A0A;color:#0A0A0A;text-decoration:none;padding:8px 16px;font-weight:700;font-size:13px;border-radius:4px;margin-top:6px">Google Maps</a>
+      <a href="${waze}" style="display:inline-block;background:#33ccff;color:#0A0A0A;text-decoration:none;padding:9px 16px;font-weight:700;font-size:13px;border-radius:999px;margin:6px 8px 0 0">Abrir en Waze</a>
+      <a href="${gmaps}" style="display:inline-block;background:#ffffff;border:1.5px solid #0A0A0A;color:#0A0A0A;text-decoration:none;padding:8px 16px;font-weight:700;font-size:13px;border-radius:999px;margin-top:6px">Google Maps</a>
     </div>`;
 };
 
 const waLine = (whatsappUrl) => whatsappUrl ? `
     <div style="margin-top:16px">
       <p style="font-size:13px;color:#0A0A0Acc;line-height:1.5;margin:0 0 8px">¿Necesitas avisarnos algo?</p>
-      <a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:11px 20px;font-weight:700;font-size:14px;border-radius:4px">Escríbenos por WhatsApp</a>
+      <a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px">Escríbenos por WhatsApp</a>
     </div>` : "";
 
 // Reglas del día de grabación (se repiten en confirmación y recordatorios).
-const guideBlock = (conditionsUrl) => `
+// conHorario: el correo ya trae el recuadro de horario (1 hora, tiempo extra) → no repetirlo aquí.
+const guideBlock = (conditionsUrl, conHorario = false) => `
     <div style="margin:18px 0;padding:16px;border:1.5px solid #0A0A0A;border-radius:4px">
       <p style="font-size:13px;font-weight:800;margin:0 0 8px">Para que todo salga bien</p>
       <ul style="font-size:13px;line-height:1.55;color:#0A0A0Acc;margin:0;padding-left:18px">
-        <li>Es <b>1 hora de estudio</b> desde la hora reservada, incluida la preparación. La hora corre aunque lleguen tarde.</li>
-        <li>Pueden grabar <b>hasta 4 personas</b>. La sesión es de 1 hora: el capítulo dura unos 30 a 40 minutos.</li>
-        <li>¿Necesitan más tiempo? Se contrata en bloques de <b>30 minutos ($100.000 + IVA)</b>, solo si no hay otra reserva después.</li>
+        ${conHorario ? "" : `<li>Es <b>1 hora de estudio</b> desde la hora reservada, incluida la preparación. La hora corre aunque lleguen tarde.</li>`}
+        <li>Pueden grabar <b>hasta 4 personas</b>. En la hora de estudio el capítulo dura unos 30 a 40 minutos.</li>
+        ${conHorario ? "" : `<li>¿Necesitan más tiempo? Se contrata en bloques de <b>30 minutos ($100.000 + IVA)</b>, solo si no hay otra reserva después.</li>`}
         <li>La edición simple incluye color, sonido, logo, música, nombres en pantalla y <b>hasta 3 cortes</b>. Entregamos en <b>5 días hábiles</b>.</li>
-        <li>Guardamos el material <b>1 semana</b> después de la entrega.</li>
+        <li>Los archivos quedan para descargar <b>30 días</b> en tu portal de cliente.</li>
       </ul>
       ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas (PDF)</a></p>` : ""}
     </div>`;
@@ -179,7 +181,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
-      ${row("Hora", hora + " hrs")}
+      ${esGrabacion && salida ? "" : row("Hora", hora + " hrs")}
       ${row(tipo === "llamada" ? "Teléfono" : "Dirección", address)}
       ${deposit ? row("Pagado", CLP(deposit) + " (IVA incluido)") : ""}
     </table>
@@ -191,17 +193,17 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic. Llega 10 minutos antes.
       Si después contratas un plan, el valor del mini-piloto se descuenta del total.
     </p>` : ""}
-    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl)}
+    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${portalUrl ? `
     <div style="margin:18px 0;padding:16px;background:#0A0A0A;border-radius:4px">
       <p style="font-size:13px;color:#F5EBD6;line-height:1.5;margin:0 0 10px">
         Sigue tu grabación y recibe tu <b>entrega</b> en tu portal de cliente:
       </p>
-      <a href="${portalUrl}" style="display:inline-block;background:#F4B81C;color:#0A0A0A;text-decoration:none;padding:11px 20px;font-weight:800;font-size:14px;border-radius:4px">Ver mi grabación en el portal</a>
+      <a href="${portalUrl}" style="display:inline-block;background:#D92E2E;color:#fff;text-decoration:none;padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px">Ver mi grabación en el portal</a>
     </div>` : ""}
     ${manageUrl ? `
-    <div style="margin:18px 0">${button(manageUrl, "Cambiar la fecha")}</div>
-    ${changePolicy}` : ""}
+    <div style="margin:18px 0">${button(manageUrl, manageUrl.includes("clientes.") ? "Cambiar o cancelar en tu portal" : "Cambiar la fecha")}</div>
+    ${esGrabacion && deadline ? "" : changePolicy}` : ""}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:18px">Nos vemos pronto,<br><b>Equipo Pod Factory</b></p>
   `);
@@ -253,7 +255,7 @@ export function reminder72EmailHtml({ name, fecha, hora, deadline, address, mana
     ${salida ? horarioBlock(hora, salida) : `<table style="width:100%;border-collapse:collapse;margin:18px 0">${row("Hora", hora + " hrs")}</table>`}
     ${confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : confirmado ? `<p style="font-size:14px;color:#1a7f37;font-weight:700">✓ Ya confirmaste tu asistencia. ¡Gracias!</p>` : ""}
     ${perdidaBlock(deadline)}
-    ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, "Cambiar la fecha")}</div>` : ""}
+    ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, manageUrl.includes("clientes.") ? "Cambiar o cancelar en tu portal" : "Cambiar la fecha")}</div>` : ""}
     <table style="width:100%;border-collapse:collapse;margin:8px 0">${row("Dirección", address)}</table>
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
@@ -278,7 +280,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
     ${esGrabacion && confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : ""}
     ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 48 horas para cambiar la fecha: si no vienes, el capítulo se da por grabado.</p>` : ""}
     ${tipo === "llamada" ? "" : mapsBlock(address)}
-    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl)}
+    ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
   `);

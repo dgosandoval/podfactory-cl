@@ -75,6 +75,7 @@ function Manage() {
   React.useEffect(() => {
     if (!token) { setState('notfound'); return; }
     fetch(`/api/booking?id=${token}`).then(r => r.json()).then(d => {
+      if (d && d.portalUrl) { location.replace(d.portalUrl + '#agendar'); return; } // compras del portal: se gestionan allá
       if (!d.found) setState('notfound'); else { setB(d); setState('ready'); }
     }).catch(() => setState('notfound'));
   }, [token]);

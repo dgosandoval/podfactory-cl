@@ -71,6 +71,8 @@ export async function onRequestPost({ request, env }) {
     token, eventId, date, label: hhmm, start: slot.start, end: slot.end,
     name, email, phone, tipo, personas, addons: [], comentarios: "", deposit: 0,
     brand, projectName, source: "portal", reminded: false,
+    // Grabaciones compradas en el portal: se cambian/cancelan SOLO en el portal (lleva la cuenta de capítulos).
+    compraId: body.compraId || null, portalUrl: body.compraId && body.projectUrl ? String(body.projectUrl) : null,
   });
 
   // Correo de confirmación al cliente (opcional)
@@ -82,7 +84,7 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: email,
         subject: `Tu grabación de ${projectName} está agendada 🎬`,
-        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, salida: salidaDe(slot.start, config.timeZone), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.projectUrl || null }),
+        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, salida: salidaDe(slot.start, config.timeZone), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: body.compraId && body.projectUrl ? body.projectUrl + '#agendar' : manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.compraId ? null : (body.projectUrl || null) }),
         attachments: [ics],
       });
     } catch (e) { console.log("schedule email error:", String(e)); }

@@ -41,7 +41,7 @@ export async function onRequestGet({ request, env }) {
           await sendEmail(env, {
             to: b.email,
             subject: "Tu grabación en Pod Factory es en 3 días 🎙️",
-            html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, ...extra }),
+            html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, ...extra }),
           });
         }
         await saveBooking(env, { ...b, reminded72: true });
@@ -51,7 +51,7 @@ export async function onRequestGet({ request, env }) {
           await sendEmail(env, {
             to: b.email,
             subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es mañana 👀" : b.tipo === "llamada" ? "Recordatorio: tu llamada con Pod Factory es mañana 📞" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
-            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, ...extra }),
+            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, ...extra }),
           });
         }
         // Grabación sin confirmar a 24 h: aviso al equipo para llamar o escribir por WhatsApp.
