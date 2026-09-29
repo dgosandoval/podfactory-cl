@@ -144,7 +144,7 @@ export const horarioBlock = (hora, salida) => `
         <td style="padding:14px 6px"><div style="font-size:11px;color:#0A0A0A99">SALIDA</div><div style="font-size:26px;font-weight:800">${salida}</div></td>
       </tr></table>
       <p style="font-size:13px;line-height:1.5;margin:0;padding:10px 14px;background:#F5EBD6">
-        Es <b>1 hora de estudio</b>, incluida la preparación: ni más ni menos. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
+        Es <b>1 hora de estudio</b>, incluida la preparación. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
         Si la grabación se extiende, cada 30 minutos extra cuesta $100.000 + IVA, solo si el estudio está libre.
       </p>
     </div>`;
