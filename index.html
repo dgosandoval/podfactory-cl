@@ -18,7 +18,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script>
+  // El contenido de respaldo (para buscadores y navegadores sin JS) se oculta mientras carga la app, para que no se vea un destello de texto.
+  // Si la app no monta en 6 s, se vuelve a mostrar.
+  document.documentElement.className += ' js';
+  setTimeout(function () { if (document.querySelector('#root > main')) document.documentElement.classList.remove('js'); }, 6000);
+</script>
 <style>
+  html.js #root > main { display: none; }
   html, body { margin: 0; padding: 0; background: #F5EBD6; font-family: 'Archivo', sans-serif; }
   * { box-sizing: border-box; }
   img, video { max-width: 100%; height: auto; }
@@ -139,7 +146,7 @@
     <p>Pide tu cotización en esta página y te enviamos formatos, precios y cómo trabajamos. También puedes venir a una visita gratis al estudio.</p>
     <h2>Grabación en locación</h2>
     <p>Llevamos el set a tu oficina, un evento o cualquier lugar, en Santiago y regiones.</p>
-    <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl · <a href="condiciones.pdf">Tarifas y condiciones (PDF)</a></p>
+    <p>WhatsApp: +56 9 2797 0014 · hola@podfactory.cl</p>
   </main>
 </div>
 <script src="app.js?v=d87693a882"></script>
