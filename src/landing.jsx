@@ -548,7 +548,7 @@ function PodFactoryLanding() {
               En Santiago y regiones.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
-              {['Jornadas de hasta 3 capítulos', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
+              {['Jornadas desde 3 horas de grabación', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
               <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
