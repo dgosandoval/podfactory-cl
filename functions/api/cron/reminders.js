@@ -2,9 +2,10 @@
 // Llamado cada hora por un cron externo (cron-job.org). Envía dos avisos por reserva:
 //  · 72 h antes: último aviso para cambiar la fecha (el plazo vence 48 h antes).
 //  · 24 h antes: recordatorio con las reglas del día de grabación.
-import { parseConfig } from "../../_lib/slots.js";
+import { parseConfig, esFlex } from "../../_lib/slots.js";
+import { resolverUrl } from "../../_lib/solicitud.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
+import { sendEmail, formatSession, solicitudPendienteHtml, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -26,6 +27,18 @@ export async function onRequestGet({ request, env }) {
   for (const b of bookings) {
     const ms = Date.parse(b.start) - now;
     if (ms <= 0) continue;
+    // Solicitud (reunión Meet / visita) todavía sin confirmar: no se recuerda al cliente; si lleva más de 12 h, aviso al equipo (una vez).
+    if (b.estado === "pendiente") {
+      if (!b.avisoPend && now - Date.parse(b.solicitadoAt || b.start) > 12 * HOUR_MS) {
+        try {
+          const { fecha, hora } = formatSession(b.start, config.timeZone);
+          await sendEmail(env, { to: studioRecipients(env), subject: `Solicitud sin responder: ${b.name} · ${fecha} ${hora} hrs`,
+            html: solicitudPendienteHtml({ name: b.name, fecha, hora, tipo: b.tipo, resolverUrl: await resolverUrl(env, origin, b.token) }) });
+          await saveBooking(env, { ...b, avisoPend: true });
+        } catch (e) { console.log("aviso solicitud pendiente error:", String(e)); }
+      }
+      continue;
+    }
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     const wa = whatsappLink(env, `Hola Pod Factory, sobre mi grabación del ${fecha} a las ${hora} hrs:`);
     // Grabaciones (no visita/llamada/mini-piloto): horario de llegada y salida + pedido de confirmación.
@@ -46,12 +59,12 @@ export async function onRequestGet({ request, env }) {
         }
         await saveBooking(env, { ...b, reminded72: true });
         sent72++;
-      } else if (!b.reminded && ms <= 24 * HOUR_MS) {
+      } else if (!b.reminded && ms <= (esFlex(b.tipo) ? 3 : 24) * HOUR_MS) { // reunión/visita: aviso el mismo día (3 h antes)
         if (b.email) {
           await sendEmail(env, {
             to: b.email,
-            subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es mañana 👀" : b.tipo === "llamada" ? "Recordatorio: tu llamada con Pod Factory es mañana 📞" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
-            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, ...extra }),
+            subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es hoy 👀" : b.tipo === "llamada" ? "Recordatorio: tu reunión con Pod Factory es hoy 📹" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
+            html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, meetUrl: b.meetUrl, mismoDia: esFlex(b.tipo), ...extra }),
           });
         }
         // Grabación sin confirmar a 24 h: aviso al equipo para llamar o escribir por WhatsApp.

@@ -168,11 +168,11 @@ export const confirmUrlDe = (origin, token) => `${origin}/api/confirm?id=${token
 
 // Correo al cliente (confirmación). tipo: 'visita' | 'minipiloto' | otro (grabación de temporada,
 // agendada por el estudio). deposit > 0 = pagó por la web.
-export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo, salida, deadline }) {
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo, salida, deadline, meetUrl }) {
   const esGrabacion = tipo !== "visita" && tipo !== "llamada" && tipo !== "minipiloto";
-  const titulo = tipo === "visita" ? "¡Visita al estudio confirmada! 👀" : tipo === "llamada" ? "¡Llamada agendada! 📞" : tipo === "minipiloto" ? "¡Mini-piloto confirmado! 🎙️" : "¡Grabación confirmada! 🎙️";
-  const intro = tipo === "visita" ? "tu visita al estudio quedó agendada. Son unos 20 minutos para conocer el set, ver el monitor y conversar tu idea"
-    : tipo === "llamada" ? "quedó agendada tu llamada con Domingo e Iván. Son unos 15 minutos para conocer tu idea y ver cómo podemos ayudarte"
+  const titulo = tipo === "visita" ? "¡Visita al estudio confirmada! 👀" : tipo === "llamada" ? "¡Reunión confirmada! 📹" : tipo === "minipiloto" ? "¡Mini-piloto confirmado! 🎙️" : "¡Grabación confirmada! 🎙️";
+  const intro = tipo === "visita" ? "confirmamos tu visita al estudio. Son unos 20 minutos para conocer el set, ver el monitor y conversar tu idea"
+    : tipo === "llamada" ? "confirmamos tu reunión por videollamada con el equipo de Pod Factory. Son unos 30 minutos para conocer tu idea y ver cómo podemos ayudarte"
     : deposit ? "recibimos tu pago y tu grabación quedó agendada" : "tu grabación quedó agendada";
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">${titulo}</div>
@@ -182,12 +182,12 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
       ${esGrabacion && salida ? "" : row("Hora", hora + " hrs")}
-      ${row(tipo === "llamada" ? "Teléfono" : "Dirección", address)}
+      ${tipo === "llamada" ? row("Videollamada", meetUrl ? `<a href="${meetUrl}" style="color:#1F3FA3">${meetUrl.replace(/^https?:\/\//, "")}</a>` : "Te enviamos el link de Meet antes de la reunión") : row("Dirección", address)}
       ${deposit ? row("Pagado", CLP(deposit) + " (IVA incluido)") : ""}
     </table>
     ${esGrabacion && salida ? horarioBlock(hora, salida) : ""}
     ${esGrabacion && deadline ? perdidaBlock(deadline) : ""}
-    ${tipo === "llamada" ? "" : mapsBlock(address)}
+    ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "minipiloto" ? `
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic. Llega 10 minutos antes.
@@ -202,8 +202,8 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       <a href="${portalUrl}" style="display:inline-block;background:#D92E2E;color:#fff;text-decoration:none;padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px">Ver mi grabación en el portal</a>
     </div>` : ""}
     ${manageUrl ? `
-    <div style="margin:18px 0">${button(manageUrl, manageUrl.includes("clientes.") ? "Cambiar o cancelar en tu portal" : "Cambiar la fecha")}</div>
-    ${esGrabacion && deadline ? "" : changePolicy}` : ""}
+    <div style="margin:18px 0">${button(manageUrl, tipo === "visita" || tipo === "llamada" ? "Ver o cancelar mi reserva" : manageUrl.includes("clientes.") ? "Cambiar o cancelar en tu portal" : "Cambiar la fecha")}</div>
+    ${tipo === "visita" || tipo === "llamada" ? `<p style="font-size:12px;color:#0A0A0A99;line-height:1.5">¿Necesitas otra hora? Cancela esta reserva y pide una nueva en podfactory.cl, o escríbenos por WhatsApp.</p>` : esGrabacion && deadline ? "" : changePolicy}` : ""}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:18px">Nos vemos pronto,<br><b>Equipo Pod Factory</b></p>
   `);
@@ -263,23 +263,23 @@ export function reminder72EmailHtml({ name, fecha, hora, deadline, address, mana
 }
 
 // Correo recordatorio (24 h antes)
-export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl, tipo, salida, confirmUrl, waConfirmUrl, confirmado }) {
+export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl, tipo, salida, confirmUrl, waConfirmUrl, confirmado, meetUrl, mismoDia }) {
   const esGrabacion = tipo !== "visita" && tipo !== "llamada" && tipo !== "minipiloto";
-  const que = tipo === "visita" ? "Tu visita al estudio es mañana 👀" : tipo === "llamada" ? "Tu llamada con Pod Factory es mañana 📞" : "Tu grabación es mañana 🎙️";
+  const que = tipo === "visita" ? (mismoDia ? "Tu visita al estudio es hoy 👀" : "Tu visita al estudio es mañana 👀") : tipo === "llamada" ? (mismoDia ? "Tu reunión con Pod Factory es hoy 📹" : "Tu reunión con Pod Factory es mañana 📹") : "Tu grabación es mañana 🎙️";
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">${que}</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
-      Hola ${name}, te recordamos tu ${tipo === "llamada" ? "llamada con" : tipo === "visita" ? "visita a" : "grabación en"} Pod Factory:
+      Hola ${name}, te recordamos tu ${tipo === "llamada" ? "reunión por videollamada con" : tipo === "visita" ? "visita a" : "grabación en"} Pod Factory:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0">
       ${row("Fecha", fecha)}
       ${row("Hora", hora + " hrs")}
-      ${tipo === "llamada" ? "" : row("Dirección", address)}
+      ${tipo === "llamada" ? (meetUrl ? row("Videollamada", `<a href="${meetUrl}" style="color:#1F3FA3">${meetUrl.replace(/^https?:\/\//, "")}</a>`) : "") : row("Dirección", address)}
     </table>
     ${esGrabacion && salida ? horarioBlock(hora, salida) : ""}
     ${esGrabacion && confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : ""}
     ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 48 horas para cambiar la fecha: si no vienes, el capítulo se da por grabado.</p>` : ""}
-    ${tipo === "llamada" ? "" : mapsBlock(address)}
+    ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:8px">¡Nos vemos!<br><b>Equipo Pod Factory</b></p>
@@ -304,5 +304,69 @@ export function studioEmailHtml({ name, email, phone, fecha, hora, deposit, tipo
       ${rut ? row("Facturar a", `${razonSocial} · RUT ${rut}${giro ? ` · ${giro}` : ""}`) : ""}
     </table>
     <p style="font-size:12px;color:#0A0A0A99">Ya está en el Google Calendar del estudio. Falta emitir la factura.</p>
+  `);
+}
+
+
+// ── Solicitudes de reunión por Meet / visita (el equipo confirma) ──
+const nombreSolicitud = (tipo) => tipo === "llamada" ? "reunión por videollamada (Google Meet)" : "visita al estudio";
+
+// Al cliente: recibimos tu solicitud, te confirmamos.
+export function solicitudRecibidaHtml({ name, fecha, hora, tipo, manageUrl, whatsappUrl }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Recibimos tu solicitud 🎙️</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, recibimos tu solicitud de ${nombreSolicitud(tipo)}. El equipo la revisa y <b>te confirmamos por correo en menos de 24 horas hábiles</b>. Mientras tanto, la hora queda reservada para ti.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0">
+      ${row("Fecha", fecha)}
+      ${row("Hora", hora + " hrs")}
+      ${row("Estado", "Pendiente de confirmación")}
+    </table>
+    <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">${tipo === "llamada" ? "Cuando la confirmemos te enviamos el link de Google Meet." : "Cuando la confirmemos te enviamos la dirección exacta y cómo llegar."} Si no ves nuestro correo, revisa la carpeta de spam.</p>
+    ${manageUrl ? `<p style="font-size:12px;color:#0A0A0A99">¿Ya no la necesitas? <a href="${manageUrl}" style="color:#1F3FA3;font-weight:700">Cancela tu solicitud aquí</a>.</p>` : ""}
+    ${waLine(whatsappUrl)}
+    <p style="font-size:13px;margin-top:8px"><b>Equipo Pod Factory</b></p>
+  `);
+}
+
+// Al equipo: nueva solicitud con el link para confirmar o responder.
+export function solicitudEstudioHtml({ name, email, phone, fecha, hora, tipo, personas, comentarios, empresa, resolverUrl }) {
+  return shell(`
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">Nueva solicitud: ${tipo === "llamada" ? "reunión por Meet 📹" : "visita al estudio 👀"}</div>
+    <table style="width:100%;border-collapse:collapse;margin:14px 0">
+      ${row("Quién", name + (empresa ? ` (${empresa})` : ""))}
+      ${row("Fecha", fecha)}
+      ${row("Hora", hora + " hrs")}
+      ${row("Email", email)}
+      ${row("Teléfono", phone || "—")}
+      ${personas ? row("Personas", personas) : ""}
+      ${comentarios ? row("Su idea", comentarios) : ""}
+    </table>
+    <p style="margin:16px 0">${button(resolverUrl, "Confirmar o responder")}</p>
+    <p style="font-size:12px;color:#0A0A0A99">La hora está reservada (aparece como tentativa en el calendario). Si no la confirman, el cliente no recibe nada más: recuerden responder en menos de 24 horas hábiles.</p>
+  `);
+}
+
+// Al equipo: solicitud que sigue sin responderse.
+export function solicitudPendienteHtml({ name, fecha, hora, tipo, resolverUrl }) {
+  return shell(`
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">Solicitud sin responder ⏳</div>
+    <p style="font-size:14px;line-height:1.5">${name} pidió una ${nombreSolicitud(tipo)} para el <b>${fecha}, ${hora} hrs</b> y todavía no la confirman.</p>
+    <p style="margin:16px 0">${button(resolverUrl, "Confirmar o responder")}</p>
+  `);
+}
+
+// Al cliente: no podemos esa hora (con mensaje del equipo y link para pedir otra).
+export function solicitudRechazadaHtml({ name, fecha, hora, tipo, mensaje, otraUrl, whatsappUrl }) {
+  return shell(`
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Necesitamos otra hora</div>
+    <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
+      Hola ${name}, no alcanzamos a tomar tu ${nombreSolicitud(tipo)} del ${fecha} a las ${hora} hrs. Liberamos esa hora.
+    </p>
+    ${mensaje ? `<div style="margin:14px 0;padding:12px 14px;border-left:4px solid #0A0A0A;background:#F5EBD6;font-size:14px;line-height:1.5">${String(mensaje).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c])).replace(/\n/g, "<br>")}</div>` : ""}
+    <p style="margin:16px 0">${button(otraUrl, "Elegir otra hora")}</p>
+    ${waLine(whatsappUrl)}
+    <p style="font-size:13px;margin-top:8px"><b>Equipo Pod Factory</b></p>
   `);
 }

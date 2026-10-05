@@ -2,9 +2,11 @@
 //  · visita / llamada: se confirman al tiro (evento + correos), sin pago.
 //  · minipiloto: "congela" el bloque en KV durante HOLD_MINUTES y crea la preferencia de
 //    MercadoPago; se confirma en /api/mp-webhook cuando el pago queda aprobado.
-import { parseConfig, configFor, buildSlots, weekday, overlapsBusy, SERVICES } from "../_lib/slots.js";
+import { parseConfig, configFor, buildSlots, weekday, overlapsBusy, SERVICES, esFlex, flexParams, inicioFlexValido, getOffset } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 import { confirmBooking } from "../_lib/confirm.js";
+import { requestBooking } from "../_lib/solicitud.js";
+import { formatSession } from "../_lib/email.js";
 
 async function pilotoSig(secret, email, exp) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -22,7 +24,8 @@ export async function onRequestPost({ request, env }) {
   if (!svc) return json({ error: "Elige visita, llamada o mini-piloto" }, 400);
   const config = configFor(parseConfig(env), svc.key);
 
-  const { date, start, label } = body;
+  const { date, start } = body;
+  let label = body.label;
   const name = String(body.name || "").trim().slice(0, 120);
   const email = String(body.email || "").trim().slice(0, 160);
   const phone = String(body.phone || "").trim().slice(0, 40);
@@ -32,7 +35,7 @@ export async function onRequestPost({ request, env }) {
   const rut = String(body.rut || "").trim().slice(0, 20);
   const razonSocial = String(body.razonSocial || "").trim().slice(0, 120);
   const giro = String(body.giro || "").trim().slice(0, 120);
-  if (!date || !start || !label || !name || !email || !phone) return json({ error: "Faltan datos de la reserva" }, 400);
+  if (!date || !start || (!label && !esFlex(svc.key)) || !name || !email || !phone) return json({ error: "Faltan datos de la reserva" }, 400);
   if (!/\S+@\S+\.\S+/.test(email)) return json({ error: "Email inválido" }, 400);
   if (phone.replace(/\D/g, "").length < 8) return json({ error: "Teléfono inválido" }, 400);
   if (rut && !/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/.test(rut)) return json({ error: "RUT inválido (ej: 12.345.678-9)" }, 400);
@@ -60,19 +63,35 @@ export async function onRequestPost({ request, env }) {
     if (n >= 3) return json({ error: "Demasiadas reservas desde esta conexión. Escríbenos por WhatsApp." }, 429);
     await env.HOLDS.put(k, String(n + 1), { expirationTtl: 86400 });
     const ek = `${svc.key}-email:${email.toLowerCase()}`;
-    if (await env.HOLDS.get(ek)) return json({ error: `Ya tienes una ${svc.key === "llamada" ? "llamada" : "visita"} agendada. Si necesitas cambiarla, usa el link del correo de confirmación.` }, 409);
+    if (await env.HOLDS.get(ek)) return json({ error: `Ya tienes una ${svc.key === "llamada" ? "reunión" : "visita"} agendada o pendiente. Si necesitas cambiarla, usa el link del correo que te enviamos.` }, 409);
   }
 
   // 1) El bloque debe ser uno válido de la grilla del servicio, en día abierto y futuro.
   if (!config.openDays.includes(weekday(date, config.timeZone))) return json({ error: "Día no disponible" }, 400);
-  const slot = buildSlots(date, config).find((s) => s.start === start && s.label === label);
-  if (!slot) return json({ error: "Bloque no válido" }, 400);
-  if (Date.parse(slot.start) <= Date.now()) return json({ error: "Ese bloque ya pasó" }, 400);
+  let slot;
+  if (esFlex(svc.key)) {
+    // Reunión por Meet o visita: cualquier hora dentro de un tramo libre; queda como SOLICITUD que confirma el equipo.
+    const startISO = new Date(start).toISOString();
+    if (Number.isNaN(Date.parse(startISO))) return json({ error: "Hora no válida" }, 400);
+    const off = getOffset(date, config.timeZone);
+    let busyDia = [];
+    try { busyDia = await getBusy(env, `${date}T00:00:00${off}`, `${date}T23:59:59${off}`); }
+    catch (e) { if (!env.MOCK_AVAILABILITY) return json({ error: "No se pudo verificar disponibilidad", detail: String(e) }, 502); }
+    if (!inicioFlexValido(date, startISO, config, busyDia, Date.now(), svc.minutes, flexParams(env))) {
+      return json({ error: "Esa hora ya no está disponible (o necesitamos al menos un día de anticipación). Elige otra." }, 409);
+    }
+    slot = { start: startISO, end: new Date(Date.parse(startISO) + svc.minutes * 60000).toISOString(), label: formatSession(startISO, config.timeZone).hora };
+    label = slot.label;
+  } else {
+    slot = buildSlots(date, config).find((s) => s.start === start && s.label === label);
+    if (!slot) return json({ error: "Bloque no válido" }, 400);
+    if (Date.parse(slot.start) <= Date.now()) return json({ error: "Ese bloque ya pasó" }, 400);
+  }
 
   // 2) ¿Sigue libre? (hold vigente o evento en el calendario)
   const holdKey = `hold:${date}:${label}`;
-  if (env.HOLDS && (await env.HOLDS.get(holdKey))) return json({ error: "Ese horario está siendo reservado por otra persona. Elige otro." }, 409);
-  try {
+  if (!esFlex(svc.key) && env.HOLDS && (await env.HOLDS.get(holdKey))) return json({ error: "Ese horario está siendo reservado por otra persona. Elige otro." }, 409);
+  if (!esFlex(svc.key)) try {
     const busy = await getBusy(env, slot.start, slot.end);
     if (overlapsBusy(slot, busy)) return json({ error: "Ese horario ya no está disponible." }, 409);
   } catch (e) {
@@ -82,7 +101,18 @@ export async function onRequestPost({ request, env }) {
   const origin = new URL(request.url).origin;
   const data = { origen: String(body.origen || "").slice(0, 120) || undefined, consent: body.acepta === true, tipo: svc.key, start: slot.start, end: slot.end, date, label, name, email, phone, empresa, personas, comentarios, rut, razonSocial, giro };
 
-  // Visita o llamada: confirmación inmediata.
+  // Visita o reunión por Meet: queda como solicitud y el equipo la confirma.
+  if (esFlex(svc.key)) {
+    try {
+      const r = await requestBooking(env, config, origin, data);
+      if (env.HOLDS) await env.HOLDS.put(`${svc.key}-email:${email.toLowerCase()}`, r.token, { expirationTtl: Math.max(60, Math.floor((Date.parse(slot.start) - Date.now()) / 1000)) });
+      return json({ ok: true, pendiente: true, fecha: r.fecha, hora: r.hora });
+    } catch (e) {
+      return json({ error: "No pudimos registrar tu solicitud", detail: String(e) }, 502);
+    }
+  }
+
+  // Mini-piloto de regalo: confirmación inmediata.
   if (gratis) {
     try {
       const r = await confirmBooking(env, config, origin, { ...data, paid: 0, cortesia: !!cortesiaKey });

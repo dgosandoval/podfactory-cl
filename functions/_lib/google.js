@@ -66,7 +66,7 @@ export async function getBusy(env, timeMinISO, timeMaxISO) {
 // Crea el evento de reserva confirmada (Fase 2, tras el pago).
 // `id` opcional = idempotencia: si ya existe un evento con ese id, Google
 // responde 409 y lanzamos "DUPLICATE_EVENT" (lo usa el webhook anti-duplicado).
-export async function createEvent(env, { id, summary, description, startISO, endISO, timeZone }) {
+export async function createEvent(env, { id, summary, description, startISO, endISO, timeZone, status, colorId }) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events`;
@@ -79,6 +79,8 @@ export async function createEvent(env, { id, summary, description, startISO, end
       description,
       start: { dateTime: startISO, timeZone },
       end: { dateTime: endISO, timeZone },
+      ...(status ? { status } : {}),
+      ...(colorId ? { colorId } : {}),
     }),
   });
   if (res.status === 409) throw new Error("DUPLICATE_EVENT");
@@ -122,4 +124,31 @@ export async function listEvents(env, timeMinISO, timeMaxISO) {
   if (!res.ok) throw new Error(`listEvents error: ${res.status} ${await res.text()}`);
   const json = await res.json();
   return (json.items || []).filter((e) => e.status !== "cancelled");
+}
+
+// Confirma una solicitud (evento tentativo → confirmado). Con meet=true intenta crear la videollamada de Google Meet
+// (la cuenta de servicio puede no tener permiso: en ese caso confirma igual y devuelve meetUrl=null).
+export async function confirmEvent(env, eventId, { summary, meet }) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const patch = async (body, conf) => fetch(`${base}${conf ? "?conferenceDataVersion=1" : ""}`, {
+    method: "PATCH", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  const comun = { status: "confirmed", colorId: "10", ...(summary ? { summary } : {}) };
+  let res, meetError = null;
+  if (meet) {
+    res = await patch({ ...comun, conferenceData: { createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } } }, true);
+    if (!res.ok) { meetError = `${res.status} ${(await res.text()).slice(0, 160)}`; res = null; }
+  }
+  if (!res) res = await patch(comun, false);
+  if (!res.ok) throw new Error(`confirmEvent error: ${res.status} ${await res.text()}`);
+  let ev = await res.json();
+  const link = (e) => e.hangoutLink || (e.conferenceData?.entryPoints || []).find((x) => x.entryPointType === "video")?.uri || null;
+  for (let i = 0; meet && !meetError && !link(ev) && i < 3; i++) { // Meet puede tardar un instante en quedar listo
+    await new Promise((r) => setTimeout(r, 1200));
+    const g = await fetch(base, { headers: { authorization: `Bearer ${token}` } });
+    if (g.ok) ev = await g.json();
+  }
+  return { event: ev, meetUrl: link(ev), meetError };
 }

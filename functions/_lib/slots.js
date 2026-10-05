@@ -19,7 +19,7 @@ export function parseConfig(env) {
 // Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis).
 export const SERVICES = {
   visita: { key: "visita", label: "Visita al estudio", minutes: 30, price: 0, net: 0 },
-  llamada: { key: "llamada", label: "Llamada con Domingo e Iván", minutes: 30, price: 0, net: 0 },
+  llamada: { key: "llamada", label: "Reunión por videollamada (Meet)", minutes: 30, price: 0, net: 0 },
   minipiloto: { key: "minipiloto", label: "Mini-piloto (10 minutos)", minutes: 30, price: 35700, net: 30000 },
 };
 
@@ -83,4 +83,54 @@ export function availabilityForDate(dateStr, config, busy, nowISO) {
     available: Date.parse(slot.start) > now && !overlapsBusy(slot, busy),
   }));
   return { date: dateStr, open: true, slots };
+}
+
+
+// ── Reuniones por Meet y visitas: la persona SOLICITA una hora libre y el equipo la confirma ──
+// No hay grilla fija: se ofrece cualquier hora (cada FLEX_STEP minutos) dentro de los tramos libres del día.
+export const FLEX_TIPOS = ["visita", "llamada"];
+export const esFlex = (tipo) => FLEX_TIPOS.includes(tipo);
+
+export function flexParams(env) {
+  const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+  const [a, b] = String(env.FLEX_HOURS || "10:00-19:30").split("-");
+  return { open: toMin(a), close: toMin(b), step: parseInt(env.FLEX_STEP || "15", 10), leadDays: parseInt(env.FLEX_LEAD_DAYS || "1", 10) };
+}
+const hhmmDe = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+// Hoy en la zona horaria (YYYY-MM-DD) y suma de días a una fecha.
+export function todayIn(timeZone, nowMs = Date.now()) { return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(nowMs)); }
+export function addDaysStr(dateStr, n) { const d = new Date(`${dateStr}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+
+// Tramos libres de un día donde cabe una reunión de `minutes`. busy = [{start,end}] (ISO).
+// Respeta días abiertos y la anticipación mínima (leadDays = 1 → desde mañana).
+export function freeWindows(dateStr, config, busy, nowMs, minutes, p) {
+  if (!config.openDays.includes(weekday(dateStr, config.timeZone))) return { open: false, windows: [] };
+  if (dateStr < addDaysStr(todayIn(config.timeZone, nowMs), p.leadDays)) return { open: true, tooSoon: true, windows: [] };
+  const off = getOffset(dateStr, config.timeZone);
+  const base = Date.parse(`${dateStr}T00:00:00${off}`);
+  const iso = (min) => new Date(base + min * 60000).toISOString();
+  const ocupados = busy.map((b) => [(Date.parse(b.start) - base) / 60000, (Date.parse(b.end) - base) / 60000]).sort((x, y) => x[0] - y[0]);
+  const tramos = []; let cur = p.open;
+  for (const [s, e] of ocupados) {
+    if (e <= cur) continue;
+    if (s > cur) tramos.push([cur, Math.min(s, p.close)]);
+    cur = Math.max(cur, e);
+    if (cur >= p.close) break;
+  }
+  if (cur < p.close) tramos.push([cur, p.close]);
+  const windows = [];
+  for (let [a, b] of tramos) {
+    a = Math.ceil(a / p.step) * p.step;
+    if (b - a < minutes) continue;
+    windows.push({ from: hhmmDe(a), to: hhmmDe(b), lastStart: hhmmDe(b - minutes), start: iso(a), end: iso(b) });
+  }
+  return { open: true, windows, offset: off };
+}
+
+// ¿Esta hora de inicio cabe en un tramo libre y cae en la grilla de `step` minutos?
+export function inicioFlexValido(dateStr, startISO, config, busy, nowMs, minutes, p) {
+  const r = freeWindows(dateStr, config, busy, nowMs, minutes, p);
+  const s = Date.parse(startISO);
+  return r.windows.some((w) => s >= Date.parse(w.start) && s + minutes * 60000 <= Date.parse(w.end) && ((s - Date.parse(w.start)) / 60000) % p.step === 0);
 }

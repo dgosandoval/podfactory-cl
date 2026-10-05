@@ -1,5 +1,5 @@
 // GET /api/booking?id=<token> — datos de una reserva para la página de gestión.
-import { parseConfig } from "../_lib/slots.js";
+import { parseConfig, esFlex } from "../_lib/slots.js";
 import { getBooking, isModifiable } from "../_lib/booking.js";
 import { formatSession } from "../_lib/email.js";
 
@@ -24,7 +24,10 @@ export async function onRequestGet({ request, env }) {
     deposit: b.deposit,
     tipo: b.tipo || null,
     address: env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago",
-    modifiable: isModifiable(b.start),
+    modifiable: esFlex(b.tipo) ? Date.parse(b.start) > Date.now() : isModifiable(b.start),
+    flex: esFlex(b.tipo),
+    estado: b.estado || "confirmada",
+    meetUrl: b.meetUrl || null,
     pastSession: Date.parse(b.start) <= Date.now(),
     portalUrl: b.compraId ? b.portalUrl || null : null,
   });

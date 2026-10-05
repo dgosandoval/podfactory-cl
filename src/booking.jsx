@@ -64,8 +64,8 @@ function groupByWeek(days) {
 
 // Productos reservables: la visita y la llamada (gratis) y el mini-piloto (pagado por MercadoPago).
 const PRODUCTOS = {
-  visita: { label: 'Visita al estudio', sub: 'Gratis · 20 minutos', precio: 0, cta: 'AGENDAR VISITA' },
-  llamada: { label: 'Llamada', sub: 'Gratis · 15 min', precio: 0, cta: 'AGENDAR LLAMADA' },
+  visita: { label: 'Visita al estudio', sub: 'Gratis · presencial', precio: 0, cta: 'SOLICITAR VISITA' },
+  llamada: { label: 'Reunión por Meet', sub: 'Gratis · 30 min · online', precio: 0, cta: 'SOLICITAR REUNIÓN' },
   minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
 };
 
@@ -86,6 +86,8 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [slot, setSlot] = React.useState(null);
+  const [winIdx, setWinIdx] = React.useState(0);
+  const [hora, setHora] = React.useState('');
   const [form, setForm] = React.useState({ name: prefill?.name || '', empresa: '', email: prefill?.email || '', phone: prefill?.phone || '', personas: 1, rut: '', razonSocial: '', giro: '', comentarios: '', acepta: false });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -103,13 +105,30 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
 
   React.useEffect(() => {
     if (!activeDate) return;
-    setLoading(true); setSlot(null); setError(null);
+    setLoading(true); setSlot(null); setError(null); setWinIdx(0); setHora('');
     fetch(`${PF_API}/api/availability?date=${activeDate}&tipo=${tipo}`)
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError('No pudimos cargar la disponibilidad. Reintenta.'))
       .finally(() => setLoading(false));
   }, [activeDate, tipo]);
+
+  // Reunión por Meet y visita: cualquier hora dentro de un tramo libre (cada `step` minutos).
+  const horasDe = (w) => {
+    const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const out = []; for (let m = toMin(w.from); m <= toMin(w.lastStart); m += data.step || 15) out.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+    return out;
+  };
+  React.useEffect(() => {
+    if (!data?.flex) return;
+    const w = data.windows?.[winIdx];
+    if (!w) { setSlot(null); return; }
+    const hs = horasDe(w);
+    const h = hs.includes(hora) ? hora : hs[0];
+    if (h !== hora) { setHora(h); return; }
+    const start = new Date(`${activeDate}T${h}:00${data.offset}`);
+    setSlot({ label: h, start: start.toISOString(), end: new Date(start.getTime() + data.minutes * 60000).toISOString(), available: true });
+  }, [data, winIdx, hora]);
 
   async function reservar() {
     setSubmitting(true); setError(null);
@@ -123,7 +142,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || 'No se pudo reservar');
       if (P.precio === 0) {
-        setListo({ fecha: out.fecha, hora: out.hora });
+        setListo({ fecha: out.fecha, hora: out.hora, pendiente: !!out.pendiente });
         window.pfTrack && window.pfTrack('schedule_visit', { value: 0, currency: 'CLP', tipo });
         setSubmitting(false);
       } else {
@@ -143,10 +162,10 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
 
   if (listo) return (
     <div style={{ border: `1.5px solid ${PFB.ink}`, background: '#fff', padding: 24, maxWidth: 560 }}>
-      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>{tipo === 'llamada' ? '¡Llamada agendada! ✅' : tipo === 'minipiloto' ? '¡Mini-piloto agendado! ✅' : '¡Visita agendada! ✅'}</div>
+      <div style={{ fontFamily: PFB.display, fontWeight: 900, fontSize: 24 }}>{listo.pendiente ? '¡Solicitud recibida! ✅' : '¡Mini-piloto agendado! ✅'}</div>
       <p style={{ fontFamily: PFB.display, fontSize: 15, lineHeight: 1.55, marginTop: 8 }}>
-        {tipo === 'llamada'
-          ? <>Te llamamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con los detalles y un link por si necesitas cambiar la hora.</>
+        {listo.pendiente
+          ? <>Pediste {tipo === 'llamada' ? 'una reunión por Meet' : 'una visita al estudio'} el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. El equipo la revisa y <b>te confirma por correo en menos de 24 horas hábiles</b>; mientras tanto la hora queda reservada para ti. Revisa también tu carpeta de spam.</>
           : <>Te esperamos el <b>{listo.fecha}</b> a las <b>{listo.hora} hrs</b>. Te enviamos un correo con la dirección exacta y un link por si necesitas cambiar la hora.</>}
       </p>
     </div>
@@ -198,7 +217,33 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
       <div style={{ padding: '12px 18px 18px' }}>
         {loading && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Cargando horarios…</div>}
         {!loading && data && !data.open && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Día cerrado.</div>}
-        {!loading && data?.open && (
+        {!loading && data?.open && data.flex && (
+          <div>
+            {data.tooSoon && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Para reuniones y visitas necesitamos al menos un día de anticipación. Elige otro día.</div>}
+            {!data.tooSoon && !data.windows.length && <div style={{ fontFamily: PFB.mono, fontSize: 12, color: PFB.ink + '99', padding: '8px 0' }}>Sin horas libres este día. Prueba otra fecha.</div>}
+            {data.windows.length > 0 && (
+              <>
+                <div style={{ fontFamily: PFB.mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: PFB.ink + '99', fontWeight: 700, marginBottom: 8 }}>Elige cualquier hora dentro de un tramo libre</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {data.windows.map((w, i) => (
+                    <button key={w.start} onClick={() => { setWinIdx(i); setHora(''); }} style={{
+                      padding: '9px 12px', cursor: 'pointer', border: `1.5px solid ${PFB.ink}`, background: i === winIdx ? PFB.blue : '#fff',
+                      color: i === winIdx ? '#fff' : PFB.ink, fontFamily: PFB.mono, fontSize: 13, fontWeight: 700,
+                    }}>Libre {w.from} a {w.to}</button>
+                  ))}
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: PFB.mono, fontSize: 12 }}>
+                  Hora de inicio
+                  <select value={hora} onChange={(e) => setHora(e.target.value)} style={{ padding: '9px 10px', border: `1.5px solid ${PFB.ink}`, background: '#fff', fontFamily: PFB.mono, fontSize: 14, fontWeight: 700 }}>
+                    {horasDe(data.windows[winIdx] || data.windows[0]).map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <span style={{ color: PFB.ink + '99' }}>dura {data.minutes} min</span>
+                </label>
+              </>
+            )}
+          </div>
+        )}
+        {!loading && data?.open && !data.flex && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(82px, 1fr))', gap: 6 }}>
             {data.slots.map((s) => {
               const chosen = slot?.start === s.start;
@@ -254,13 +299,13 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
               background: valid && !submitting ? PFB.red : PFB.ink + '33', color: '#fff',
               fontFamily: PFB.display, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em',
             }}>
-              {submitting ? (P.precio === 0 ? 'AGENDANDO…' : 'REDIRIGIENDO A MERCADOPAGO…') : P.cta}
+              {submitting ? (P.precio === 0 ? (tipo === 'minipiloto' ? 'AGENDANDO…' : 'ENVIANDO SOLICITUD…') : 'REDIRIGIENDO A MERCADOPAGO…') : P.cta}
             </button>
             <div style={{ marginTop: 10, fontFamily: PFB.mono, fontSize: 10.5, color: PFB.ink + '88', lineHeight: 1.5 }}>
               {tipo === 'visita'
-                ? 'Te enviamos la dirección exacta por correo al confirmar.'
+                ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos la dirección exacta.'
                 : tipo === 'llamada'
-                ? 'Te llamamos al teléfono que dejes, a la hora que elijas.'
+                ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos el link de Google Meet.'
                 : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
             </div>
           </div>

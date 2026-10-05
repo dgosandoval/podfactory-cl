@@ -304,7 +304,7 @@ function AgendarDesdeCorreo() {
         <div>
           <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
-          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Llamada</b>: 15 minutos con Domingo e Iván, si prefieres conversar antes.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
+          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Reunión por Meet</b>: 30 minutos online con el equipo, si prefieres conversar antes. Eliges la hora y te confirmamos por correo.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
         </div>
         <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={prefill} />
       </div>

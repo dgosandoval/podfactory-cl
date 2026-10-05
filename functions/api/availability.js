@@ -1,6 +1,6 @@
 // GET /api/availability?date=YYYY-MM-DD
 // Devuelve los bloques del día con su estado (disponible / ocupado).
-import { parseConfig, getOffset, availabilityForDate, configFor, SERVICES } from "../_lib/slots.js";
+import { parseConfig, getOffset, availabilityForDate, configFor, SERVICES, esFlex, flexParams, freeWindows } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 
 const json = (data, status = 200) =>
@@ -48,6 +48,11 @@ export async function onRequestGet({ request, env }) {
     }
     busy = busy.concat(await getHolds(env, date));
 
+    // Reunión por Meet y visita: tramos libres (cualquier hora dentro de ellos), no una grilla fija.
+    if (esFlex(tipo)) {
+      const r = freeWindows(date, config, busy, Date.now(), SERVICES[tipo].minutes, flexParams(env));
+      return json({ date, flex: true, tipo, minutes: SERVICES[tipo].minutes, step: flexParams(env).step, ...r });
+    }
     const result = availabilityForDate(date, config, busy, new Date().toISOString());
     const svc = SERVICES[tipo];
     return json({ ...result, slotMinutes: config.slotMinutes, depositCLP: config.depositCLP, tipo: svc ? svc.key : null, price: svc ? svc.price : null });

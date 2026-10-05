@@ -126,19 +126,28 @@ function Manage() {
             <tr><td style={{...note,padding:'5px 0',width:90}}>Nombre</td><td style={{padding:'5px 0',fontWeight:700}}>{b.name}</td></tr>
             <tr><td style={{...note,padding:'5px 0'}}>Fecha</td><td style={{padding:'5px 0',fontWeight:700,textTransform:'capitalize'}}>{b.fecha}</td></tr>
             <tr><td style={{...note,padding:'5px 0'}}>Hora</td><td style={{padding:'5px 0',fontWeight:700}}>{b.hora} hrs</td></tr>
-            <tr><td style={{...note,padding:'5px 0'}}>Dirección</td><td style={{padding:'5px 0'}}>{b.address}</td></tr>
+            {b.flex && <tr><td style={{...note,padding:'5px 0'}}>Estado</td><td style={{padding:'5px 0',fontWeight:700,color:b.estado==='pendiente'?M.red:'#1a7f37'}}>{b.estado==='pendiente'?'Pendiente de confirmación':'Confirmada'}</td></tr>}
+            {b.tipo === 'llamada'
+              ? <tr><td style={{...note,padding:'5px 0'}}>Videollamada</td><td style={{padding:'5px 0'}}>{b.meetUrl ? <a href={b.meetUrl} style={{color:M.blue}}>{b.meetUrl.replace(/^https?:\/\//,'')}</a> : 'Te enviamos el link de Meet al confirmar'}</td></tr>
+              : <tr><td style={{...note,padding:'5px 0'}}>Dirección</td><td style={{padding:'5px 0'}}>{b.address}</td></tr>}
           </tbody>
         </table>
 
         {b.pastSession && <p style={note}>Esta sesión ya pasó.</p>}
-        {!b.pastSession && !b.modifiable && (
+        {!b.flex && !b.pastSession && !b.modifiable && (
           <p style={note}>Estás dentro de las 48 horas previas a tu grabación, así que ya no se puede cambiar la fecha. Si necesitas algo, escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
         )}
 
-        {!b.pastSession && b.modifiable && !mode && (
+        {b.flex && !b.pastSession && !mode && (
+          <div>
+            <p style={note}>{b.estado === 'pendiente' ? 'Tu solicitud está pendiente: el equipo te confirma por correo en menos de 24 horas hábiles. ' : ''}¿Necesitas otra hora? Cancela esta y vuelve a pedirla en <a href="https://podfactory.cl" style={{color:M.blue}}>podfactory.cl</a>.</p>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}><button style={btn(M.red,'#fff')} onClick={()=>setMode('cancel')}>Cancelar</button></div>
+          </div>
+        )}
+        {!b.flex && !b.pastSession && b.modifiable && !mode && (
           <p style={note}>Puedes cambiar la fecha sin costo hasta 48 horas antes. Con menos de 48 horas, o si no llegas, el capítulo se da por grabado. ¿Necesitas cancelar? Escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
         )}
-        {!b.pastSession && b.modifiable && !mode && (
+        {!b.flex && !b.pastSession && b.modifiable && !mode && (
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
             <button style={btn(M.ink,M.bg)} onClick={()=>{ setMode('reschedule'); setActiveDate(days[0].iso); }}>Cambiar la fecha</button>
           </div>
