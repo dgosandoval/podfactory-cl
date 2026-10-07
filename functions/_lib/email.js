@@ -125,11 +125,11 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
 
 const changePolicy = `
     <p style="font-size:12px;color:#0A0A0A99;line-height:1.5">
-      Puedes cambiar la fecha sin costo hasta <b>48 horas antes</b>. Con menos de 48 horas,
+      Puedes cambiar la fecha o cancelar sin costo hasta <b>36 horas antes</b>. Con menos de 36 horas,
       o si no llegas, el capítulo se da por grabado.
     </p>`;
 
-// ── Horario, regla de las 48 h y confirmación de asistencia (grabaciones) ──
+// ── Horario, regla de las 36 h y confirmación de asistencia (grabaciones) ──
 // Regla de Domingo (sep-2026): una grabación es 1 hora de estudio, no más, no menos, incluida la preparación.
 // El calendario bloquea 60 min; la grilla (cada 90 min) deja 30 min de margen entre reservas.
 export const ESTUDIO_MIN = 60;
@@ -150,7 +150,7 @@ export const horarioBlock = (hora, salida) => `
     </div>`;
 export const perdidaBlock = (deadline) => `
     <div style="margin:14px 0;padding:12px 14px;border-left:4px solid #D92E2E;background:#FDEDED;font-size:13px;line-height:1.5">
-      <b>Si no cancelas o cambias la fecha antes del ${deadline}</b> (48 horas antes), pierdes la hora: el capítulo se da por grabado aunque no vengas.
+      <b>Si no cancelas o cambias la fecha antes del ${deadline}</b> (36 horas antes), pierdes la hora: el capítulo se da por grabado aunque no vengas.
     </div>`;
 export const confirmBlock = (confirmUrl, waConfirmUrl) => `
     <div style="margin:18px 0;padding:16px;border:2px solid #D92E2E;border-radius:4px;text-align:center">
@@ -159,7 +159,7 @@ export const confirmBlock = (confirmUrl, waConfirmUrl) => `
       ${waConfirmUrl ? `<a href="${waConfirmUrl}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px;margin:4px">Confirmar por WhatsApp</a>` : ""}
     </div>`;
 export const deadlineDe = (startISO, timeZone) => {
-  const d = new Date(Date.parse(startISO) - 48 * 3600 * 1000);
+  const d = new Date(Date.parse(startISO) - 36 * 3600 * 1000);
   const f = new Intl.DateTimeFormat("es-CL", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(d);
   const h = new Intl.DateTimeFormat("es-CL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
   return `${f} a las ${h} hrs`;
@@ -245,12 +245,13 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
   `);
 }
 
-// Recordatorio 72 h antes: último aviso para cambiar la fecha (el plazo vence a las 48 h).
+// Recordatorio 48 h antes: confirmar y último aviso para cambiar o cancelar (quedan 12 h: el plazo vence a las 36 h).
 export function reminder72EmailHtml({ name, fecha, hora, deadline, address, manageUrl, whatsappUrl, salida, confirmUrl, waConfirmUrl, confirmado }) {
   return shell(`
-    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es en 3 días 🎙️</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es en 2 días 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
       Hola ${name}, te recordamos tu grabación en Pod Factory el <b>${fecha}</b>.
+      <b>Tienes 12 horas</b> (hasta el ${deadline}) para cambiar la fecha o cancelar sin costo.
     </p>
     ${salida ? horarioBlock(hora, salida) : `<table style="width:100%;border-collapse:collapse;margin:18px 0">${row("Hora", hora + " hrs")}</table>`}
     ${confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : confirmado ? `<p style="font-size:14px;color:#1a7f37;font-weight:700">✓ Ya confirmaste tu asistencia. ¡Gracias!</p>` : ""}
@@ -278,7 +279,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
     </table>
     ${esGrabacion && salida ? horarioBlock(hora, salida) : ""}
     ${esGrabacion && confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : ""}
-    ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 48 horas para cambiar la fecha: si no vienes, el capítulo se da por grabado.</p>` : ""}
+    ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 36 horas para cambiar la fecha o cancelar: si no vienes, el capítulo se da por grabado.</p>` : ""}
     ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${waLine(whatsappUrl)}

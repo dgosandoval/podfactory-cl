@@ -1,6 +1,6 @@
 // POST /api/cancel  { id: token }
 // Cancela una reserva: borra el evento, libera el bloque, elimina el registro y
-// avisa al cliente. Sin ADMIN_KEY solo se permite hasta 48 h antes (hoy la web
+// avisa al cliente. Sin ADMIN_KEY solo se permite hasta 36 h antes (hoy la web
 // no ofrece cancelar al cliente: las cancelaciones se gestionan por WhatsApp).
 import { parseConfig, esFlex } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
   // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
   if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
   if (!isAdmin && !esFlex(b.tipo) && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede cancelar (menos de 48 horas para la grabación)." }, 409);
+    return json({ error: "Ya no se puede cancelar (menos de 36 horas para la grabación)." }, 409);
   }
 
   try {

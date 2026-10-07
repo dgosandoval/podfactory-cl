@@ -238,6 +238,7 @@ function InfoForm({ id, compact = false }) {
       <div>
         <div style={{ fontFamily: PF.mono, fontSize: 10.5, letterSpacing: '0.14em', color: PF.red, fontWeight: 700 }}>TODA LA INFORMACIÓN, EN TU CORREO</div>
         <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15, marginTop: 6 }}>Formatos, precios y cómo trabajamos.</div>
+        <div style={{ fontFamily: PF.mono, fontSize: 13, fontWeight: 700, marginTop: 8 }}>Capítulos desde $170.000 + IVA</div>
       </div>
       <div className="pf-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <label><span style={lbl}>NOMBRE</span><input style={inp} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
@@ -537,6 +538,7 @@ function PodFactoryLanding() {
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
                 Cada capítulo es 1 hora en el estudio, con la preparación incluida. Agendas cada grabación cuando te acomode, con el mismo look en todos los capítulos.
               </p>
+              <div style={{ fontWeight: 800, fontSize: 15, marginTop: 10 }}>Capítulos desde $170.000 + IVA</div>
               <div style={{ marginTop: 14 }}><InfoButton label="INFORMACIÓN Y PRECIOS" /></div>
             </div>
           </Reveal>

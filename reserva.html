@@ -135,7 +135,7 @@ function Manage() {
 
         {b.pastSession && <p style={note}>Esta sesión ya pasó.</p>}
         {!b.flex && !b.pastSession && !b.modifiable && (
-          <p style={note}>Estás dentro de las 48 horas previas a tu grabación, así que ya no se puede cambiar la fecha. Si necesitas algo, escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
+          <p style={note}>Estás dentro de las 36 horas previas a tu grabación, así que ya no se puede cambiar la fecha ni cancelar. Si necesitas algo, escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
         )}
 
         {b.flex && !b.pastSession && !mode && (
@@ -145,7 +145,7 @@ function Manage() {
           </div>
         )}
         {!b.flex && !b.pastSession && b.modifiable && !mode && (
-          <p style={note}>Puedes cambiar la fecha sin costo hasta 48 horas antes. Con menos de 48 horas, o si no llegas, el capítulo se da por grabado. ¿Necesitas cancelar? Escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
+          <p style={note}>Puedes cambiar la fecha o cancelar sin costo hasta 36 horas antes. Con menos de 36 horas, o si no llegas, el capítulo se da por grabado. ¿Necesitas cancelar? Escríbenos por <a href="https://wa.me/56927970014" style={{color:M.blue}}>WhatsApp</a>.</p>
         )}
         {!b.flex && !b.pastSession && b.modifiable && !mode && (
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>

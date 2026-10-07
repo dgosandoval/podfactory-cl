@@ -1,5 +1,5 @@
 // POST /api/reschedule  { id: token, date, start, label }
-// Mueve la reserva a un nuevo bloque (hasta 48 h antes de la grabación actual).
+// Mueve la reserva a un nuevo bloque (hasta 36 h antes de la grabación actual).
 // El pago ya hecho se mantiene. No cobra de nuevo.
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
   // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
   if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
   if (!isAdmin && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede reagendar (menos de 48 horas para la grabación)." }, 409);
+    return json({ error: "Ya no se puede reagendar (menos de 36 horas para la grabación)." }, 409);
   }
 
   // Validar el nuevo bloque

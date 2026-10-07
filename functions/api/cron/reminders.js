@@ -1,6 +1,6 @@
 // GET /api/cron/reminders?key=<CRON_KEY>
 // Llamado cada hora por un cron externo (cron-job.org). Envía dos avisos por reserva:
-//  · 72 h antes: último aviso para cambiar la fecha (el plazo vence 48 h antes).
+//  · 48 h antes: confirmar + último aviso para cambiar o cancelar (quedan 12 h: el plazo vence 36 h antes).
 //  · 24 h antes: recordatorio con las reglas del día de grabación.
 import { parseConfig, esFlex } from "../../_lib/slots.js";
 import { resolverUrl } from "../../_lib/solicitud.js";
@@ -48,12 +48,12 @@ export async function onRequestGet({ request, env }) {
       waConfirmUrl: whatsappLink(env, `Confirmo mi grabación del ${fecha} a las ${hora} hrs (reserva ${String(b.token).slice(0, 6)}).`),
     } : {};
     try {
-      if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 72 * HOUR_MS && ms > 49 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
-        const dl = formatSession(new Date(Date.parse(b.start) - 48 * HOUR_MS).toISOString(), config.timeZone);
+      if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 48 * HOUR_MS && ms > 37 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
+        const dl = formatSession(new Date(Date.parse(b.start) - 36 * HOUR_MS).toISOString(), config.timeZone);
         if (b.email) {
           await sendEmail(env, {
             to: b.email,
-            subject: "Tu grabación en Pod Factory es en 3 días 🎙️",
+            subject: "Tu grabación en Pod Factory es en 2 días: confirma o cambia hoy 🎙️",
             html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, ...extra }),
           });
         }
