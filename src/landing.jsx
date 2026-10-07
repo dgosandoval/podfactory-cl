@@ -304,7 +304,7 @@ function AgendarDesdeCorreo() {
         <div>
           <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
-          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Reunión por Meet</b>: 30 minutos online con el equipo, si prefieres conversar antes. Eliges la hora y te confirmamos por correo.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después grabas con nosotros, se descuenta.</p>
+          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Reunión por Meet</b>: 30 minutos online con el equipo, si prefieres conversar antes. Eliges la hora y te confirmamos por correo.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después compras capítulos, los $30.000 se descuentan.</p>
         </div>
         <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={prefill} />
       </div>
@@ -535,7 +535,7 @@ function PodFactoryLanding() {
               <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Un set listo para grabar</div>
               <p style={{ fontSize: 15, lineHeight: 1.55, color: PF.ink + 'bb', marginTop: 8 }}>
                 Set listo, iluminado y calibrado. Dos versiones: <b>Base</b>, o <b>Full</b> con paneles de madera y un televisor con tu logo.
-                Agendas cada grabación cuando te acomode, con el mismo look en todos los capítulos.
+                Cada capítulo es 1 hora en el estudio, con la preparación incluida. Agendas cada grabación cuando te acomode, con el mismo look en todos los capítulos.
               </p>
               <div style={{ marginTop: 14 }}><InfoButton label="INFORMACIÓN Y PRECIOS" /></div>
             </div>
@@ -548,8 +548,8 @@ function PodFactoryLanding() {
               En Santiago y regiones.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
-              {['Jornadas desde 3 horas de grabación', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
-              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Tarifa por jornada: pídela junto a la lista de precios.</li>
+              {['Jornadas de hasta 3 horas de grabación, desde $950.000 + IVA', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
+              <li style={{ marginTop: 8, color: PF.yellow }}>▸ Horas adicionales se suman; si tu proyecto es distinto, cotizamos a medida.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>
               <InfoButton label="INFORMACIÓN Y PRECIOS" dark />

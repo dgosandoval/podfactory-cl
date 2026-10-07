@@ -153,7 +153,7 @@ function NewBookingForm({ headers, onDone, prefill }) {
   const [err, setErr] = React.useState(null);
   const [custom, setCustom] = React.useState(false);
   const [cstart, setCstart] = React.useState('12:00');
-  const [cmins, setCmins] = React.useState(80);
+  const [cmins, setCmins] = React.useState(60);
   const ADDONS = ['Teaser','3 Reels adicionales'];
   const ADDON_DESC = { 'Teaser': 'Se pone al inicio del video y se entrega aparte en formato vertical.' };
 
@@ -206,7 +206,7 @@ function NewBookingForm({ headers, onDone, prefill }) {
           <div style={{ display:'flex', gap:8, marginTop:6, alignItems:'center', flexWrap:'wrap' }}>
             <input type="time" value={cstart} onChange={e=>setCstart(e.target.value)} style={{ ...INP, width:130 }} />
             <span style={{ ...TAG, fontSize:12 }}>dura</span>
-            <input type="number" min="20" step="5" value={cmins} onChange={e=>setCmins(parseInt(e.target.value,10)||80)} style={{ ...INP, width:90 }} />
+            <input type="number" min="20" step="5" value={cmins} onChange={e=>setCmins(parseInt(e.target.value,10)||60)} style={{ ...INP, width:90 }} />
             <span style={{ ...TAG, fontSize:12 }}>min</span>
           </div>
         )}

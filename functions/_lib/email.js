@@ -115,10 +115,10 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
       <p style="font-size:13px;font-weight:800;margin:0 0 8px">Para que todo salga bien</p>
       <ul style="font-size:13px;line-height:1.55;color:#0A0A0Acc;margin:0;padding-left:18px">
         ${conHorario ? "" : `<li>Es <b>1 hora de estudio</b> desde la hora reservada, incluida la preparación. La hora corre aunque lleguen tarde.</li>`}
-        <li>Pueden grabar <b>hasta 4 personas</b>. En la hora de estudio el capítulo dura unos 30 a 40 minutos.</li>
-        ${conHorario ? "" : `<li>¿Necesitan más tiempo? Se contrata en bloques de <b>30 minutos ($100.000 + IVA)</b>, solo si no hay otra reserva después.</li>`}
+        <li>Pueden grabar <b>hasta 4 personas</b>. El capítulo dura de 20 a 40 minutos.</li>
+        ${conHorario ? "" : `<li>Si la grabación se pasa de la hora y el estudio está libre, el tiempo extra se cobra en bloques de <b>30 minutos ($100.000 + IVA)</b>.</li>`}
         <li>La edición simple incluye color, sonido, logo, música, nombres en pantalla y <b>hasta 3 cortes</b>. Entregamos en <b>5 días hábiles</b>.</li>
-        <li>Los archivos quedan para descargar <b>30 días</b> en tu portal de cliente.</li>
+        <li>Los archivos entregados quedan para descargar <b>30 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
       </ul>
       ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas (PDF)</a></p>` : ""}
     </div>`;
@@ -131,7 +131,7 @@ const changePolicy = `
 
 // ── Horario, regla de las 48 h y confirmación de asistencia (grabaciones) ──
 // Regla de Domingo (sep-2026): una grabación es 1 hora de estudio, no más, no menos, incluida la preparación.
-// El calendario bloquea 80 min: los 20 finales son para que el equipo prepare al siguiente cliente.
+// El calendario bloquea 60 min; la grilla (cada 90 min) deja 30 min de margen entre reservas.
 export const ESTUDIO_MIN = 60;
 export function salidaDe(startISO, timeZone) {
   return new Intl.DateTimeFormat("es-CL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(Date.parse(startISO) + ESTUDIO_MIN * 60000));
@@ -166,7 +166,7 @@ export const deadlineDe = (startISO, timeZone) => {
 };
 export const confirmUrlDe = (origin, token) => `${origin}/api/confirm?id=${token}`;
 
-// Correo al cliente (confirmación). tipo: 'visita' | 'minipiloto' | otro (grabación de temporada,
+// Correo al cliente (confirmación). tipo: 'visita' | 'minipiloto' | otro (grabación de capítulos,
 // agendada por el estudio). deposit > 0 = pagó por la web.
 export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo, salida, deadline, meetUrl }) {
   const esGrabacion = tipo !== "visita" && tipo !== "llamada" && tipo !== "minipiloto";
@@ -190,8 +190,8 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
     ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "minipiloto" ? `
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic. Llega 10 minutos antes.
-      Si después contratas un plan, el valor del mini-piloto se descuenta del total.
+      Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic.
+      Si después compras capítulos, los $30.000 del mini-piloto se descuentan de la compra.
     </p>` : ""}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${portalUrl ? `
@@ -237,7 +237,7 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
       El horario quedó liberado.
     </p>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Cuando quieras volver a grabar, revisa las temporadas en
+      Cuando quieras volver a grabar, revisa los capítulos en
       <a href="https://podfactory.cl/" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>.
     </p>
     ${waLine(whatsappUrl)}

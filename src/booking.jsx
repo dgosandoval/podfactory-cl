@@ -306,7 +306,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
                 ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos la dirección exacta.'
                 : tipo === 'llamada'
                 ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos el link de Google Meet.'
-                : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después grabas tu podcast con nosotros, el mini-piloto se descuenta del total.'}
+                : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después compras capítulos, los $30.000 se descuentan.'}
             </div>
           </div>
         )}

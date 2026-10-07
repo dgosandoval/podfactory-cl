@@ -9,9 +9,9 @@ pages_build_output_dir = "."
 TIMEZONE = "America/Santiago"
 OPEN_DAYS = "1,2,3,4,5"          # 1=Lun ... 5=Vie (sáb y dom cerrado)
 SLOT_STARTS = "10:00,11:30,13:00,14:30,16:00,17:30,19:00"
-SLOT_MINUTES = "80"              # 60 grabación + 20 setup
+SLOT_MINUTES = "60"              # 1 hora en el estudio con preparación incluida; la grilla (cada 90 min) deja 30 min de margen entre reservas
 HOLD_MINUTES = "15"             # cuánto se "congela" un bloque mientras paga
-DEPOSIT_CLP = "357000"          # capítulo piloto: $300.000 + IVA, se paga completo al reservar
+DEPOSIT_CLP = "357000"          # legado, no se usa (precio del antiguo capítulo piloto)
 HUB_LEAD_URL = "https://clientes.doppel.cl/api/intake/lead"  # CRM de leads en el hub
 SITE_URL = "https://podfactory.cl/"  # landing (vuelta de MercadoPago y links de los correos)
 GOOGLE_CALENDAR_ID = "c_1c4ecb5d4647edc42748a5ffcc9fb906f3c13f0a6d892e9bfc29b2fcd720f162@group.calendar.google.com"

@@ -6,12 +6,12 @@ export function parseConfig(env) {
     timeZone: env.TIMEZONE || "America/Santiago",
     openDays: (env.OPEN_DAYS || "1,2,3,4,5").split(",").map((n) => parseInt(n, 10)),
     slotStarts: (env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
-    slotMinutes: parseInt(env.SLOT_MINUTES || "80", 10),
+    slotMinutes: parseInt(env.SLOT_MINUTES || "60", 10),
     holdMinutes: parseInt(env.HOLD_MINUTES || "15", 10),
     depositCLP: parseInt(env.DEPOSIT_CLP || "30000", 10), // (legado) monto del antiguo piloto
     siteUrl: env.SITE_URL || "https://podfactory.cl/",
     // Bloques cortos para la visita y el mini-piloto: empiezan en los mismos horarios que
-    // los bloques normales (así no desordenan la grilla de las temporadas).
+    // los bloques normales (así no desordenan la grilla de los capítulos).
     shortStarts: (env.SHORT_STARTS || env.SLOT_STARTS || "10:00,11:30,13:00,14:30,16:00,17:30,19:00").split(","),
   };
 }
