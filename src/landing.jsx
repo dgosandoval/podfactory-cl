@@ -530,7 +530,7 @@ function PodFactoryLanding() {
         </Reveal>
         <div className="pf-two" style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 18 }}>
           <Reveal delay={100} style={{ background: PF.bg, color: PF.ink }}>
-            <div style={{ aspectRatio: '16/7', background: `url(assets/set-full.jpg) center 40% / cover no-repeat` }} />
+            <div style={{ aspectRatio: '16/7', background: `url(assets/set-collage.jpg) center / cover no-repeat` }} />
             <div style={{ padding: 24 }}>
               <div style={{ fontFamily: PF.mono, fontSize: 11, letterSpacing: '0.14em', color: PF.red, fontWeight: 700 }}>EN NUESTRO ESTUDIO · VITACURA</div>
               <div style={{ fontWeight: 900, fontSize: 30, letterSpacing: '-0.03em', marginTop: 8 }}>Un set listo para grabar</div>
