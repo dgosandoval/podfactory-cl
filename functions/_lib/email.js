@@ -118,7 +118,7 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
         <li>Pueden grabar <b>hasta 4 personas</b>. El capítulo dura de 20 a 40 minutos.</li>
         ${conHorario ? "" : `<li>Si la grabación se pasa de la hora y el estudio está libre, el tiempo extra se cobra en bloques de <b>30 minutos ($100.000 + IVA)</b>.</li>`}
         <li>La edición simple incluye color, sonido, logo, música, nombres en pantalla y <b>hasta 3 cortes</b>. Entregamos en <b>5 días hábiles</b>.</li>
-        <li>Los archivos entregados quedan para descargar <b>30 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
+        <li>Los archivos entregados quedan para descargar <b>90 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
       </ul>
       ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas (PDF)</a></p>` : ""}
     </div>`;
