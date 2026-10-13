@@ -39,6 +39,8 @@ export async function onRequestGet({ request, env }) {
     const b = byEvent.get(e.id);
     return {
       id: e.id, title: e.summary || "(sin título)", start, end, allDay,
+      // Quién creó el evento (correo): permite distinguir lo agendado a mano por el equipo (p. ej. Iván) de lo de otras marcas.
+      creador: (e.creator && e.creator.email) || null,
       dia: fKey.format(d), diaLabel: fDia.format(d),
       hora: allDay ? "Todo el día" : fHora.format(d), horaFin: end ? fHora.format(new Date(end)) : null,
       reserva: b ? { tipo: b.tipo, name: b.name, email: b.email, phone: b.phone, personas: b.personas, empresa: b.empresa || "", pagado: b.deposit || 0, comentarios: b.comentarios || "", confirmada: b.confirmedAt ? (b.confirmedVia || "sí") : null } : null,
