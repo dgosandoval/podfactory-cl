@@ -1,8 +1,8 @@
-// GET /api/portal/agenda?days=21  (header x-intake-secret == PORTAL_INTAKE_SECRET)
+// GET /api/portal/agenda?days=21[&desde=YYYY-MM-DD]  (header x-intake-secret == PORTAL_INTAKE_SECRET)
 // Agenda del estudio para el panel del hub: TODOS los eventos del calendario del estudio
 // (reservas web y los que se agregan a mano), cruzados con la reserva web cuando existe
 // (tipo, contacto, pago). El calendario es la fuente única de lo que ocupa el estudio.
-import { parseConfig } from "../../_lib/slots.js";
+import { parseConfig, inicioDiaUtc, addDaysStr, todayIn } from "../../_lib/slots.js";
 import { listEvents } from "../../_lib/google.js";
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -10,10 +10,21 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), { status
 export async function onRequestGet({ request, env }) {
   if (!env.PORTAL_INTAKE_SECRET || request.headers.get("x-intake-secret") !== env.PORTAL_INTAKE_SECRET) return json({ error: "forbidden" }, 403);
   const config = parseConfig(env);
-  const days = Math.min(60, Math.max(1, parseInt(new URL(request.url).searchParams.get("days") || "21", 10) || 21));
+  const qs = new URL(request.url).searchParams;
+  const days = Math.min(60, Math.max(1, parseInt(qs.get("days") || "21", 10) || 21));
   const now = Date.now();
-  const timeMin = new Date(now - 6 * 3600 * 1000).toISOString(); // incluye lo de hoy que ya empezó
-  const timeMax = new Date(now + days * 86400 * 1000).toISOString();
+  let timeMin = new Date(now - 6 * 3600 * 1000).toISOString(); // incluye lo de hoy que ya empezó
+  let timeMax = new Date(now + days * 86400 * 1000).toISOString();
+  // ?desde=YYYY-MM-DD (opcional): ventana de `days` días calendario desde las 00:00 de ese día en la zona del estudio (calendario semanal
+  // del hub). Hasta 120 días atrás. Sin `desde` no cambia nada: así lo usan las demás páginas.
+  const desde = qs.get("desde");
+  if (desde) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || Number.isNaN(Date.parse(`${desde}T12:00:00Z`))) return json({ error: "desde inválido (YYYY-MM-DD)" }, 400);
+    const minimo = addDaysStr(todayIn(config.timeZone, now), -120);
+    const dia = desde < minimo ? minimo : desde;
+    timeMin = new Date(inicioDiaUtc(dia, config.timeZone)).toISOString();
+    timeMax = new Date(inicioDiaUtc(addDaysStr(dia, days), config.timeZone)).toISOString();
+  }
 
   // Reservas web, indexadas por id del evento.
   const byEvent = new Map();

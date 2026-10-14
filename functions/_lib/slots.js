@@ -38,6 +38,22 @@ export function getOffset(dateStr, timeZone) {
   return m ? m[1] : "+00:00";
 }
 
+// Primer instante (ms UTC) del día local `dateStr` (YYYY-MM-DD) en la zona dada. Usa el desfase vigente a esa hora, no el del
+// mediodía: el día del cambio de horario (Chile, septiembre y abril) la medianoche y el mediodía tienen desfases distintos.
+export function inicioDiaUtc(dateStr, timeZone) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wall = Date.UTC(y, m - 1, d); // la medianoche "de pared" como si fuera UTC
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" });
+  const offsetMs = (t) => {
+    const o = {};
+    for (const p of fmt.formatToParts(new Date(t))) o[p.type] = Number(p.value);
+    return Date.UTC(o.year, o.month - 1, o.day, o.hour, o.minute, o.second) - Math.floor(t / 1000) * 1000;
+  };
+  const cands = [...new Set([wall - offsetMs(wall - 12 * 3600e3), wall - offsetMs(wall + 12 * 3600e3)])];
+  const validos = cands.filter((t) => t + offsetMs(t) === wall);
+  return validos.length ? Math.min(...validos) : Math.max(...cands); // sin válido = medianoche inexistente: vale el instante del salto
+}
+
 // Día de la semana (0=Dom ... 6=Sáb) de una fecha en la zona horaria dada.
 export function weekday(dateStr, timeZone) {
   const d = new Date(`${dateStr}T12:00:00Z`);
