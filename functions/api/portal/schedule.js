@@ -4,7 +4,7 @@
 // del estudio que usa la disponibilidad pública → una grabación de Doppel ocupa
 // el calendario y por lo tanto BLOQUEA las reservas de Pod Factory (y viceversa).
 // Es aditivo: no toca /api/reserve ni /api/availability.
-import { parseConfig, getOffset, overlapsBusy } from "../../_lib/slots.js";
+import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slots.js";
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsAttachment, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
@@ -36,10 +36,18 @@ export async function onRequestPost({ request, env }) {
   const slot = { label: hhmm, start: new Date(startMs).toISOString(), end: new Date(startMs + mins * 60000).toISOString() };
   if (startMs <= Date.now()) return json({ error: "Ese horario ya pasó" }, 400);
 
-  // ¿El calendario del estudio está libre en ese rango? (reservas PF + otras grabaciones)
+  // ¿El calendario del estudio está libre en ese rango, con REC_MARGEN min libres antes y después? (reservas PF +
+  // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
   try {
-    const busy = await getBusy(env, slot.start, slot.end);
-    if (overlapsBusy(slot, busy)) return json({ error: "Ese horario ya está ocupado en el estudio." }, 409);
+    const rp = recParams(env), margenMs = rp.margen * 60000;
+    const busy = await getBusy(env, new Date(startMs - margenMs).toISOString(), new Date(startMs + mins * 60000 + margenMs).toISOString());
+    if (env.HOLDS) {
+      const list = await env.HOLDS.list({ prefix: `hold:${date}:` });
+      const holds = await Promise.all(list.keys.map((k) => env.HOLDS.get(k.name, "json")));
+      for (const h of holds) if (h?.start && h?.end) busy.push({ start: h.start, end: h.end });
+    }
+    const choque = errorDeMargen(startMs, startMs + mins * 60000, busy, rp.margen);
+    if (choque) return json({ error: choque }, 409);
   } catch (e) {
     return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
   }

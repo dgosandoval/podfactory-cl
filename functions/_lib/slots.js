@@ -150,3 +150,49 @@ export function inicioFlexValido(dateStr, startISO, config, busy, nowMs, minutes
   const s = Date.parse(startISO);
   return r.windows.some((w) => s >= Date.parse(w.start) && s + minutes * 60000 <= Date.parse(w.end) && ((s - Date.parse(w.start)) / 60000) % p.step === 0);
 }
+
+
+// ── Grabaciones del estudio (portal): inicios dinámicos con margen ──
+// Una grabación puede empezar en cualquier hora en punto o y media (REC_STEP), con el inicio desde la apertura y el FIN
+// a más tardar al cierre (REC_HOURS), siempre que queden REC_MARGEN minutos libres ANTES y DESPUÉS respecto de cualquier
+// evento ocupado del calendario (y de los holds de pago). Reemplaza a la grilla fija de SLOT_STARTS solo para
+// grabaciones; las visitas, llamadas y el mini-piloto de la web siguen con lo suyo.
+export function recParams(env) {
+  const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+  const [a, b] = String(env.REC_HOURS || "10:00-20:00").split("-");
+  const num = (v, def, min) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= min ? n : def; };
+  const p = { open: toMin(a), close: toMin(b), step: num(env.REC_STEP, 30, 5), margen: num(env.REC_MARGEN, 30, 0) };
+  if (!Number.isFinite(p.open) || !Number.isFinite(p.close) || p.close <= p.open) { p.open = 600; p.close = 1200; }
+  return p;
+}
+
+// ¿[startMs, endMs) ampliado en `margenMin` por cada lado choca con algún ocupado? El borde exacto NO choca
+// (un evento que termina a las 14:30 permite empezar a las 15:00 con 30 min de margen).
+export function margenChoca(startMs, endMs, busy, margenMin) {
+  const m = margenMin * 60000;
+  const s = startMs - m, e = endMs + m;
+  return busy.some((b) => s < Date.parse(b.end) && Date.parse(b.start) < e);
+}
+
+// Inicios de grabación de un día para una duración de `minutes`. Misma forma que availabilityForDate:
+// { date, open, slots: [{ label, start, end, available }] }. Los no disponibles también se devuelven (available:false).
+export function recSlots(dateStr, config, busy, nowMs, minutes, p) {
+  if (!config.openDays.includes(weekday(dateStr, config.timeZone))) return { date: dateStr, open: false, slots: [] };
+  const off = getOffset(dateStr, config.timeZone);
+  const slots = [];
+  for (let t = Math.ceil(p.open / p.step) * p.step; t + minutes <= p.close; t += p.step) {
+    const label = hhmmDe(t);
+    const startMs = Date.parse(`${dateStr}T${label}:00${off}`);
+    const endMs = startMs + minutes * 60000;
+    slots.push({ label, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), available: startMs > nowMs && !margenChoca(startMs, endMs, busy, p.margen) });
+  }
+  return { date: dateStr, open: true, slots };
+}
+
+// Validación de servidor de una grabación [startMs, endMs): null si cabe, o el mensaje de error (409) si choca
+// directo con un ocupado o queda más pegada que `margenMin` a alguno.
+export function errorDeMargen(startMs, endMs, busy, margenMin) {
+  if (margenChoca(startMs, endMs, busy, 0)) return "Ese horario ya está ocupado en el estudio.";
+  if (margenChoca(startMs, endMs, busy, margenMin)) return `Ese horario queda muy pegado a otra grabación: se necesitan ${margenMin} minutos entre una y otra.`;
+  return null;
+}

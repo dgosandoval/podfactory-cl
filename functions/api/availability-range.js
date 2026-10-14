@@ -2,7 +2,9 @@
 // Disponibilidad de varios días en una sola consulta al calendario (máx. 70 días). La usa el portal
 // de clientes para pintar el calendario del mes y proponer fechas recurrentes. Mismas reglas que
 // /api/availability: días abiertos, bloques de grabación, ocupados del calendario + holds de pago.
-import { parseConfig, getOffset, availabilityForDate } from "../_lib/slots.js";
+// Opcional: flex=1&minutos=N (20–480; por defecto slotMinutes) → inicios dinámicos de grabación (cada REC_STEP min,
+// con REC_MARGEN min libres antes y después de cualquier ocupado) en vez de la grilla fija. Sin flex, igual que siempre.
+import { parseConfig, getOffset, availabilityForDate, recParams, recSlots } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 
 const json = (data, status = 200) =>
@@ -18,6 +20,9 @@ export async function onRequestGet({ request, env }) {
     if (dias.length > 70) return json({ error: "Máximo 70 días" }, 400);
   }
   const config = parseConfig(env);
+  const flex = url.searchParams.get("flex") === "1";
+  const minutos = Math.min(480, Math.max(20, parseInt(url.searchParams.get("minutos"), 10) || config.slotMinutes));
+  const rp = recParams(env);
   try {
     // Google responde a veces 5xx pasajeros (ej. 520): hasta 3 intentos antes de dar error.
     const tMin = `${from}T00:00:00${getOffset(from, config.timeZone)}`, tMax = `${to}T23:59:59${getOffset(to, config.timeZone)}`;
@@ -31,6 +36,10 @@ export async function onRequestGet({ request, env }) {
       const list = await env.HOLDS.list({ prefix: "hold:" });
       const holds = await Promise.all(list.keys.filter((k) => { const f = k.name.split(":")[1]; return f >= from && f <= to; }).map((k) => env.HOLDS.get(k.name, "json")));
       for (const h of holds) if (h?.start && h?.end) busy.push({ start: h.start, end: h.end });
+    }
+    if (flex) {
+      const nowMs = Date.now();
+      return json({ from, to, flex: true, minutos, margen: rp.margen, step: rp.step, days: dias.map((date) => recSlots(date, config, busy, nowMs, minutos, rp)) });
     }
     const now = new Date().toISOString();
     return json({ from, to, days: dias.map((date) => availabilityForDate(date, config, busy, now)) });
