@@ -36,7 +36,9 @@ export async function onRequestPost({ request, env }) {
 
   // Aviso al cliente y al estudio — best-effort. Se puede silenciar con notify:false
   // (lo usa el portal al cancelar una grabación: el correo "Pod Factory" no aplica a Doppel).
-  if (body.notify === false) return json({ ok: true });
+  // Los datos de la reserva cancelada van en la respuesta: el hub los usa para avisar por WhatsApp (el registro ya no existe).
+  const datos = { ok: true, start: b.start, end: b.end, name: b.name, email: b.email, phone: b.phone || "", tipo: b.tipo, brand: b.brand || "podfactory", projectName: b.projectName || null };
+  if (body.notify === false) return json(datos);
   try {
     const { fecha, hora } = formatSession(b.start, config.timeZone);
     if (correosDe(b.email).length) {
@@ -52,5 +54,5 @@ export async function onRequestPost({ request, env }) {
     console.log("email cancel error:", String(e));
   }
 
-  return json({ ok: true });
+  return json(datos);
 }
