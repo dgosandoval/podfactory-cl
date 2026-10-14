@@ -246,7 +246,7 @@ export function rescheduleEmailHtml({ name, fecha, hora, address, manageUrl }) {
 }
 
 // Correo al cliente (reserva cancelada)
-export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
+export function cancelEmailHtml({ name, fecha, hora, whatsappUrl, portalUrl }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Reserva cancelada</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
@@ -254,8 +254,9 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
       El horario quedó liberado.
     </p>
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
-      Cuando quieras volver a grabar, revisa los capítulos en
-      <a href="https://podfactory.cl/" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>.
+      ${portalUrl
+        ? `Puedes elegir otra fecha cuando quieras en <a href="${portalUrl}" style="color:#1F3FA3;font-weight:700;text-decoration:none">tu portal de Pod Factory</a>.`
+        : `Cuando quieras volver a grabar, revisa los capítulos en <a href="https://podfactory.cl/" style="color:#1F3FA3;font-weight:700;text-decoration:none">podfactory.cl</a>.`}
     </p>
     ${waLine(whatsappUrl)}
     <p style="font-size:13px;margin-top:14px"><b>Equipo Pod Factory</b></p>

@@ -42,7 +42,7 @@ export async function onRequestPost({ request, env }) {
     if (correosDe(b.email).length) {
       await sendEmail(env, {
         to: correosDe(b.email), subject: "Reserva cancelada · Pod Factory",
-        html: cancelEmailHtml({ name: b.name, fecha, hora, whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva cancelada del ${fecha}:`) }),
+        html: cancelEmailHtml({ name: b.name, fecha, hora, portalUrl: b.portalUrl || null, whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva cancelada del ${fecha}:`) }),
       });
     }
     if (env.STUDIO_EMAIL) {
