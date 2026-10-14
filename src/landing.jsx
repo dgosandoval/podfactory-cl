@@ -507,7 +507,7 @@ function PodFactoryLanding() {
           {[
             ['01', 'Formato', 'Definimos contigo la idea, la estructura de cada capítulo, los invitados y la pauta.', PF.blue],
             ['02', 'Grabación', 'Set multicámara, audio broadcast y un operador en cada grabación. En el estudio o donde estés.', PF.red],
-            ['03', 'Edición', 'Color, sonido, logo, música y nombres en pantalla. Reels para redes si los necesitas.', PF.orange],
+            ['03', 'Edición', 'Edición simple: color, sonido, logo, música y nombres en pantalla, con 1 ronda de cambios. Reels para redes si los necesitas.', PF.orange],
             ['04', 'Entrega', 'Cada capítulo listo para publicar en pocos días, con la misma calidad de principio a fin.', PF.yellow],
           ].map(([n, t, d, c], i) => (
             <Reveal key={n} delay={120 + i * 100} style={{ border: `1.5px solid ${PF.ink}`, background: PF.bg }}>
