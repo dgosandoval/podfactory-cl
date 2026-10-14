@@ -8,7 +8,7 @@ import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slo
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsAttachment, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
-import { salidaDe, deadlineDe } from "../../_lib/email.js";
+import { salidaDe, deadlineDe, correosDe, minutosDe } from "../../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -53,7 +53,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   const name = String(body.name || "").slice(0, 120) || projectName;
-  const email = String(body.email || "").slice(0, 160);
+  // `email` puede traer varios correos separados por coma (todos los contactos del cliente): por eso el tope es mayor.
+  const email = String(body.email || "").slice(0, 600);
   const phone = String(body.phone || "").slice(0, 40);
   const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
   const personas = Math.min(8, Math.max(1, parseInt(body.personas, 10) || 1));
@@ -90,9 +91,9 @@ export async function onRequestPost({ request, env }) {
       const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
       const ics = icsAttachment({ uid: token, start: slot.start, end: slot.end, summary: `Grabación ${marca}`, location: address, description: `Grabación de ${projectName} (${tipo}, ${personas} personas).` });
       await sendEmail(env, {
-        to: email,
+        to: correosDe(email),
         subject: `Tu grabación de ${projectName} está agendada 🎬`,
-        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, salida: salidaDe(slot.start, config.timeZone), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: body.compraId && body.projectUrl ? body.projectUrl + '#agendar' : manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.compraId ? null : (body.projectUrl || null) }),
+        html: customerEmailHtml({ name, fecha, hora, deposit: 0, address, salida: salidaDe(slot.start, config.timeZone, slot.end), minutos: minutosDe(slot.start, slot.end), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: body.compraId && body.projectUrl ? body.projectUrl + '#agendar' : manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola, sobre la grabación de ${projectName} del ${fecha} a las ${hora} hrs:`), portalUrl: body.compraId ? null : (body.projectUrl || null) }),
         attachments: [ics],
       });
     } catch (e) { console.log("schedule email error:", String(e)); }

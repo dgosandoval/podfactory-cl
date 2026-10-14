@@ -3,7 +3,7 @@
 // (Outlook, antivirus) abren los links solos y confirmarían sin que la persona lo haya hecho.
 import { parseConfig } from "../_lib/slots.js";
 import { getBooking, saveBooking } from "../_lib/booking.js";
-import { formatSession, salidaDe } from "../_lib/email.js";
+import { formatSession, salidaDe, minutosDe, duracionTxt, finDe } from "../_lib/email.js";
 
 const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const page = (inner) => new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -16,8 +16,8 @@ const page = (inner) => new Response(`<!doctype html><html lang="es"><head><meta
 function detalle(b, config) {
   const { fecha, hora } = formatSession(b.start, config.timeZone);
   return `<p style="font-size:15px;text-transform:capitalize;margin:0 0 6px"><b>${esc(fecha)}</b></p>
-    <p style="font-size:30px;font-weight:800;margin:6px 0">${hora} → ${salidaDe(b.start, config.timeZone)}</p>
-    <p style="font-size:13px;color:#555;margin:0 0 18px">Llegada ${hora} · salida ${salidaDe(b.start, config.timeZone)} hrs. Es 1 hora de estudio: si llegas tarde, igual terminamos a la hora de salida.</p>`;
+    <p style="font-size:30px;font-weight:800;margin:6px 0">${hora} → ${salidaDe(b.start, config.timeZone, finDe(b))}</p>
+    <p style="font-size:13px;color:#555;margin:0 0 18px">Llegada ${hora} · salida ${salidaDe(b.start, config.timeZone, finDe(b))} hrs. Es ${duracionTxt(minutosDe(b.start, finDe(b)))} de estudio: si llegas tarde, igual terminamos a la hora de salida.</p>`;
 }
 
 export async function onRequestGet({ request, env }) {

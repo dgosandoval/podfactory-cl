@@ -133,10 +133,27 @@ const changePolicy = `
 // Regla de Domingo (sep-2026): una grabación es 1 hora de estudio, no más, no menos, incluida la preparación.
 // El calendario bloquea 60 min; la grilla (cada 90 min) deja 30 min de margen entre reservas.
 export const ESTUDIO_MIN = 60;
-export function salidaDe(startISO, timeZone) {
-  return new Intl.DateTimeFormat("es-CL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(Date.parse(startISO) + ESTUDIO_MIN * 60000));
+// Minutos reales de la reserva (fin − inicio). Sin fin válido (reservas antiguas), el respaldo es ESTUDIO_MIN.
+export function minutosDe(startISO, endISO) {
+  const m = (Date.parse(endISO) - Date.parse(startISO)) / 60000;
+  return Number.isFinite(m) && m > 0 ? Math.round(m) : ESTUDIO_MIN;
 }
-export const horarioBlock = (hora, salida) => `
+// Hora de salida = FIN real de la reserva (endISO); el +60 solo es respaldo si no hay fin.
+export function salidaDe(startISO, timeZone, endISO) {
+  return new Intl.DateTimeFormat("es-CL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(Date.parse(startISO) + minutosDe(startISO, endISO) * 60000));
+}
+export const duracionTxt = (min) => (min === 60 ? "1 hora" : min % 30 === 0 ? `${String(min / 60).replace(".", ",")} horas` : `${min} minutos`);
+// Fin que se le muestra al cliente para una reserva guardada. Las reservas con pago posterior hechas ANTES del 14-oct-2026 llevan 20 min de
+// margen metidos dentro del evento (60/90/120 → 80/110/140): a esas se les descuenta, para que la salida siga siendo la hora reservada.
+export function finDe(b) {
+  const m = (Date.parse(b.end) - Date.parse(b.start)) / 60000;
+  if (b.compraId === "postpago" && [80, 110, 140].includes(m)) return new Date(Date.parse(b.end) - 20 * 60000).toISOString();
+  return b.end;
+}
+// Destinatarios de una reserva: el hub guarda en `email` todos los correos del cliente separados por coma.
+// Con un solo correo devuelve [ese correo] (mismo envío que antes).
+export const correosDe = (email) => String(email || "").split(",").map((x) => x.trim()).filter(Boolean);
+export const horarioBlock = (hora, salida, minutos = ESTUDIO_MIN) => `
     <div style="margin:18px 0;border:2px solid #0A0A0A;border-radius:4px;overflow:hidden">
       <div style="background:#0A0A0A;color:#F5EBD6;font-size:11px;font-weight:800;letter-spacing:.08em;padding:8px 14px">TU HORARIO EN EL ESTUDIO</div>
       <table style="width:100%;border-collapse:collapse;text-align:center"><tr>
@@ -144,7 +161,7 @@ export const horarioBlock = (hora, salida) => `
         <td style="padding:14px 6px"><div style="font-size:11px;color:#0A0A0A99">SALIDA</div><div style="font-size:26px;font-weight:800">${salida}</div></td>
       </tr></table>
       <p style="font-size:13px;line-height:1.5;margin:0;padding:10px 14px;background:#F5EBD6">
-        Es <b>1 hora de estudio</b>, incluida la preparación. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
+        Es <b>${duracionTxt(minutos)} de estudio</b>, incluida la preparación. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
         Si la grabación se extiende, cada 30 minutos extra cuesta $100.000 + IVA, solo si el estudio está libre.
       </p>
     </div>`;
@@ -168,7 +185,7 @@ export const confirmUrlDe = (origin, token) => `${origin}/api/confirm?id=${token
 
 // Correo al cliente (confirmación). tipo: 'visita' | 'minipiloto' | otro (grabación de capítulos,
 // agendada por el estudio). deposit > 0 = pagó por la web.
-export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo, salida, deadline, meetUrl }) {
+export function customerEmailHtml({ name, fecha, hora, deposit, address, manageUrl, whatsappUrl, portalUrl, conditionsUrl, tipo, salida, deadline, meetUrl, minutos }) {
   const esGrabacion = tipo !== "visita" && tipo !== "llamada" && tipo !== "minipiloto";
   const titulo = tipo === "visita" ? "¡Visita al estudio confirmada! 👀" : tipo === "llamada" ? "¡Reunión confirmada! 📹" : tipo === "minipiloto" ? "¡Mini-piloto confirmado! 🎙️" : "¡Grabación confirmada! 🎙️";
   const intro = tipo === "visita" ? "confirmamos tu visita al estudio. Son unos 20 minutos para conocer el set, ver el monitor y conversar tu idea"
@@ -185,7 +202,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
       ${tipo === "llamada" ? row("Videollamada", meetUrl ? `<a href="${meetUrl}" style="color:#1F3FA3">${meetUrl.replace(/^https?:\/\//, "")}</a>` : "Te enviamos el link de Meet antes de la reunión") : row("Dirección", address)}
       ${deposit ? row("Pagado", CLP(deposit) + " (IVA incluido)") : ""}
     </table>
-    ${esGrabacion && salida ? horarioBlock(hora, salida) : ""}
+    ${esGrabacion && salida ? horarioBlock(hora, salida, minutos) : ""}
     ${esGrabacion && deadline ? perdidaBlock(deadline) : ""}
     ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "minipiloto" ? `
@@ -246,14 +263,14 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl }) {
 }
 
 // Recordatorio 48 h antes: confirmar y último aviso para cambiar o cancelar (quedan 12 h: el plazo vence a las 36 h).
-export function reminder72EmailHtml({ name, fecha, hora, deadline, address, manageUrl, whatsappUrl, salida, confirmUrl, waConfirmUrl, confirmado }) {
+export function reminder72EmailHtml({ name, fecha, hora, deadline, address, manageUrl, whatsappUrl, salida, confirmUrl, waConfirmUrl, confirmado, minutos }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es en 2 días 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
       Hola ${name}, te recordamos tu grabación en Pod Factory el <b>${fecha}</b>.
       <b>Tienes 12 horas</b> (hasta el ${deadline}) para cambiar la fecha o cancelar sin costo.
     </p>
-    ${salida ? horarioBlock(hora, salida) : `<table style="width:100%;border-collapse:collapse;margin:18px 0">${row("Hora", hora + " hrs")}</table>`}
+    ${salida ? horarioBlock(hora, salida, minutos) : `<table style="width:100%;border-collapse:collapse;margin:18px 0">${row("Hora", hora + " hrs")}</table>`}
     ${confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : confirmado ? `<p style="font-size:14px;color:#1a7f37;font-weight:700">✓ Ya confirmaste tu asistencia. ¡Gracias!</p>` : ""}
     ${perdidaBlock(deadline)}
     ${manageUrl ? `<div style="margin:18px 0">${button(manageUrl, manageUrl.includes("clientes.") ? "Cambiar o cancelar en tu portal" : "Cambiar la fecha")}</div>` : ""}
@@ -264,7 +281,7 @@ export function reminder72EmailHtml({ name, fecha, hora, deadline, address, mana
 }
 
 // Correo recordatorio (24 h antes)
-export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl, tipo, salida, confirmUrl, waConfirmUrl, confirmado, meetUrl, mismoDia }) {
+export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whatsappUrl, conditionsUrl, tipo, salida, confirmUrl, waConfirmUrl, confirmado, meetUrl, mismoDia, minutos }) {
   const esGrabacion = tipo !== "visita" && tipo !== "llamada" && tipo !== "minipiloto";
   const que = tipo === "visita" ? (mismoDia ? "Tu visita al estudio es hoy 👀" : "Tu visita al estudio es mañana 👀") : tipo === "llamada" ? (mismoDia ? "Tu reunión con Pod Factory es hoy 📹" : "Tu reunión con Pod Factory es mañana 📹") : "Tu grabación es mañana 🎙️";
   return shell(`
@@ -277,7 +294,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
       ${row("Hora", hora + " hrs")}
       ${tipo === "llamada" ? (meetUrl ? row("Videollamada", `<a href="${meetUrl}" style="color:#1F3FA3">${meetUrl.replace(/^https?:\/\//, "")}</a>`) : "") : row("Dirección", address)}
     </table>
-    ${esGrabacion && salida ? horarioBlock(hora, salida) : ""}
+    ${esGrabacion && salida ? horarioBlock(hora, salida, minutos) : ""}
     ${esGrabacion && confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : ""}
     ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 36 horas para cambiar la fecha o cancelar: si no vienes, el capítulo se da por grabado.</p>` : ""}
     ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}

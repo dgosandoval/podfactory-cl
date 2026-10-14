@@ -4,7 +4,7 @@
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
 import { getBusy, patchEvent } from "../_lib/google.js";
-import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml } from "../_lib/email.js";
+import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml, correosDe } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -54,9 +54,9 @@ export async function onRequestPost({ request, env }) {
     const { fecha, hora } = formatSession(slot.start, config.timeZone);
     const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
     const origin = new URL(request.url).origin;
-    if (b.email) {
+    if (correosDe(b.email).length) {
       await sendEmail(env, {
-        to: b.email,
+        to: correosDe(b.email),
         subject: "Tu reserva fue reagendada · Pod Factory",
         html: rescheduleEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token) }),
       });

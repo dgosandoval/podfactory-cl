@@ -5,7 +5,7 @@
 import { parseConfig, esFlex } from "../../_lib/slots.js";
 import { resolverUrl } from "../../_lib/solicitud.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, solicitudPendienteHtml, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
+import { sendEmail, formatSession, solicitudPendienteHtml, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, minutosDe, finDe, correosDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -44,15 +44,15 @@ export async function onRequestGet({ request, env }) {
     // Grabaciones (no visita/llamada/mini-piloto): horario de llegada y salida + pedido de confirmación.
     const esGrabacion = b.tipo !== "visita" && b.tipo !== "llamada" && b.tipo !== "minipiloto";
     const extra = esGrabacion ? {
-      salida: salidaDe(b.start, config.timeZone), confirmUrl: confirmUrlDe(origin, b.token), confirmado: !!b.confirmedAt,
+      salida: salidaDe(b.start, config.timeZone, finDe(b)), minutos: minutosDe(b.start, finDe(b)), confirmUrl: confirmUrlDe(origin, b.token), confirmado: !!b.confirmedAt,
       waConfirmUrl: whatsappLink(env, `Confirmo mi grabación del ${fecha} a las ${hora} hrs (reserva ${String(b.token).slice(0, 6)}).`),
     } : {};
     try {
       if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 48 * HOUR_MS && ms > 37 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
         const dl = formatSession(new Date(Date.parse(b.start) - 36 * HOUR_MS).toISOString(), config.timeZone);
-        if (b.email) {
+        if (correosDe(b.email).length) {
           await sendEmail(env, {
-            to: b.email,
+            to: correosDe(b.email),
             subject: "Tu grabación en Pod Factory es en 2 días: confirma o cambia hoy 🎙️",
             html: reminder72EmailHtml({ name: b.name, fecha, hora, deadline: `${dl.fecha} a las ${dl.hora} hrs`, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, ...extra }),
           });
@@ -60,9 +60,9 @@ export async function onRequestGet({ request, env }) {
         await saveBooking(env, { ...b, reminded72: true });
         sent72++;
       } else if (!b.reminded && ms <= (esFlex(b.tipo) ? 3 : 24) * HOUR_MS) { // reunión/visita: aviso el mismo día (3 h antes)
-        if (b.email) {
+        if (correosDe(b.email).length) {
           await sendEmail(env, {
-            to: b.email,
+            to: correosDe(b.email),
             subject: b.tipo === "visita" ? "Recordatorio: tu visita a Pod Factory es hoy 👀" : b.tipo === "llamada" ? "Recordatorio: tu reunión con Pod Factory es hoy 📹" : "Recordatorio: tu grabación en Pod Factory es mañana 🎙️",
             html: reminderEmailHtml({ name: b.name, fecha, hora, address, manageUrl: b.portalUrl ? b.portalUrl + '#agendar' : manageUrl(origin, b.token), whatsappUrl: wa, conditionsUrl, tipo: b.tipo, meetUrl: b.meetUrl, mismoDia: esFlex(b.tipo), ...extra }),
           });
