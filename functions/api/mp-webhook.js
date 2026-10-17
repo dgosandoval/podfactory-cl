@@ -35,11 +35,49 @@ export async function onRequestPost({ request, env }) {
   });
   if (!payRes.ok) return ok();
   const pay = await payRes.json();
+  const ref = String(pay.external_reference || "");
+
+  // Pack de créditos de Pulse · Autoservicio: external_reference = "hubcreditos:<compraCreditosId>". Es la ÚNICA rama que también reenvía los pagos revertidos
+  // (refunded / charged_back / cancelled), con su status: el hub descuenta los créditos que ya había dado. El hub es idempotente por compra y por pago.
+  if (ref.startsWith("hubcreditos:")) {
+    const REVERSAS = ["refunded", "charged_back", "cancelled"];
+    if (pay.status !== "approved" && !REVERSAS.includes(pay.status)) return ok(); // pending, in_process, rejected…: aún no hay nada que hacer
+    const compraCreditosId = Number(ref.split(":")[1]);
+    if (!Number.isInteger(compraCreditosId) || compraCreditosId < 1) { console.log("mp-webhook: hubcreditos con referencia inválida", paymentId, ref); return ok(); }
+    // Los packs se cobran SIEMPRE en CLP. Otra moneda no se manda al hub: se avisa al estudio para revisarlo a mano.
+    if (String(pay.currency_id || "") !== "CLP") {
+      console.error("mp-webhook: hubcreditos con moneda distinta de CLP", paymentId, pay.currency_id);
+      try {
+        await sendEmail(env, { to: studioRecipients(env), subject: `⚠️ Pago de créditos Pulse en moneda ${pay.currency_id || "desconocida"} (no se acreditó)`,
+          html: `<p>MercadoPago informó el pago <b>${String(paymentId)}</b> (${pay.status}) de la compra de créditos <b>${ref}</b> en moneda <b>${pay.currency_id || "?"}</b>, no CLP. No se mandó al hub; revísalo a mano.</p>` });
+      } catch (e) { console.log("aviso de moneda distinta falló:", String(e)); }
+      return ok();
+    }
+    if (!env.HUB_LEAD_URL || !env.PORTAL_INTAKE_SECRET) return new Response("hub no configurado", { status: 500 });
+    const r = await fetch(new URL("/api/intake/pulse-creditos", env.HUB_LEAD_URL).toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-intake-secret": env.PORTAL_INTAKE_SECRET },
+      body: JSON.stringify({ compraCreditosId, paymentId: String(paymentId), amount: Number(pay.transaction_amount) || 0, status: pay.status }),
+    }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
+    if (r.ok) return ok();
+    const detalle = (await r.text()).slice(0, 200);
+    // Un 4xx del hub es definitivo (datos que reintentar no arregla: compra inexistente, cuerpo inválido): se registra y se responde 200 para que MercadoPago deje de reintentar.
+    // Salvo 401/403 (secreto mal configurado: se arregla y el reintento sí sirve), 408 y 429 (transitorios). 5xx y errores de red (status 0): 500 → MercadoPago reintenta.
+    if (r.status >= 400 && r.status < 500 && ![401, 403, 408, 429].includes(r.status)) {
+      console.log("mp-webhook: hub rechazó definitivamente el pago de créditos", paymentId, pay.status, r.status, detalle);
+      try {
+        await sendEmail(env, { to: studioRecipients(env), subject: `⚠️ El hub rechazó un pago de créditos Pulse (${r.status})`,
+          html: `<p>MercadoPago informó el pago <b>${String(paymentId)}</b> (${pay.status}, $${Number(pay.transaction_amount) || 0}) de <b>${ref}</b>, pero el hub respondió <b>${r.status}</b>: ${detalle.replace(/</g, "&lt;")}. No se reintentará; revísalo a mano.</p>` });
+      } catch (e) { console.log("aviso de rechazo del hub falló:", String(e)); }
+      return ok();
+    }
+    return new Response(`retry: hub ${r.status} ${detalle}`, { status: 500 });
+  }
+
   if (pay.status !== "approved") return ok();
 
   // Compra de capítulos desde el portal del hub: external_reference = "hubcompra:<id>:<cuota>".
   // El hub confirma el pago (idempotente) y habilita agendar. Si el hub falla, 500 → MercadoPago reintenta.
-  const ref = String(pay.external_reference || "");
   if (ref.startsWith("hubcompra:")) {
     const [, compraId, cuota] = ref.split(":");
     if (!env.HUB_LEAD_URL || !env.PORTAL_INTAKE_SECRET) return new Response("hub no configurado", { status: 500 });
