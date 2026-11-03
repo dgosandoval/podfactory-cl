@@ -21,6 +21,9 @@ export async function onRequestPost({ request, env }) {
   const esHub = env.PORTAL_INTAKE_SECRET && request.headers.get("x-intake-secret") === env.PORTAL_INTAKE_SECRET;
   // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
   if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
+  // Grabación de Doppel en el calendario de Domingo: el horario se cambia desde el hub (agenda la nueva y cancela la anterior en ese mismo
+  // calendario). Esta ruta mueve eventos en la grilla del estudio y en su calendario: no se usa para no tocar el calendario equivocado.
+  if (b.calendarId) return json({ error: "Esta grabación se cambia desde el hub de Doppel o escribiéndole a Domingo." }, 409);
   if (!isAdmin && !isModifiable(b.start)) {
     return json({ error: "Ya no se puede reagendar (menos de 36 horas para la grabación)." }, 409);
   }

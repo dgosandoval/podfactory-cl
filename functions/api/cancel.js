@@ -21,12 +21,13 @@ export async function onRequestPost({ request, env }) {
   const esHub = env.PORTAL_INTAKE_SECRET && request.headers.get("x-intake-secret") === env.PORTAL_INTAKE_SECRET;
   // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
   if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
-  if (!isAdmin && !esFlex(b.tipo) && !isModifiable(b.start)) {
+  // Las grabaciones de Doppel (calendario de Domingo) las gestiona Domingo desde el hub: la regla de 36 h es de Pod Factory y no les aplica.
+  if (!isAdmin && !(esHub && b.calendarId) && !esFlex(b.tipo) && !isModifiable(b.start)) {
     return json({ error: "Ya no se puede cancelar (menos de 36 horas para la grabación)." }, 409);
   }
 
   try {
-    await deleteEvent(env, b.eventId);
+    await deleteEvent(env, b.eventId, b.calendarId); // calendarId: solo las reservas de Doppel (calendario de Domingo); el resto, el del estudio
   } catch (e) {
     return json({ error: "No se pudo cancelar, intenta de nuevo", detail: String(e) }, 502);
   }

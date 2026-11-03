@@ -28,6 +28,10 @@ WHATSAPP_PHONE = "56927970014"   # para el link de WhatsApp en los correos
 # Integración con el portal de clientes (doppel-clientes), vía clientes.podfactory.cl.
 # Se activa al cargar el secret PORTAL_INTAKE_SECRET (= INTAKE_SECRET del portal).
 PORTAL_INTAKE_URL = "https://clientes.podfactory.cl/api/intake/podfactory"
+# Calendario PERSONAL de Domingo para las grabaciones de Doppel (brand "doppel" en /api/portal/schedule). Con esta variable, Doppel revisa
+# choques y crea el evento ahí (no en el calendario del estudio). REQUISITO: compartir ese calendario con el service account
+# (GOOGLE_SA_KEY → client_email) con permiso «Hacer cambios en eventos». Sin la variable, Doppel sigue usando el calendario del estudio.
+# DOPPEL_CALENDAR_ID = "domingo@doppel.cl"
 # MOCK_AVAILABILITY = "1"       # descomenta para probar sin Google Calendar
 
 # --- KV: holds temporales de reservas en pago (Fase 2) ---

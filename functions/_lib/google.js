@@ -49,27 +49,30 @@ async function getAccessToken(sa) {
 }
 
 // Intervalos ocupados (eventos + bloqueos manuales) entre dos instantes.
-export async function getBusy(env, timeMinISO, timeMaxISO) {
+// `calendarId` opcional: por defecto el calendario del estudio (GOOGLE_CALENDAR_ID).
+export async function getBusy(env, timeMinISO, timeMaxISO, calendarId) {
+  const calId = calendarId || env.GOOGLE_CALENDAR_ID;
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
   const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ timeMin: timeMinISO, timeMax: timeMaxISO, items: [{ id: env.GOOGLE_CALENDAR_ID }] }),
+    body: JSON.stringify({ timeMin: timeMinISO, timeMax: timeMaxISO, items: [{ id: calId }] }),
   });
   if (!res.ok) throw new Error(`freeBusy error: ${res.status} ${await res.text()}`);
   const json = await res.json();
-  const cal = json.calendars?.[env.GOOGLE_CALENDAR_ID];
+  const cal = json.calendars?.[calId];
   return (cal?.busy || []).map((b) => ({ start: b.start, end: b.end }));
 }
 
 // Crea el evento de reserva confirmada (Fase 2, tras el pago).
 // `id` opcional = idempotencia: si ya existe un evento con ese id, Google
 // responde 409 y lanzamos "DUPLICATE_EVENT" (lo usa el webhook anti-duplicado).
-export async function createEvent(env, { id, summary, description, startISO, endISO, timeZone, status, colorId }) {
+// `calendarId` opcional: por defecto el calendario del estudio.
+export async function createEvent(env, { id, summary, description, startISO, endISO, timeZone, status, colorId, calendarId }) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events`;
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId || env.GOOGLE_CALENDAR_ID)}/events`;
   const res = await fetch(url, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -89,10 +92,10 @@ export async function createEvent(env, { id, summary, description, startISO, end
 }
 
 // Mueve un evento existente a un nuevo horario (reagendar).
-export async function patchEvent(env, eventId, { startISO, endISO, timeZone }) {
+export async function patchEvent(env, eventId, { startISO, endISO, timeZone, calendarId }) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId || env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
   const res = await fetch(url, {
     method: "PATCH",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -103,10 +106,11 @@ export async function patchEvent(env, eventId, { startISO, endISO, timeZone }) {
 }
 
 // Borra un evento (cancelar). Trata 404/410 como éxito (ya no existe).
-export async function deleteEvent(env, eventId) {
+// `calendarId` opcional: el calendario donde se creó (reservas de Doppel → calendario de Domingo); por defecto el del estudio.
+export async function deleteEvent(env, eventId, calendarId) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);
   const token = await getAccessToken(sa);
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId || env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
   const res = await fetch(url, { method: "DELETE", headers: { authorization: `Bearer ${token}` } });
   if (!res.ok && res.status !== 404 && res.status !== 410) {
     throw new Error(`deleteEvent error: ${res.status} ${await res.text()}`);
@@ -151,4 +155,27 @@ export async function confirmEvent(env, eventId, { summary, meet }) {
     if (g.ok) ev = await g.json();
   }
   return { event: ev, meetUrl: link(ev), meetError };
+}
+
+// Eventos de OTRO calendario (el personal de Domingo, para las grabaciones de Doppel) con título, para poder nombrar el choque.
+// Devuelve los eventos crudos de Google (el filtro de "qué ocupa" está en _lib/doppel-calendario.js). Si el calendario no está
+// compartido con la cuenta de servicio, Google responde 404/403: se lanza CalendarioNoCompartido (NUNCA se interpreta como "libre").
+export class CalendarioNoCompartido extends Error {}
+export async function listarEventosDe(env, calendarId, timeMinISO, timeMaxISO) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const items = [];
+  let pageToken;
+  do {
+    const params = new URLSearchParams({ timeMin: timeMinISO, timeMax: timeMaxISO, singleEvents: "true", orderBy: "startTime", maxResults: "250", ...(pageToken ? { pageToken } : {}) });
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`, { headers: { authorization: `Bearer ${token}` } });
+    if (res.status === 404 || res.status === 403) {
+      throw new CalendarioNoCompartido(`El calendario ${calendarId} no está compartido con ${sa.client_email} (Google respondió ${res.status}). Hay que compartirlo con permiso «Hacer cambios en eventos».`);
+    }
+    if (!res.ok) throw new Error(`listarEventosDe error: ${res.status} ${await res.text()}`);
+    const j = await res.json();
+    items.push(...(j.items || []));
+    pageToken = j.nextPageToken;
+  } while (pageToken);
+  return items;
 }

@@ -4,9 +4,15 @@
 // del estudio que usa la disponibilidad pública → una grabación de Doppel ocupa
 // el calendario y por lo tanto BLOQUEA las reservas de Pod Factory (y viceversa).
 // Es aditivo: no toca /api/reserve ni /api/availability.
+//
+// EXCEPCIÓN (Doppel): si env.DOPPEL_CALENDAR_ID está definido (p. ej. domingo@doppel.cl), las grabaciones de brand "doppel" NO usan el
+// calendario del estudio: se revisan contra el calendario personal de Domingo (choque con un evento → 409 que lo nombra; si coincide con la
+// misma grabación se puede reintentar con agendarIgual:true) y el evento se crea ahí. La reserva guarda `calendarId` para que cancelar /
+// reagendar actúen sobre ese mismo calendario. Sin la variable, Doppel sigue como siempre (calendario del estudio). Pod Factory no cambia.
 import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slots.js";
-import { getBusy, createEvent } from "../../_lib/google.js";
-import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
+import { getBusy, createEvent, listarEventosDe, CalendarioNoCompartido } from "../../_lib/google.js";
+import { normalizarEventos, evaluarGrabacionDoppel } from "../../_lib/doppel-calendario.js";
+import { newToken, saveBooking, getBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsAttachment, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
 import { salidaDe, deadlineDe, correosDe, minutosDe } from "../../_lib/email.js";
 
@@ -36,20 +42,41 @@ export async function onRequestPost({ request, env }) {
   const slot = { label: hhmm, start: new Date(startMs).toISOString(), end: new Date(startMs + mins * 60000).toISOString() };
   if (startMs <= Date.now()) return json({ error: "Ese horario ya pasó" }, 400);
 
-  // ¿El calendario del estudio está libre en ese rango, con REC_MARGEN min libres antes y después? (reservas PF +
-  // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
-  try {
-    const rp = recParams(env), margenMs = rp.margen * 60000;
-    const busy = await getBusy(env, new Date(startMs - margenMs).toISOString(), new Date(startMs + mins * 60000 + margenMs).toISOString());
-    if (env.HOLDS) {
-      const list = await env.HOLDS.list({ prefix: `hold:${date}:` });
-      const holds = await Promise.all(list.keys.map((k) => env.HOLDS.get(k.name, "json")));
-      for (const h of holds) if (h?.start && h?.end) busy.push({ start: h.start, end: h.end });
+  // Doppel con calendario propio (el de Domingo) o, como siempre, el calendario del estudio.
+  const calendarioDoppel = brand === "doppel" && env.DOPPEL_CALENDAR_ID ? String(env.DOPPEL_CALENDAR_ID) : null;
+  let agendadoIgual = false;
+
+  if (calendarioDoppel) {
+    // Choque contra lo que Domingo ya tiene (no se mira el estudio ni los holds de Pod Factory). Sin margen: el borde exacto está permitido.
+    // `reemplazaToken` (reagendar): el evento de la reserva que se está moviendo no cuenta como choque.
+    try {
+      const reemplaza = body.reemplazaToken ? await getBooking(env, String(body.reemplazaToken)) : null;
+      const ignorarId = reemplaza?.calendarId === calendarioDoppel ? reemplaza.eventId : null;
+      const items = await listarEventosDe(env, calendarioDoppel, new Date(startMs).toISOString(), new Date(startMs + mins * 60000).toISOString());
+      const eventos = normalizarEventos(items, config.timeZone);
+      const r = evaluarGrabacionDoppel({ startMs, endMs: startMs + mins * 60000, eventos, ignorarId, forzar: body.agendarIgual === true || body.agendarIgual === "1", timeZone: config.timeZone });
+      if (!r.ok) return json({ error: r.error, choques: r.choques, puedeAgendarIgual: r.puedeAgendarIgual }, 409);
+      agendadoIgual = !!r.igual;
+    } catch (e) {
+      if (e instanceof CalendarioNoCompartido) return json({ error: "No se pudo revisar el calendario de Domingo: " + e.message, detail: String(e) }, 502);
+      return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
     }
-    const choque = errorDeMargen(startMs, startMs + mins * 60000, busy, rp.margen);
-    if (choque) return json({ error: choque }, 409);
-  } catch (e) {
-    return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
+  } else {
+    // ¿El calendario del estudio está libre en ese rango, con REC_MARGEN min libres antes y después? (reservas PF +
+    // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
+    try {
+      const rp = recParams(env), margenMs = rp.margen * 60000;
+      const busy = await getBusy(env, new Date(startMs - margenMs).toISOString(), new Date(startMs + mins * 60000 + margenMs).toISOString());
+      if (env.HOLDS) {
+        const list = await env.HOLDS.list({ prefix: `hold:${date}:` });
+        const holds = await Promise.all(list.keys.map((k) => env.HOLDS.get(k.name, "json")));
+        for (const h of holds) if (h?.start && h?.end) busy.push({ start: h.start, end: h.end });
+      }
+      const choque = errorDeMargen(startMs, startMs + mins * 60000, busy, rp.margen);
+      if (choque) return json({ error: choque }, 409);
+    } catch (e) {
+      return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
+    }
   }
 
   const name = String(body.name || "").slice(0, 120) || projectName;
@@ -65,11 +92,17 @@ export async function onRequestPost({ request, env }) {
   const token = newToken();
   let eventId;
   try {
-    const ev = await createEvent(env, {
-      summary: `${emoji} ${marca}: ${projectName}`,
-      description: `Grabación agendada desde el portal (${marca}).\nProyecto: ${projectName}\nContacto: ${name}\nEmail: ${email || "—"}\nTel: ${phone || "—"}\nTipo: ${tipo} · Personas: ${personas}\nGestión: token ${token}`,
-      startISO: slot.start, endISO: slot.end, timeZone: config.timeZone,
-    });
+    const ev = await createEvent(env, calendarioDoppel
+      ? {
+        summary: `🎬 Grabación · ${projectName}`,
+        description: `Grabación de Doppel agendada desde el hub.\nProyecto: ${projectName}${body.projectUrl ? `\nProyecto en el hub: ${String(body.projectUrl).slice(0, 300)}` : ""}\nCliente: ${name}\nEmail: ${email || "—"}\nTel: ${phone || "—"}${agendadoIgual ? "\nAgendada igual: ya había un evento a esa hora en el calendario (la misma grabación)." : ""}\nGestión: token ${token}`,
+        startISO: slot.start, endISO: slot.end, timeZone: config.timeZone, calendarId: calendarioDoppel,
+      }
+      : {
+        summary: `${emoji} ${marca}: ${projectName}`,
+        description: `Grabación agendada desde el portal (${marca}).\nProyecto: ${projectName}\nContacto: ${name}\nEmail: ${email || "—"}\nTel: ${phone || "—"}\nTipo: ${tipo} · Personas: ${personas}\nGestión: token ${token}`,
+        startISO: slot.start, endISO: slot.end, timeZone: config.timeZone,
+      });
     eventId = ev.id;
   } catch (e) {
     return json({ error: "No se pudo crear el evento en el calendario", detail: String(e) }, 502);
@@ -80,6 +113,8 @@ export async function onRequestPost({ request, env }) {
     token, eventId, date, label: hhmm, start: slot.start, end: slot.end,
     name, email, phone, tipo, personas, addons: [], comentarios: "", deposit: 0,
     brand, projectName, source: "portal", reminded: false,
+    // Calendario donde vive el evento, SOLO si no es el del estudio (Doppel → calendario de Domingo): cancelar y reagendar lo usan.
+    ...(calendarioDoppel ? { calendarId: calendarioDoppel } : {}),
     // Grabaciones compradas en el portal: se cambian/cancelan SOLO en el portal (lleva la cuenta de capítulos).
     compraId: body.compraId || null, portalUrl: body.compraId && body.projectUrl ? String(body.projectUrl) : null,
   });
@@ -99,5 +134,5 @@ export async function onRequestPost({ request, env }) {
     } catch (e) { console.log("schedule email error:", String(e)); }
   }
 
-  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora });
+  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora, calendario: calendarioDoppel ? "doppel" : "estudio", ...(agendadoIgual ? { agendadoIgual: true } : {}) });
 }
