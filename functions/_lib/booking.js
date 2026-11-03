@@ -39,6 +39,12 @@ export async function listBookings(env) {
   return out;
 }
 
+// La reserva (si hay) vinculada a un evento de calendario: evita vincular el mismo evento a dos grabaciones.
+export async function bookingPorEvento(env, eventId) {
+  if (!eventId) return null;
+  return (await listBookings(env)).find((b) => b.eventId === eventId) || null;
+}
+
 // ¿Aún se puede cambiar la fecha? (al menos 36 h antes del inicio)
 export function isModifiable(startISO, nowMs = Date.now()) {
   return Date.parse(startISO) - nowMs >= MODIFY_WINDOW_MS;

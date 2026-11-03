@@ -179,3 +179,19 @@ export async function listarEventosDe(env, calendarId, timeMinISO, timeMaxISO) {
   } while (pageToken);
   return items;
 }
+
+// Agrega texto AL FINAL de la descripción de un evento (nunca borra ni cambia nada más). Solo para eventos cuyo organizador es el dueño del
+// calendario. Idempotente: si `texto` ya está en la descripción, no hace nada. Devuelve true si escribió.
+export async function agregarADescripcion(env, calendarId, eventId, descripcionActual, texto) {
+  if ((descripcionActual || "").includes(texto)) return false;
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ description: `${descripcionActual ? descripcionActual + "\n\n" : ""}${texto}` }),
+  });
+  if (!res.ok) throw new Error(`agregarADescripcion error: ${res.status} ${await res.text()}`);
+  return true;
+}

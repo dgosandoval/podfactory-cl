@@ -21,7 +21,7 @@ export async function onRequestGet({ request, env }) {
         const { fecha, hora } = formatSession(b.start, config.timeZone);
         // phone/confirmado/salida/minutos/estado/compraId: los usa el hub para los recordatorios por WhatsApp (48 h y 24 h).
         // salida = hora de término REAL (finDe descuenta el margen de las reservas postpago viejas), igual que en el correo.
-        return { name: b.name, email: b.email, phone: b.phone || "", start: b.start, end: b.end, fecha, hora, tipo: b.tipo, personas: b.personas, brand: b.brand || "podfactory", projectName: b.projectName || null, token: b.token,
+        return { name: b.name, email: b.email, phone: b.phone || "", start: b.start, end: b.end, fecha, hora, tipo: b.tipo, personas: b.personas, brand: b.brand || "podfactory", projectName: b.projectName || null, token: b.token, adoptado: !!b.adoptado,
           estado: b.estado || null, confirmado: !!b.confirmedAt, compraId: b.compraId || null, minutos: minutosDe(b.start, finDe(b)), salida: salidaDe(b.start, config.timeZone, finDe(b)) };
       });
   }

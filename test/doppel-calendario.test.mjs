@@ -1,4 +1,4 @@
-// Prueba de las grabaciones de Doppel en el calendario personal de Domingo (DOPPEL_CALENDAR_ID).
+// Prueba de las grabaciones de Doppel en el calendario personal de Domingo (DOPPEL_CALENDAR_ID): revisar, ADOPTAR el evento que ya existe, o crear.
 // Corre el código REAL de functions/ (schedule.js, cancel.js, reschedule.js, _lib/*) con Google y Resend SIMULADOS: no sale ninguna llamada de red,
 // no se crea ni se borra nada en ningún calendario. La clave del service account es una RSA generada al vuelo.
 // Uso:  node test/doppel-calendario.test.mjs      → imprime OK/FALLA por comprobación y termina en "TODO OK" (exit 0) o "HAY FALLAS" (exit 1).
@@ -7,7 +7,7 @@ import { onRequestPost as schedule } from "../functions/api/portal/schedule.js";
 import { onRequestPost as cancel } from "../functions/api/cancel.js";
 import { onRequestPost as reschedule } from "../functions/api/reschedule.js";
 import { getOffset, addDaysStr, todayIn } from "../functions/_lib/slots.js";
-import { normalizarEventos, evaluarGrabacionDoppel } from "../functions/_lib/doppel-calendario.js";
+import { normalizarEventos, decidirGrabacionDoppel } from "../functions/_lib/doppel-calendario.js";
 
 const resultados = [];
 const check = (nombre, ok, detalle = "") => { resultados.push(!!ok); console.log(`${ok ? "OK   " : "FALLA"} ${nombre}${!ok && detalle ? "  → " + detalle : ""}`); };
@@ -26,11 +26,11 @@ const HOLDS = {
   async delete(k) { kv.delete(k); },
   async list({ prefix }) { return { keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }; },
 };
-const envBase = { GOOGLE_SA_KEY: JSON.stringify(SA), GOOGLE_CALENDAR_ID: ESTUDIO, PORTAL_INTAKE_SECRET: SECRETO, TIMEZONE: "America/Santiago", HOLDS };
+const envBase = { RESEND_API_KEY: "k",  GOOGLE_SA_KEY: JSON.stringify(SA), GOOGLE_CALENDAR_ID: ESTUDIO, PORTAL_INTAKE_SECRET: SECRETO, TIMEZONE: "America/Santiago", HOLDS };
 const envDoppel = { ...envBase, DOPPEL_CALENDAR_ID: DOMINGO };
 
 // Google simulado. `cal[id]` = { eventos: [eventos de Google], busy: [freeBusy], noCompartido: bool }.
-let cal, log, sigId;
+let cal, log, sigId; const correos = [];
 function reiniciar() {
   kv.clear(); log = []; sigId = 1;
   cal = { [ESTUDIO]: { eventos: [], busy: [] }, [DOMINGO]: { eventos: [], busy: [] } };
@@ -39,6 +39,7 @@ globalThis.fetch = async (url, init = {}) => {
   url = String(url); const method = (init.method || "GET").toUpperCase();
   const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json" } });
   if (url === "https://oauth2.googleapis.com/token") return json({ access_token: "tok" });
+  if (url === "https://api.resend.com/emails") { correos.push(JSON.parse(init.body)); return json({ id: "r1" }); }
   let m;
   if (url.endsWith("/calendar/v3/freeBusy")) {
     const id = JSON.parse(init.body).items[0].id; log.push({ op: "freeBusy", cal: id });
@@ -56,7 +57,10 @@ globalThis.fetch = async (url, init = {}) => {
       log.push({ op: "crear", cal: id, body }); cal[id].eventos.push({ ...nuevo, start: body.start, end: body.end }); return json(nuevo);
     }
     if (method === "DELETE") { log.push({ op: "borrar", cal: id, evId }); return new Response(null, { status: 204 }); }
-    if (method === "PATCH") { log.push({ op: "patch", cal: id, evId }); return json({ id: evId }); }
+    if (method === "PATCH") {
+      const body = JSON.parse(init.body); log.push({ op: "patch", cal: id, evId, body });
+      const e = cal[id].eventos.find((x) => x.id === evId); if (e) Object.assign(e, body); return json({ id: evId });
+    }
   }
   throw new Error("fetch no simulado: " + method + " " + url);
 };
@@ -81,77 +85,114 @@ function escenarioJobStories() {
   cal[ESTUDIO].busy = [busyEstudio("13:45", "17:00")];
 }
 
-// 1. Doppel choca con el calendario de Domingo y NO mira el del estudio; el mensaje nombra el evento
+const ORG_AJENO = { email: "damian.yousef@beiersdorf.com" };
+const ORG_DOMINGO = { email: DOMINGO, self: true };
+
+// 1. ADOPCIÓN: la invitación de Beiersdorf (ajena) ya es esta grabación → se vincula, no se crea nada y no se toca
 escenarioJobStories();
-let r = await agendar(envDoppel, { brand: "doppel" });
-check("1a. Doppel 15:30 con la invitación de Beiersdorf: 409", r.status === 409, JSON.stringify(r));
-check("1b. el mensaje nombra el evento y su horario", r.j.error === "Choca con “Grabación Job Stories con Damian Yousef” 15:30–17:00", r.j.error);
-check("1c. como coincide con la misma grabación, ofrece «Agendar igual»", r.j.puedeAgendarIgual === true && r.j.choques?.[0]?.coincide === true);
-check("1d. no se miró el calendario del estudio ni se creó nada", tipos("freeBusy").length === 0 && !log.some((x) => x.cal === ESTUDIO) && tipos("crear").length === 0, JSON.stringify(log));
-check("1e. se consultó el calendario de Domingo", log.some((x) => x.op === "list" && x.cal === DOMINGO));
+cal[DOMINGO].eventos[1].organizer = ORG_AJENO; cal[DOMINGO].eventos[1].description = "Invitación del cliente";
+cal[DOMINGO].eventos[0].organizer = ORG_DOMINGO;
+let r = await agendar(envDoppel, { brand: "doppel", email: "damian@beiersdorf.com", sendEmail: true });
+check("1a. Job Stories 15:30 (80 min) con la invitación 15:30–17:00: 200 y adoptada", r.status === 200 && r.j.ok === true && r.j.adoptado === true && r.j.calendario === "doppel", JSON.stringify(r));
+check("1b. NO se creó ningún evento", tipos("crear").length === 0, JSON.stringify(log));
+check("1c. el evento ajeno no se tocó (ni PATCH ni DELETE)", tipos("patch").length === 0 && tipos("borrar").length === 0);
+check("1d. la respuesta trae título y hora real 15:30–17:00", r.j.evento?.titulo === "Grabación Job Stories con Damian Yousef" && r.j.evento.inicio === "15:30" && r.j.evento.fin === "17:00" && r.j.evento.organizadorPropio === false, JSON.stringify(r.j.evento));
+check("1e. start/end de la respuesta son los del evento (no los 80 min del formulario)", r.j.start === new Date(iso("15:30")).toISOString() && r.j.end === new Date(iso("17:00")).toISOString() && r.j.hora === "15:30", JSON.stringify(r.j));
+const adop = JSON.parse(kv.get("booking:" + r.j.token));
+check("1f. la reserva guarda eventId, calendarId, adoptado:true y la hora real", adop.eventId === "beiersdorf" && adop.calendarId === DOMINGO && adop.adoptado === true && adop.start === new Date(iso("15:30")).toISOString() && adop.end === new Date(iso("17:00")).toISOString() && adop.label === "15:30", JSON.stringify(adop));
+check("1g. no se miró el estudio", !log.some((x) => x.cal === ESTUDIO));
+check("1h. el correo al cliente lleva la hora del evento adoptado (salida 17:00)", correos.length === 1 && /17:00/.test(correos[0].html) && /15:30/.test(correos[0].html), correos[0]?.html?.slice(0, 200));
+const tokenAdoptada = r.j.token;
 
-// 2. «Agendar igual»: se crea en el calendario de Domingo, con título y enlace al proyecto, y la reserva recuerda el calendario
-r = await agendar(envDoppel, { brand: "doppel", agendarIgual: true });
-const creados = tipos("crear");
-check("2a. «Agendar igual» → 200 ok", r.status === 200 && r.j.ok === true && r.j.calendario === "doppel" && r.j.agendadoIgual === true, JSON.stringify(r));
-check("2b. el evento se creó en domingo@doppel.cl (y en ningún otro)", creados.length === 1 && creados[0].cal === DOMINGO);
-check("2c. título «🎬 Grabación · Job Stories»", creados[0]?.body.summary === "🎬 Grabación · Job Stories", creados[0]?.body.summary);
-check("2d. la descripción trae el enlace al proyecto", /https:\/\/clientes\.doppel\.cl\/project\/1023/.test(creados[0]?.body.description || ""));
-check("2e. horario 15:30–16:50 en la zona de Chile", creados[0]?.body.start.dateTime === new Date(iso("15:30")).toISOString() && creados[0]?.body.end.dateTime === new Date(iso("16:50")).toISOString(), JSON.stringify(creados[0]?.body.start));
-const tokenIgual = r.j.token;
-const reserva = JSON.parse(kv.get("booking:" + tokenIgual));
-check("2f. la reserva guarda calendarId = domingo@doppel.cl", reserva.calendarId === DOMINGO && reserva.brand === "doppel");
+// 1i. el mismo evento no se vincula a dos grabaciones
+r = await agendar(envDoppel, { brand: "doppel" });
+check("1i. vincular el mismo evento otra vez: 409 «ya está vinculado»", r.status === 409 && /ya está vinculado a otra grabación/.test(r.j.error), JSON.stringify(r));
 
-// 3. Un evento largo que solo se cruza (Andigital 09:00–14:00) NO se puede forzar: el servidor vuelve a comprobar
+// 2. Cancelar una adoptada: solo la desvincula
+log.length = 0;
+let c = await anular(envDoppel, tokenAdoptada);
+check("2a. cancelar una adoptada: 200, adoptado:true y NUNCA se borra el evento", c.status === 200 && c.j.adoptado === true && tipos("borrar").length === 0 && log.length === 0, JSON.stringify({ c, log }));
+check("2b. la reserva ya no existe en el hub y el evento sigue en el calendario", !kv.has("booking:" + tokenAdoptada) && cal[DOMINGO].eventos.some((e) => e.id === "beiersdorf"));
+
+// 3. Organizador PROPIO: se adopta y se agrega el enlace al final de la descripción, sin borrar nada
+escenarioJobStories();
+cal[DOMINGO].eventos[1].organizer = ORG_DOMINGO; cal[DOMINGO].eventos[1].description = "Mis notas de la grabación";
+r = await agendar(envDoppel, { brand: "doppel" });
+check("3a. adoptada y sin crear", r.status === 200 && r.j.adoptado === true && r.j.evento.organizadorPropio === true && tipos("crear").length === 0, JSON.stringify(r));
+const pat = tipos("patch");
+check("3b. un solo PATCH, solo de la descripción, con lo anterior intacto y el enlace al final", pat.length === 1 && pat[0].evId === "beiersdorf" && Object.keys(pat[0].body).join() === "description" && pat[0].body.description === "Mis notas de la grabación\n\nProyecto en el hub: https://clientes.doppel.cl/project/1023", JSON.stringify(pat));
+check("3c. el título y el horario no cambiaron", cal[DOMINGO].eventos[1].summary === "Grabación Job Stories con Damian Yousef" && r.j.evento.enlaceAgregado === true);
+await anular(envDoppel, r.j.token);
+r = await agendar(envDoppel, { brand: "doppel" });
+check("3d. al volver a vincular no se duplica el enlace (idempotente)", r.status === 200 && tipos("patch").length === 1 && r.j.evento.enlaceAgregado === false, JSON.stringify(tipos("patch")));
+
+// 4. Varios candidatos: se pide elegir; con vincularEventoId se vincula el elegido
+escenarioJobStories();
+cal[DOMINGO].eventos.push(ev("segundo", "Grabación Job Stories (backup)", "15:40", "17:00"));
+log.length = 0;
+r = await agendar(envDoppel, { brand: "doppel" });
+check("4a. dos eventos podrían ser la grabación: 409 con los dos candidatos", r.status === 409 && r.j.candidatos?.length === 2 && r.j.candidatos.map((x) => x.eventId).sort().join() === "beiersdorf,segundo" && /elige cuál vincular/.test(r.j.error), JSON.stringify(r));
+check("4b. cada candidato trae título y horario", r.j.candidatos.every((x) => x.titulo && /^\d\d:\d\d–\d\d:\d\d$/.test(x.horario)), JSON.stringify(r.j.candidatos));
+check("4c. no se creó nada", tipos("crear").length === 0 && tipos("patch").length === 0);
+r = await agendar(envDoppel, { brand: "doppel", vincularEventoId: "segundo" });
+check("4d. con vincularEventoId se adopta el elegido", r.status === 200 && r.j.adoptado === true && JSON.parse(kv.get("booking:" + r.j.token)).eventId === "segundo" && tipos("crear").length === 0, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel", vincularEventoId: "andigital" });
+check("4e. un vincularEventoId que no es candidato (Andigital) se rechaza", r.status === 409 && !r.j.candidatos && /ya no coincide/.test(r.j.error), JSON.stringify(r));
+
+// 5. Choque con otra cosa: 409 que lo nombra, sin forzar
 escenarioJobStories();
 r = await agendar(envDoppel, { brand: "doppel", start: "13:00", minutes: 60 });
-check("3a. 13:00 cruza Andigital: 409 que lo nombra", r.status === 409 && r.j.error === "Choca con “Andigital” 09:00–14:00", JSON.stringify(r));
-check("3b. no coincide: no ofrece «Agendar igual»", r.j.puedeAgendarIgual === false);
-r = await agendar(envDoppel, { brand: "doppel", start: "13:00", minutes: 60, agendarIgual: true });
-check("3c. aunque llegue agendarIgual:true, el servidor lo rechaza (409) y no crea nada", r.status === 409 && tipos("crear").length === 0, JSON.stringify(r));
-// 3d. mezcla: una que coincide y otra que no → no se puede forzar
-r = await agendar(envDoppel, { brand: "doppel", start: "13:40", minutes: 100, agendarIgual: true });
-check("3d. si choca con dos y solo una coincide, tampoco se fuerza", r.status === 409 && r.j.puedeAgendarIgual === false && /Andigital/.test(r.j.error), JSON.stringify(r));
+check("5a. 13:00 cruza Andigital: 409 que lo nombra", r.status === 409 && r.j.error === "Choca con “Andigital” 09:00–14:00" && !r.j.candidatos, JSON.stringify(r));
+check("5b. no queda ninguna forma de forzar (la respuesta no ofrece nada más)", r.j.puedeAgendarIgual === undefined && tipos("crear").length === 0);
+r = await agendar(envDoppel, { brand: "doppel", start: "13:00", minutes: 60, agendarIgual: true, vincularEventoId: "andigital" });
+check("5c. ni agendarIgual ni vincularEventoId fuerzan un choque", r.status === 409 && tipos("crear").length === 0, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel", start: "09:00", minutes: 60 });
+check("5d. un evento largo que solo empieza a la misma hora (Andigital 09:00–14:00 vs 09:00–10:00) NO se adopta", r.status === 409 && /Andigital/.test(r.j.error), JSON.stringify(r));
+// la invitación coincide pero hay además otra cosa que se cruza
+cal[DOMINGO].eventos.push(ev("otra", "Llamada con proveedor", "16:00", "16:30"));
+r = await agendar(envDoppel, { brand: "doppel" });
+check("5e. si además de la invitación se cruza otra cosa, es choque real y nombra la otra", r.status === 409 && r.j.error === "Choca con “Llamada con proveedor” 16:00–16:30", JSON.stringify(r));
 
-// 4. El calendario del estudio no bloquea a Doppel: 14:00–15:20 está libre en el de Domingo aunque Iván esté «en médico» 13:45–17:00
+// 6. Sin choque: se crea como siempre (el estudio ocupado no cuenta)
 escenarioJobStories();
 r = await agendar(envDoppel, { brand: "doppel", start: "14:00", minutes: 80 });
-check("4a. Doppel 14:00–15:20 (estudio ocupado por Iván, Domingo libre) → 200", r.status === 200 && r.j.calendario === "doppel", JSON.stringify(r));
-check("4b. el borde exacto no choca (termina 14:00 Andigital, empieza 14:00; termina 15:20 y la invitación empieza 15:30)", tipos("crear").length === 1);
-check("4c. el estudio no se tocó", !log.some((x) => x.cal === ESTUDIO));
+check("6a. libre en el calendario de Domingo (estudio ocupado por Iván): se crea en domingo@doppel.cl", r.status === 200 && !r.j.adoptado && r.j.calendario === "doppel" && tipos("crear").length === 1 && tipos("crear")[0].cal === DOMINGO, JSON.stringify(r));
+check("6b. título «🎬 Grabación · Job Stories» y enlace al proyecto", tipos("crear")[0].body.summary === "🎬 Grabación · Job Stories" && /clientes\.doppel\.cl\/project\/1023/.test(tipos("crear")[0].body.description));
+check("6c. la reserva creada guarda calendarId y NO adoptado", (() => { const b = JSON.parse(kv.get("booking:" + r.j.token)); return b.calendarId === DOMINGO && b.adoptado === undefined; })());
+check("6d. el estudio no se tocó", !log.some((x) => x.cal === ESTUDIO));
 escenarioJobStories();
 r = await agendar(envDoppel, { brand: "doppel", start: "14:00", minutes: 90 });
-check("4d. 14:00–15:30 termina justo cuando empieza la invitación: libre", r.status === 200, JSON.stringify(r));
+check("6e. 14:00–15:30 termina justo cuando empieza la invitación: libre (no choca ni adopta)", r.status === 200 && !r.j.adoptado && tipos("crear").length === 1, JSON.stringify(r));
 escenarioJobStories();
 r = await agendar(envDoppel, { brand: "doppel", start: "14:00", minutes: 100 });
-check("4e. 14:00–15:40 ya pisa 10 min la invitación: 409", r.status === 409 && /Job Stories/.test(r.j.error), JSON.stringify(r));
+check("6f. 14:00–15:40 pisa 10 min la invitación y no es la misma grabación: 409", r.status === 409 && /Job Stories/.test(r.j.error), JSON.stringify(r));
 
-// 5. Pod Factory sigue igual (aunque DOPPEL_CALENDAR_ID esté definido)
+// P. Pod Factory sigue igual (aunque DOPPEL_CALENDAR_ID esté definido)
 escenarioJobStories();
 r = await agendar(envDoppel, { brand: "podfactory", projectName: "Cap 1" });
-check("5a. PF 15:30 con el estudio ocupado: mismo 409 de siempre", r.status === 409 && r.j.error === "Ese horario ya está ocupado en el estudio.", JSON.stringify(r));
-check("5b. PF revisó el calendario del estudio (freeBusy) y NO el de Domingo", tipos("freeBusy").every((x) => x.cal === ESTUDIO) && tipos("freeBusy").length === 1 && !log.some((x) => x.cal === DOMINGO));
+check("Pa. PF 15:30 con el estudio ocupado: mismo 409 de siempre", r.status === 409 && r.j.error === "Ese horario ya está ocupado en el estudio.", JSON.stringify(r));
+check("Pb. PF revisó el calendario del estudio (freeBusy) y NO el de Domingo", tipos("freeBusy").every((x) => x.cal === ESTUDIO) && tipos("freeBusy").length === 1 && !log.some((x) => x.cal === DOMINGO));
 reiniciar();
 r = await agendar(envDoppel, { brand: "podfactory", projectName: "Cap 1", start: "18:00", minutes: 60 });
 const crP = tipos("crear");
-check("5c. PF libre: se crea en el calendario del estudio con el título de siempre", r.status === 200 && crP.length === 1 && crP[0].cal === ESTUDIO && crP[0].body.summary === "🎙️ Pod Factory: Cap 1", JSON.stringify(crP[0]));
-check("5d. la reserva de PF no lleva calendarId", JSON.parse(kv.get("booking:" + r.j.token)).calendarId === undefined && r.j.calendario === "estudio");
+check("Pc. PF libre: se crea en el calendario del estudio con el título de siempre", r.status === 200 && crP.length === 1 && crP[0].cal === ESTUDIO && crP[0].body.summary === "🎙️ Pod Factory: Cap 1", JSON.stringify(crP[0]));
+check("Pd. la reserva de PF no lleva calendarId", JSON.parse(kv.get("booking:" + r.j.token)).calendarId === undefined && r.j.calendario === "estudio");
 // 5e. un hold de pago de PF no afecta a Doppel pero sí a PF
 reiniciar();
 kv.set(`hold:${DIA}:16:00`, JSON.stringify({ start: new Date(iso("16:00")).toISOString(), end: new Date(iso("17:00")).toISOString() }));
 const rD = await agendar(envDoppel, { brand: "doppel", start: "16:00", minutes: 60 });
 const rP = await agendar(envDoppel, { brand: "podfactory", start: "16:00", minutes: 60 });
-check("5e. un hold de pago de PF bloquea a PF (409) pero no a Doppel (200)", rP.status === 409 && rD.status === 200, JSON.stringify({ rD, rP }));
+check("Pe. un hold de pago de PF bloquea a PF (409) pero no a Doppel (200)", rP.status === 409 && rD.status === 200, JSON.stringify({ rD, rP }));
 
-// 6. Sin DOPPEL_CALENDAR_ID, Doppel se comporta como antes (calendario del estudio)
+// S. Sin DOPPEL_CALENDAR_ID, Doppel se comporta como antes (calendario del estudio)
 escenarioJobStories();
 r = await agendar(envBase, { brand: "doppel" });
-check("6a. sin la variable, Doppel sigue chocando con el estudio (como hoy)", r.status === 409 && r.j.error === "Ese horario ya está ocupado en el estudio." && !log.some((x) => x.cal === DOMINGO), JSON.stringify(r));
+check("Sa. sin la variable, Doppel sigue chocando con el estudio (como hoy)", r.status === 409 && r.j.error === "Ese horario ya está ocupado en el estudio." && !log.some((x) => x.cal === DOMINGO), JSON.stringify(r));
 reiniciar();
 r = await agendar(envBase, { brand: "doppel", start: "12:00", minutes: 60 });
-check("6b. sin la variable y libre, el evento va al estudio con «🎬 Doppel: …»", r.status === 200 && tipos("crear")[0].cal === ESTUDIO && tipos("crear")[0].body.summary === "🎬 Doppel: Job Stories" && r.j.calendario === "estudio");
+check("Sb. sin la variable y libre, el evento va al estudio con «🎬 Doppel: …»", r.status === 200 && tipos("crear")[0].cal === ESTUDIO && tipos("crear")[0].body.summary === "🎬 Doppel: Job Stories" && r.j.calendario === "estudio");
 
-// 7. Eventos que NO ocupan: cancelado, «disponible», rechazado, ubicación de trabajo
+// E. Eventos que NO ocupan: cancelado, «disponible», rechazado, ubicación de trabajo
 reiniciar();
 cal[DOMINGO].eventos = [
   ev("a", "Cancelado", "15:30", "17:00", { status: "cancelled" }),
@@ -160,82 +201,91 @@ cal[DOMINGO].eventos = [
   ev("d", "Oficina", "15:30", "17:00", { eventType: "workingLocation" }),
 ];
 r = await agendar(envDoppel, { brand: "doppel" });
-check("7. cancelado / disponible / rechazado / ubicación de trabajo no bloquean", r.status === 200, JSON.stringify(r));
+check("E1. cancelado / disponible / rechazado / ubicación de trabajo no bloquean", r.status === 200, JSON.stringify(r));
 reiniciar();
-cal[DOMINGO].eventos = [ev("e", "Aceptado", "15:30", "17:00", { attendees: [{ self: true, responseStatus: "accepted" }] })];
+cal[DOMINGO].eventos = [ev("e", "Aceptado", "16:00", "17:00", { attendees: [{ self: true, responseStatus: "accepted" }] })];
 r = await agendar(envDoppel, { brand: "doppel" });
-check("7b. uno aceptado sí bloquea", r.status === 409 && /Aceptado/.test(r.j.error));
+check("Eb. uno aceptado sí bloquea", r.status === 409 && /Aceptado/.test(r.j.error));
 
-// 8. Evento de todo el día: bloquea, nunca se fuerza
+// T. Evento de todo el día: bloquea, nunca se fuerza
 reiniciar();
 cal[DOMINGO].eventos = [{ id: "v", summary: "Viaje a Lima", status: "confirmed", start: { date: DIA }, end: { date: addDaysStr(DIA, 1) } }];
-r = await agendar(envDoppel, { brand: "doppel", agendarIgual: true });
-check("8. todo el día: «Choca con “Viaje a Lima” (todo el día)» y no se fuerza", r.status === 409 && r.j.error === "Choca con “Viaje a Lima” (todo el día)" && r.j.puedeAgendarIgual === false, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel" });
+check("T1. todo el día: «Choca con “Viaje a Lima” (todo el día)» y no se adopta", r.status === 409 && r.j.error === "Choca con “Viaje a Lima” (todo el día)" && !r.j.candidatos, JSON.stringify(r));
 
-// 9. Calendario NO compartido con el service account: error explícito, jamás «libre»
+// N. Calendario NO compartido con el service account: error explícito, jamás «libre»
 reiniciar();
 cal[DOMINGO].noCompartido = true;
 r = await agendar(envDoppel, { brand: "doppel", start: "12:00", minutes: 60 });
-check("9a. calendario no compartido → 502 y NO se crea nada", r.status === 502 && tipos("crear").length === 0, JSON.stringify(r));
-check("9b. el mensaje dice qué hacer y nombra la cuenta de servicio", /no está compartido con reservas-bot@pod-factory-reservas\.iam\.gserviceaccount\.com/.test(r.j.error) && /Hacer cambios en eventos/.test(r.j.error), r.j.error);
+check("Na. calendario no compartido → 502 y NO se crea nada", r.status === 502 && tipos("crear").length === 0, JSON.stringify(r));
+check("Nb. el mensaje dice qué hacer y nombra la cuenta de servicio", /no está compartido con reservas-bot@pod-factory-reservas\.iam\.gserviceaccount\.com/.test(r.j.error) && /Hacer cambios en eventos/.test(r.j.error), r.j.error);
 
-// 10. Cancelar usa el mismo calendario con el que se creó
+// C. Cancelar usa el mismo calendario con el que se creó
 reiniciar();
 const rDop = await agendar(envDoppel, { brand: "doppel", start: "12:00", minutes: 60 });
 const rPf = await agendar(envDoppel, { brand: "podfactory", start: "18:00", minutes: 60 });
 log.length = 0;
-let c = await anular(envDoppel, rDop.j.token);
-check("10a. cancelar una grabación de Doppel borra el evento del calendario de Domingo", c.status === 200 && tipos("borrar").length === 1 && tipos("borrar")[0].cal === DOMINGO && tipos("borrar")[0].evId === rDop.j.eventId, JSON.stringify(log));
+c = await anular(envDoppel, rDop.j.token);
+check("Ca. cancelar una grabación de Doppel borra el evento del calendario de Domingo", c.status === 200 && tipos("borrar").length === 1 && tipos("borrar")[0].cal === DOMINGO && tipos("borrar")[0].evId === rDop.j.eventId, JSON.stringify(log));
 log.length = 0;
 c = await anular(envDoppel, rPf.j.token);
-check("10b. cancelar una de PF borra del estudio", c.status === 200 && tipos("borrar")[0].cal === ESTUDIO);
+check("Cb. cancelar una de PF borra del estudio", c.status === 200 && tipos("borrar")[0].cal === ESTUDIO);
 // reserva de Doppel vieja (antes del cambio, sin calendarId) → estudio
 reiniciar();
 kv.set("booking:viejo", JSON.stringify({ token: "viejo", eventId: "evViejo", brand: "doppel", start: new Date(Date.now() + 5 * 86400000).toISOString(), end: new Date(Date.now() + 5 * 86400000 + 3600000).toISOString(), tipo: "Podcast" }));
 c = await anular(envDoppel, "viejo");
-check("10c. una reserva de Doppel anterior al cambio (sin calendarId) se borra del estudio", c.status === 200 && tipos("borrar")[0].cal === ESTUDIO);
+check("Cc. una reserva de Doppel anterior al cambio (sin calendarId) se borra del estudio", c.status === 200 && tipos("borrar")[0].cal === ESTUDIO);
 // dentro de 36 h: la regla es de PF; Doppel desde el hub sí puede cancelar
 reiniciar();
 const pronto = { token: "pronto", eventId: "evP", calendarId: DOMINGO, brand: "doppel", start: new Date(Date.now() + 5 * 3600000).toISOString(), end: new Date(Date.now() + 6 * 3600000).toISOString(), tipo: "Podcast" };
 kv.set("booking:pronto", JSON.stringify(pronto));
 c = await anular(envDoppel, "pronto");
-check("10d. Doppel en menos de 36 h se puede cancelar desde el hub", c.status === 200 && tipos("borrar")[0].cal === DOMINGO, JSON.stringify(c));
+check("Cd. Doppel en menos de 36 h se puede cancelar desde el hub", c.status === 200 && tipos("borrar")[0].cal === DOMINGO, JSON.stringify(c));
 kv.set("booking:prontoPF", JSON.stringify({ ...pronto, token: "prontoPF", calendarId: undefined, brand: "podfactory" }));
 c = await anular(envDoppel, "prontoPF");
-check("10e. PF en menos de 36 h sigue bloqueado (409)", c.status === 409);
+check("Ce. PF en menos de 36 h sigue bloqueado (409)", c.status === 409);
 // sin el secreto del hub, una reserva de Doppel en menos de 36 h sigue protegida
 kv.set("booking:prontoX", JSON.stringify({ ...pronto, token: "prontoX" }));
 const rSin = await cancel({ request: new Request("https://podfactory.cl/api/cancel", { method: "POST", body: JSON.stringify({ id: "prontoX" }) }), env: envDoppel });
-check("10f. sin el secreto del hub (público) la regla de 36 h sigue aplicando", rSin.status === 409);
+check("Cf. sin el secreto del hub (público) la regla de 36 h sigue aplicando", rSin.status === 409);
 
-// 11. /api/reschedule (ruta pública del estudio) no mueve eventos de Doppel en el calendario equivocado
+// R. /api/reschedule (ruta pública del estudio) no mueve eventos de Doppel en el calendario equivocado
 reiniciar();
 kv.set("booking:pronto", JSON.stringify({ ...pronto, start: new Date(Date.now() + 10 * 86400000).toISOString() }));
 const rr = await reschedule({ request: new Request("https://podfactory.cl/api/reschedule", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "pronto", date: DIA, start: new Date(iso("10:00")).toISOString(), label: "10:00" }) }), env: envDoppel });
-check("11. reagendar por la ruta del estudio una reserva con calendarId: 409 y ninguna llamada a Google", rr.status === 409 && log.length === 0, JSON.stringify(log));
+check("R1. reagendar por la ruta del estudio una reserva con calendarId: 409 y ninguna llamada a Google", rr.status === 409 && log.length === 0, JSON.stringify(log));
 
-// 12. Reagendar desde el hub (agenda la nueva con reemplazaToken, después cancela la anterior): no choca consigo misma
+// 12. Reagendar
+// 12.1 una creada por el hub: el evento propio no choca consigo misma con reemplazaToken
 escenarioJobStories();
-r = await agendar(envDoppel, { brand: "doppel", agendarIgual: true });
-const original = r.j;
-r = await agendar(envDoppel, { brand: "doppel", start: "15:50", minutes: 80 });
-check("12a. mover 20 min SIN reemplazaToken choca con la grabación original", r.status === 409 && /Grabación Job Stories|Job Stories/.test(r.j.error), JSON.stringify(r));
-// el hub guarda el evento propio como parte del calendario de Domingo
-cal[DOMINGO].eventos = cal[DOMINGO].eventos.filter((e) => e.id !== "beiersdorf");
-const propio = cal[DOMINGO].eventos.find((e) => e.id === original.eventId);
-propio.start = { dateTime: new Date(iso("15:30")).toISOString() }; propio.end = { dateTime: new Date(iso("16:50")).toISOString() };
-r = await agendar(envDoppel, { brand: "doppel", start: "15:50", minutes: 80 });
-check("12a'. (control) sin reemplazaToken el evento propio sigue chocando", r.status === 409, JSON.stringify(r));
-r = await agendar(envDoppel, { brand: "doppel", start: "15:50", minutes: 80, reemplazaToken: original.token });
-check("12b. con reemplazaToken el evento propio se ignora → 200", r.status === 200 && tipos("crear").length === 2, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel", start: "14:00", minutes: 80 });
+const creada = r.j;
+r = await agendar(envDoppel, { brand: "doppel", start: "14:20", minutes: 70 });
+check("12a. mover 20 min SIN reemplazaToken choca con la creada por el hub", r.status === 409, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel", start: "14:20", minutes: 70, reemplazaToken: creada.token });
+check("12b. con reemplazaToken se ignora el evento propio → 200 (se crea el nuevo)", r.status === 200 && !r.j.adoptado && tipos("crear").length === 2, JSON.stringify(r));
 log.length = 0;
-c = await anular(envDoppel, original.token);
-check("12c. luego la anterior se cancela en el mismo calendario", c.status === 200 && tipos("borrar")[0].cal === DOMINGO && tipos("borrar")[0].evId === original.eventId);
-// reemplazaToken ajeno (de otro calendario) no ignora nada
+c = await anular(envDoppel, creada.token);
+check("12c. luego la anterior (creada por el hub) se borra de su calendario", c.status === 200 && tipos("borrar")[0].cal === DOMINGO && tipos("borrar")[0].evId === creada.eventId);
+// 12.2 una ADOPTADA: reagendar desvincula y agenda la nueva hora con la misma lógica
 escenarioJobStories();
-kv.set("booking:ajeno", JSON.stringify({ token: "ajeno", eventId: "beiersdorf", brand: "podfactory", start: new Date(Date.now() + 86400000).toISOString(), end: new Date(Date.now() + 90000000).toISOString() }));
-r = await agendar(envDoppel, { brand: "doppel", reemplazaToken: "ajeno" });
-check("12d. un reemplazaToken de una reserva del estudio no permite ignorar eventos de Domingo", r.status === 409, JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel" });
+const ad2 = r.j;
+r = await agendar(envDoppel, { brand: "doppel", start: "16:00", minutes: 80, reemplazaToken: ad2.token });
+check("12d. mover una adoptada a 16:00: el evento adoptado sigue en el calendario, así que choca (no se ignora)", r.status === 409 && /Choca con “Grabación Job Stories con Damian Yousef” 15:30–17:00/.test(r.j.error), JSON.stringify(r));
+r = await agendar(envDoppel, { brand: "doppel", start: "15:30", minutes: 80, reemplazaToken: ad2.token });
+check("12e. reagendar a la misma hora re-adopta el mismo evento (permitido con reemplazaToken)", r.status === 200 && r.j.adoptado === true && r.j.token !== ad2.token, JSON.stringify(r));
+log.length = 0;
+c = await anular(envDoppel, ad2.token);
+check("12f. y luego la anterior solo se desvincula: el evento NO se borra", c.status === 200 && c.j.adoptado === true && tipos("borrar").length === 0 && cal[DOMINGO].eventos.some((e) => e.id === "beiersdorf"));
+// 12.3 mover una adoptada a un hueco libre: se crea uno nuevo y el ajeno queda intacto
+escenarioJobStories();
+r = await agendar(envDoppel, { brand: "doppel" });
+const ad3 = r.j;
+r = await agendar(envDoppel, { brand: "doppel", start: "18:00", minutes: 60, reemplazaToken: ad3.token });
+check("12g. mover una adoptada a un hueco libre crea el evento nuevo", r.status === 200 && !r.j.adoptado && tipos("crear").length === 1 && tipos("crear")[0].cal === DOMINGO, JSON.stringify(r));
+c = await anular(envDoppel, ad3.token);
+check("12h. y desvincula la adoptada sin borrar el evento ajeno", c.status === 200 && tipos("borrar").length === 0 && cal[DOMINGO].eventos.some((e) => e.id === "beiersdorf"));
 
 // 13. Validaciones previas siguen: fecha pasada y secreto
 r = await agendar(envDoppel, { brand: "doppel", date: "2020-01-01" });
@@ -246,8 +296,8 @@ check("13b. secreto incorrecto → 403", rs.status === 403);
 // 14. Unitarias de la lógica pura
 const ev1 = normalizarEventos([ev("x", "A", "10:00", "11:00")], "America/Santiago");
 const t0 = Date.parse(iso("11:00")), t1 = Date.parse(iso("12:00"));
-check("14a. un evento que termina justo cuando empieza la grabación no choca", evaluarGrabacionDoppel({ startMs: t0, endMs: t1, eventos: ev1, timeZone: "America/Santiago" }).ok === true);
-check("14b. evento de otro día que cruza la medianoche se nombra con fecha", /^Choca con “Vuelo” \d+ \w+\.? \d\d:\d\d–\d\d:\d\d$/.test(evaluarGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error), evaluarGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error);
+check("14a. un evento que termina justo cuando empieza la grabación no choca", decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: ev1, timeZone: "America/Santiago" }).accion === "crear");
+check("14b. evento de otro día que cruza la medianoche se nombra con fecha", /^Choca con “Vuelo” \d+ \w+\.? \d\d:\d\d–\d\d:\d\d$/.test(decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error), decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error);
 
 const fallas = resultados.filter((x) => !x).length;
 console.log(`\n${resultados.length - fallas}/${resultados.length} comprobaciones OK`);

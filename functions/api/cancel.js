@@ -27,7 +27,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    await deleteEvent(env, b.eventId, b.calendarId); // calendarId: solo las reservas de Doppel (calendario de Domingo); el resto, el del estudio
+    // Adoptada (el evento ya estaba en el calendario de Domingo, p. ej. la invitación del cliente): solo se desvincula, NUNCA se borra un evento ajeno.
+    if (!b.adoptado) await deleteEvent(env, b.eventId, b.calendarId); // calendarId: solo las reservas de Doppel (calendario de Domingo); el resto, el del estudio
   } catch (e) {
     return json({ error: "No se pudo cancelar, intenta de nuevo", detail: String(e) }, 502);
   }
@@ -38,7 +39,7 @@ export async function onRequestPost({ request, env }) {
   // Aviso al cliente y al estudio — best-effort. Se puede silenciar con notify:false
   // (lo usa el portal al cancelar una grabación: el correo "Pod Factory" no aplica a Doppel).
   // Los datos de la reserva cancelada van en la respuesta: el hub los usa para avisar por WhatsApp (el registro ya no existe).
-  const datos = { ok: true, start: b.start, end: b.end, name: b.name, email: b.email, phone: b.phone || "", tipo: b.tipo, brand: b.brand || "podfactory", projectName: b.projectName || null };
+  const datos = { ok: true, start: b.start, end: b.end, name: b.name, email: b.email, phone: b.phone || "", tipo: b.tipo, brand: b.brand || "podfactory", projectName: b.projectName || null, adoptado: !!b.adoptado, eventoTitulo: b.eventoTitulo || null };
   if (body.notify === false) return json(datos);
   try {
     const { fecha, hora } = formatSession(b.start, config.timeZone);
