@@ -6,7 +6,7 @@ import { createEvent, confirmEvent, deleteEvent } from "./google.js";
 import { newToken, saveBooking, deleteBooking, manageUrl } from "./booking.js";
 import { SERVICES } from "./slots.js";
 import { toHub } from "./hub.js";
-import { sendEmail, studioRecipients, formatSession, customerEmailHtml, icsAttachment, whatsappLink,
+import { sendEmail, studioRecipients, formatSession, customerEmailHtml, icsReserva, correosDe, whatsappLink,
   solicitudRecibidaHtml, solicitudEstudioHtml, solicitudRechazadaHtml } from "./email.js";
 
 async function firma(env, token) {
@@ -73,13 +73,11 @@ export async function confirmarSolicitud(env, config, origin, b, meetManual) {
   const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
   try {
     if (b.email) await sendEmail(env, {
-      to: b.email,
+      to: correosDe(b.email),
       subject: b.tipo === "visita" ? "Tu visita a Pod Factory está confirmada 🎙️" : "Tu reunión con Pod Factory está confirmada 📹",
       html: customerEmailHtml({ name: b.name, fecha, hora, deposit: 0, address, tipo: b.tipo, meetUrl,
         manageUrl: manageUrl(origin, b.token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`) }),
-      attachments: [icsAttachment({ uid: b.token, start: b.start, end: b.end, summary: `${svc.label} · Pod Factory`,
-        location: b.tipo === "llamada" ? (meetUrl || "Videollamada") : address,
-        description: b.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)." : `Reunión por videollamada con el equipo de Pod Factory.${meetUrl ? ` Link: ${meetUrl}` : ""}` })],
+      attachments: [icsReserva(env, upd, { address, to: correosDe(b.email) })], // la solicitud ya confirmada recién ahora llega al calendario del cliente
     });
   } catch (e) { console.log("email confirmación solicitud error:", String(e)); }
   return { fecha, hora, meetUrl, meetError };

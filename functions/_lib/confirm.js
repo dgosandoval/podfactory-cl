@@ -6,7 +6,7 @@ import { createEvent } from "./google.js";
 import { newToken, saveBooking, manageUrl } from "./booking.js";
 import { SERVICES } from "./slots.js";
 import { toHub } from "./hub.js";
-import { sendEmail, studioRecipients, formatSession, customerEmailHtml, studioEmailHtml, icsAttachment, whatsappLink } from "./email.js";
+import { sendEmail, studioRecipients, formatSession, customerEmailHtml, studioEmailHtml, icsReserva, correosDe, whatsappLink } from "./email.js";
 
 // d = { tipo, start, end, date, label, name, email, phone, personas, comentarios, empresa,
 //       rut, razonSocial, giro, paid (CLP con IVA), paymentId, eventId? }
@@ -66,7 +66,7 @@ export async function confirmBooking(env, config, origin, d) {
     const address = d.tipo === "llamada" ? `Te llamamos al ${d.phone}` : (env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago");
     if (d.email) {
       await sendEmail(env, {
-        to: d.email,
+        to: correosDe(d.email),
         subject: d.tipo === "visita" ? "Tu visita a Pod Factory está confirmada 🎙️" : d.tipo === "llamada" ? "Tu llamada con Pod Factory está agendada 📞" : "Tu mini-piloto en Pod Factory está confirmado 🎙️",
         html: customerEmailHtml({
           name: d.name, fecha, hora, deposit: d.paid || 0, address, tipo: d.tipo,
@@ -74,10 +74,8 @@ export async function confirmBooking(env, config, origin, d) {
           whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
           portalUrl,
         }),
-        attachments: [icsAttachment({
-          uid: token, start: d.start, end: d.end, summary: `${svc.label} · Pod Factory`, location: address,
-          description: d.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)." : d.tipo === "llamada" ? `Llamada con Domingo e Iván de Pod Factory (15 minutos). Te llamamos al ${d.phone}.` : "Mini-piloto en Pod Factory: 10 minutos de grabación. Llega 10 minutos antes.",
-        })],
+        // Invitación REQUEST a los mismos correos del mensaje; el UID (token) es el que usarán reagendar y cancelar.
+        attachments: [icsReserva(env, { token, start: d.start, end: d.end, name: d.name, tipo: d.tipo, phone: d.phone }, { address, to: correosDe(d.email) })],
       });
     }
     if (env.STUDIO_EMAIL) {

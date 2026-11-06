@@ -5,7 +5,7 @@
 import { parseConfig, buildSlots, weekday, overlapsBusy, getOffset } from "../../_lib/slots.js";
 import { getBusy, createEvent } from "../../_lib/google.js";
 import { newToken, saveBooking, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, customerEmailHtml, icsAttachment, whatsappLink } from "../../_lib/email.js";
+import { sendEmail, formatSession, customerEmailHtml, icsReserva, correosDe, whatsappLink } from "../../_lib/email.js";
 import { salidaDe, deadlineDe, minutosDe } from "../../_lib/email.js";
 
 const json = (data, status = 200) =>
@@ -96,9 +96,9 @@ export async function onRequestPost({ request, env }) {
     try {
       const origin = new URL(request.url).origin;
       const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
-      const ics = icsAttachment({ uid: token, start: slot.start, end: slot.end, summary: "Sesión Pod Factory", location: address, description: `Tu sesión de grabación en Pod Factory (${tipo}, ${personas} personas).` });
+      const ics = icsReserva(env, { token, start: slot.start, end: slot.end, name, tipo, personas }, { address, to: correosDe(email) });
       await sendEmail(env, {
-        to: email,
+        to: correosDe(email),
         subject: "Tu reserva en Pod Factory está confirmada 🎙️",
         html: customerEmailHtml({ name, fecha, hora, deposit, address, salida: salidaDe(slot.start, config.timeZone, slot.end), minutos: minutosDe(slot.start, slot.end), deadline: deadlineDe(slot.start, config.timeZone), manageUrl: manageUrl(origin, token), whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`), portalUrl }),
         attachments: [ics],

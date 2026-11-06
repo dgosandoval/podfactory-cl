@@ -18,7 +18,7 @@ import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slo
 import { getBusy, createEvent, listarEventosDe, agregarADescripcion, CalendarioNoCompartido } from "../../_lib/google.js";
 import { normalizarEventos, decidirGrabacionDoppel, horaDe } from "../../_lib/doppel-calendario.js";
 import { newToken, saveBooking, getBooking, bookingPorEvento, manageUrl } from "../../_lib/booking.js";
-import { sendEmail, formatSession, icsAttachment, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
+import { sendEmail, formatSession, icsReserva, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
 import { salidaDe, deadlineDe, correosDe, minutosDe } from "../../_lib/email.js";
 
 const json = (data, status = 200) =>
@@ -151,7 +151,8 @@ export async function onRequestPost({ request, env }) {
     try {
       const origin = new URL(request.url).origin;
       const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
-      const ics = icsAttachment({ uid: token, start: slot.start, end: slot.end, summary: `Grabación ${marca}`, location: address, description: `Grabación de ${projectName} (${tipo}, ${personas} personas).` });
+      // Invitación REQUEST a los mismos correos del mensaje (UID = token: reagendar/cancelar actualizan este mismo evento en su calendario).
+      const ics = icsReserva(env, { token, start: slot.start, end: slot.end, name, tipo, personas, brand, projectName, source: "portal" }, { address, to: correosDe(email) });
       await sendEmail(env, {
         to: correosDe(email),
         subject: `Tu grabación de ${projectName} está agendada 🎬`,

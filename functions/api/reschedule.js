@@ -4,7 +4,7 @@
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
 import { getBusy, patchEvent } from "../_lib/google.js";
-import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml, correosDe } from "../_lib/email.js";
+import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml, icsReserva, correosDe } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -62,6 +62,8 @@ export async function onRequestPost({ request, env }) {
         to: correosDe(b.email),
         subject: "Tu reserva fue reagendada · Pod Factory",
         html: rescheduleEmailHtml({ name: b.name, fecha, hora, address, manageUrl: manageUrl(origin, b.token) }),
+        // Mismo UID que la invitación original, SEQUENCE mayor y las horas nuevas: el evento del cliente se MUEVE, no se duplica.
+        attachments: [icsReserva(env, updated, { address, to: correosDe(b.email), method: "REQUEST" })],
       });
     }
     if (env.STUDIO_EMAIL) {

@@ -5,7 +5,7 @@
 import { parseConfig, esFlex } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
 import { deleteEvent } from "../_lib/google.js";
-import { sendEmail, studioRecipients, formatSession, cancelEmailHtml, whatsappLink, correosDe } from "../_lib/email.js";
+import { sendEmail, studioRecipients, formatSession, cancelEmailHtml, whatsappLink, icsReserva, correosDe } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -47,6 +47,9 @@ export async function onRequestPost({ request, env }) {
       await sendEmail(env, {
         to: correosDe(b.email), subject: "Reserva cancelada · Pod Factory",
         html: cancelEmailHtml({ name: b.name, fecha, hora, portalUrl: b.portalUrl || null, whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva cancelada del ${fecha}:`) }),
+        // CANCEL con el mismo UID y SEQUENCE mayor: el evento del cliente queda cancelado. Una solicitud aún pendiente nunca llegó a su
+        // calendario (la invitación sale al confirmarla), así que no hay nada que cancelar.
+        attachments: b.estado === "pendiente" ? undefined : [icsReserva(env, b, { address: env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago", to: correosDe(b.email), method: "CANCEL" })],
       });
     }
     if (env.STUDIO_EMAIL) {

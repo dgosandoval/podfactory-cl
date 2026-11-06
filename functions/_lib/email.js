@@ -1,5 +1,6 @@
 // Envío de correos vía Resend (https://resend.com). Best-effort: si falla,
 // el llamador debe ignorarlo para no romper la confirmación de la reserva.
+import { SERVICES } from "./slots.js";
 
 export async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
   if (!env.RESEND_API_KEY) return { skipped: "RESEND_API_KEY no configurada" };
@@ -7,7 +8,7 @@ export async function sendEmail(env, { to, subject, html, replyTo, attachments }
     method: "POST",
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
     body: JSON.stringify({
-      from: env.FROM_EMAIL || "Pod Factory <reservas@podfactory.cl>",
+      from: env.FROM_EMAIL || FROM_POR_DEFECTO,
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
@@ -33,18 +34,97 @@ function b64(str) {
   return btoa(bin);
 }
 
-// Genera un .ics (iCalendar) para que el cliente agregue la sesión a su calendario.
-const icsDate = (iso) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-export function icsAttachment({ uid, start, end, summary, location, description }) {
-  const esc = (s) => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
-  const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pod Factory//Reservas//ES", "METHOD:PUBLISH",
-    "BEGIN:VEVENT", `UID:${uid}@podfactory.cl`, `DTSTAMP:${icsDate(start)}`,
+// ── Invitación de calendario (.ics) ──
+// Se manda como invitación REAL (METHOD:REQUEST) y no como archivo suelto (PUBLISH): así Gmail, Outlook y Apple Mail muestran la
+// tarjeta «Agregar al calendario» y, como el UID no cambia, un reagendo (REQUEST con SEQUENCE mayor) MUEVE el evento que el cliente ya
+// tiene y una cancelación (METHOD:CANCEL) lo marca cancelado, en vez de dejar eventos duplicados.
+const FROM_POR_DEFECTO = "Pod Factory <reservas@podfactory.cl>";
+// Solo la dirección del From: "Pod Factory <reservas@doppel.cl>" → "reservas@doppel.cl".
+export function fromEmail(env) {
+  const from = String((env && env.FROM_EMAIL) || FROM_POR_DEFECTO);
+  const m = from.match(/<([^<>\s]+@[^<>\s]+)>/);
+  if (m) return m[1];
+  return /^[^<>\s,]+@[^<>\s,]+$/.test(from.trim()) ? from.trim() : "reservas@podfactory.cl";
+}
+
+const icsDate = (iso) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+// Texto de propiedad (RFC 5545 §3.3.11): \ ; , y saltos de línea.
+const icsEsc = (s) => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\r\n|\r|\n/g, "\\n");
+// Valor de parámetro (CN): sin comillas ni saltos; entre comillas si lleva , ; :
+const icsParam = (s) => { const v = String(s || "").replace(/["\r\n]/g, " ").trim(); return /[,;:]/.test(v) ? `"${v}"` : v; };
+// Plegado (RFC 5545 §3.1): máx. 75 OCTETOS por línea (UTF-8, no caracteres); la continuación empieza con un espacio, que también cuenta.
+// Se recorre por code points para no partir nunca un carácter multibyte (tildes, emojis).
+const utf8 = new TextEncoder();
+export function icsPlegar(linea) {
+  if (utf8.encode(linea).length <= 75) return linea;
+  const partes = [];
+  let actual = "", n = 0, max = 75;
+  for (const ch of linea) {
+    const bytes = utf8.encode(ch).length;
+    if (n + bytes > max) { partes.push(actual); actual = ""; n = 0; max = 74; }
+    actual += ch; n += bytes;
+  }
+  partes.push(actual);
+  return partes.join("\r\n ");
+}
+
+// SEQUENCE sin estado: segundos desde 2026-01-01. Cada correo posterior (reagendo, cancelación) sale en un instante mayor, así que su
+// SEQUENCE es mayor que el de TODOS los anteriores sin guardar un contador por reserva (las reservas viejas no lo tienen, y KV no
+// incrementa de forma atómica). Los .ics antiguos (PUBLISH) no traían SEQUENCE = 0, y cualquier valor ≥1 los supera. Cabe en un entero de
+// 32 bits hasta el año 2094. Límite: dos cambios dentro del mismo segundo empatan (imposible en la práctica: cada uno es una acción humana).
+const SEQ_BASE_S = Date.UTC(2026, 0, 1) / 1000;
+export const icsSequence = (nowMs = Date.now()) => Math.max(1, Math.floor(nowMs / 1000) - SEQ_BASE_S);
+
+// Genera el adjunto de invitación. method: "REQUEST" (agenda o actualiza) | "CANCEL" (cancela). `to` = los mismos correos a los que
+// va el mensaje (un correo, varios separados por coma o arreglo): cada uno es un ATTENDEE. Sin `env`/`to` queda compatible con el uso antiguo.
+export function icsAttachment({ uid, start, end, summary, location, description, env, to, name, method = "REQUEST", sequence }) {
+  const cancel = method === "CANCEL";
+  const ahora = icsDate(new Date().toISOString());
+  const correos = (Array.isArray(to) ? to : String(to || "").split(",")).map((x) => String(x).trim()).filter(Boolean);
+  const lineas = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pod Factory//Reservas//ES", "CALSCALE:GREGORIAN", `METHOD:${method}`,
+    "BEGIN:VEVENT", `UID:${uid}@podfactory.cl`, `DTSTAMP:${ahora}`, `LAST-MODIFIED:${ahora}`, `SEQUENCE:${sequence ?? icsSequence()}`,
     `DTSTART:${icsDate(start)}`, `DTEND:${icsDate(end)}`,
-    `SUMMARY:${esc(summary)}`, `LOCATION:${esc(location)}`, `DESCRIPTION:${esc(description)}`,
+    `SUMMARY:${icsEsc(summary)}`, `LOCATION:${icsEsc(location)}`, `DESCRIPTION:${icsEsc(description)}`,
+    `STATUS:${cancel ? "CANCELLED" : "CONFIRMED"}`,
+    `ORGANIZER;CN=Pod Factory:mailto:${fromEmail(env)}`,
+    // Un solo destinatario con nombre → CN con el nombre; con varios, el CN es el propio correo.
+    ...correos.map((c) => `ATTENDEE;CN=${icsParam(correos.length === 1 && name ? name : c)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:${c}`),
     "END:VEVENT", "END:VCALENDAR",
-  ].join("\r\n");
-  return { filename: "reserva-podfactory.ics", content: b64(ics) };
+  ];
+  const ics = lineas.map(icsPlegar).join("\r\n") + "\r\n";
+  // content_type: el campo REST de Resend (el SDK de Node lo expone como contentType y lo envía como content_type).
+  return { filename: "invitacion.ics", content: b64(ics), content_type: `text/calendar; method=${method}` };
+}
+
+// Título, lugar y descripción del evento según la reserva. UNA sola fuente para la invitación inicial, el reagendo y la cancelación:
+// si cambiaran entre un correo y otro, el evento del cliente cambiaría de nombre al reagendar.
+export function icsDatosReserva(b, address) {
+  const svc = SERVICES[b.tipo];
+  if (svc) { // visita / reunión por videollamada / mini-piloto
+    const summary = `${svc.label} · Pod Factory`;
+    if (b.estado) { // solicitud confirmada por el equipo (trae el link de Meet)
+      return {
+        summary, location: b.tipo === "llamada" ? (b.meetUrl || "Videollamada") : address,
+        description: b.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)." : `Reunión por videollamada con el equipo de Pod Factory.${b.meetUrl ? ` Link: ${b.meetUrl}` : ""}`,
+      };
+    }
+    return { // reserva web (visita gratis / mini-piloto pagado)
+      summary, location: b.tipo === "llamada" ? `Te llamamos al ${b.phone}` : address,
+      description: b.tipo === "visita" ? "Visita al estudio Pod Factory (20 minutos)."
+        : b.tipo === "llamada" ? `Llamada con Domingo e Iván de Pod Factory (15 minutos). Te llamamos al ${b.phone}.`
+        : "Mini-piloto en Pod Factory: 10 minutos de grabación. Llega 10 minutos antes.",
+    };
+  }
+  if (b.source === "portal") { // agendada desde el portal / hub
+    return { summary: `Grabación ${b.brand === "podfactory" ? "Pod Factory" : "Doppel"}`, location: address, description: `Grabación de ${b.projectName} (${b.tipo}, ${b.personas} personas).` };
+  }
+  return { summary: "Sesión Pod Factory", location: address, description: `Tu sesión de grabación en Pod Factory (${b.tipo}, ${b.personas} personas).` }; // reserva manual (admin)
+}
+
+// Invitación completa de una reserva guardada. b = registro de la reserva (token, start, end, name, tipo...). to = destinatarios del correo.
+export function icsReserva(env, b, { address, to, method = "REQUEST" }) {
+  return icsAttachment({ uid: b.token, start: b.start, end: b.end, ...icsDatosReserva(b, address), env, to, name: b.name, method });
 }
 
 // Link wa.me con mensaje prellenado (o null si no hay número configurado).
