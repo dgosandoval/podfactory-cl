@@ -1,6 +1,6 @@
 // Envío de correos vía Resend (https://resend.com). Best-effort: si falla,
 // el llamador debe ignorarlo para no romper la confirmación de la reserva.
-import { SERVICES } from "./slots.js";
+import { SERVICES, esNocturno, TXT_RECARGO } from "./slots.js";
 
 export async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
   if (!env.RESEND_API_KEY) return { skipped: "RESEND_API_KEY no configurada" };
@@ -197,6 +197,7 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
         ${conHorario ? "" : `<li>Es <b>1 hora de estudio</b> desde la hora reservada, incluida la preparación. La hora corre aunque lleguen tarde.</li>`}
         <li>Pueden grabar <b>hasta 4 personas</b>. El capítulo dura de 20 a 40 minutos.</li>
         ${conHorario ? "" : `<li>Si la grabación se pasa de la hora y el estudio está libre, el tiempo extra se cobra en bloques de <b>30 minutos ($100.000 + IVA)</b>.</li>`}
+        ${conHorario ? "" : `<li>${TXT_RECARGO}</li>`}
         <li>Edición simple: color, sonido, logo, música y nombres en pantalla, con <b>1 ronda de cambios</b>. Entregamos en <b>5 días hábiles</b>.</li>
         <li>Los archivos entregados quedan para descargar <b>90 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
       </ul>
@@ -242,7 +243,7 @@ export const horarioBlock = (hora, salida, minutos = ESTUDIO_MIN) => `
       </tr></table>
       <p style="font-size:13px;line-height:1.5;margin:0;padding:10px 14px;background:#F5EBD6">
         Es <b>${duracionTxt(minutos)} de estudio</b>, incluida la preparación. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
-        Si la grabación se extiende, cada 30 minutos extra cuesta $100.000 + IVA, solo si el estudio está libre.
+        Si la grabación se extiende, cada 30 minutos extra cuesta $100.000 + IVA, solo si el estudio está libre.${esNocturno(hora) ? ` <b>${TXT_RECARGO}</b> Esta grabación empieza a las ${hora}.` : ""}
       </p>
     </div>`;
 export const perdidaBlock = (deadline) => `

@@ -4,7 +4,8 @@
 // /api/availability: días abiertos, bloques de grabación, ocupados del calendario + holds de pago.
 // Opcional: flex=1&minutos=N (20–480; por defecto slotMinutes) → inicios dinámicos de grabación (cada REC_STEP min,
 // con REC_MARGEN min libres antes y después de cualquier ocupado) en vez de la grilla fija. Sin flex, igual que siempre.
-import { parseConfig, getOffset, availabilityForDate, recParams, recSlots } from "../_lib/slots.js";
+// Con flex, los inicios desde las 19:00 traen `recargo` (neto) y la respuesta trae `recargoNocturno: { desde, neto }` (ver RECARGO_NOCTURNO en slots.js).
+import { parseConfig, getOffset, availabilityForDate, recParams, recSlots, RECARGO_NOCTURNO } from "../_lib/slots.js";
 import { getBusy } from "../_lib/google.js";
 
 const json = (data, status = 200) =>
@@ -39,7 +40,7 @@ export async function onRequestGet({ request, env }) {
     }
     if (flex) {
       const nowMs = Date.now();
-      return json({ from, to, flex: true, minutos, margen: rp.margen, step: rp.step, days: dias.map((date) => recSlots(date, config, busy, nowMs, minutos, rp)) });
+      return json({ from, to, flex: true, minutos, margen: rp.margen, step: rp.step, recargoNocturno: RECARGO_NOCTURNO, days: dias.map((date) => recSlots(date, config, busy, nowMs, minutos, rp)) });
     }
     const now = new Date().toISOString();
     return json({ from, to, days: dias.map((date) => availabilityForDate(date, config, busy, now)) });

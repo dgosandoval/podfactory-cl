@@ -16,6 +16,13 @@ export function parseConfig(env) {
   };
 }
 
+// Recargo por horario nocturno (Domingo, 10-nov-2026): una grabación del estudio que EMPIEZA a las 19:00 o después (hora de Chile) cuesta $100.000 + IVA más (neto).
+// El precio lo cobra el hub (clientes.doppel.cl, RECARGO_NOCTURNO en src/compras.ts: Nueva grabación del equipo y reservas con pago posterior); aquí solo se MARCA en la
+// disponibilidad de grabaciones (availability-range?flex=1) y se avisa en los correos. No aplica a la visita, la reunión por Meet ni el mini-piloto de la web (no son capítulos).
+export const RECARGO_NOCTURNO = { desde: "19:00", neto: 100000 };
+export const esNocturno = (hhmm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim()); return !!m && +m[1] * 60 + +m[2] >= 19 * 60; };
+export const TXT_RECARGO = `Las grabaciones que empiezan a las 19:00 o después tienen un recargo de $${RECARGO_NOCTURNO.neto.toLocaleString("es-CL")} + IVA.`;
+
 // Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis).
 export const SERVICES = {
   visita: { key: "visita", label: "Visita al estudio", minutes: 30, price: 0, net: 0 },
@@ -175,7 +182,7 @@ export function margenChoca(startMs, endMs, busy, margenMin) {
 }
 
 // Inicios de grabación de un día para una duración de `minutes`. Misma forma que availabilityForDate:
-// { date, open, slots: [{ label, start, end, available }] }. Los no disponibles también se devuelven (available:false).
+// { date, open, slots: [{ label, start, end, available, recargo? }] }. Los no disponibles también se devuelven (available:false). `recargo` (neto, CLP) solo viene en los inicios desde las 19:00.
 export function recSlots(dateStr, config, busy, nowMs, minutes, p) {
   if (!config.openDays.includes(weekday(dateStr, config.timeZone))) return { date: dateStr, open: false, slots: [] };
   const off = getOffset(dateStr, config.timeZone);
@@ -184,7 +191,8 @@ export function recSlots(dateStr, config, busy, nowMs, minutes, p) {
     const label = hhmmDe(t);
     const startMs = Date.parse(`${dateStr}T${label}:00${off}`);
     const endMs = startMs + minutes * 60000;
-    slots.push({ label, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), available: startMs > nowMs && !margenChoca(startMs, endMs, busy, p.margen) });
+    slots.push({ label, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), available: startMs > nowMs && !margenChoca(startMs, endMs, busy, p.margen),
+      ...(esNocturno(label) ? { recargo: RECARGO_NOCTURNO.neto } : {}) });   // inicio desde las 19:00: lleva el recargo nocturno (neto)
   }
   return { date: dateStr, open: true, slots };
 }
