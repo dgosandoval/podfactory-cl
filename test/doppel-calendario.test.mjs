@@ -244,6 +244,12 @@ check("Cd. Doppel en menos de 36 h se puede cancelar desde el hub", c.status ===
 kv.set("booking:prontoPF", JSON.stringify({ ...pronto, token: "prontoPF", calendarId: undefined, brand: "podfactory" }));
 c = await anular(envDoppel, "prontoPF");
 check("Ce. PF en menos de 36 h sigue bloqueado (409)", c.status === 409);
+// el equipo (hub + porEquipo:true) SÍ puede cancelar una de PF en menos de 36 h; sin el flag o sin el secreto sigue bloqueado
+const cancelPorEquipo = async (token, headers, extra = {}) => { const r = await cancel({ request: new Request("https://podfactory.cl/api/cancel", { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify({ id: token, notify: false, ...extra }) }), env: envDoppel }); return { status: r.status }; };
+kv.set("booking:prontoPF2", JSON.stringify({ ...pronto, token: "prontoPF2", calendarId: undefined, brand: "podfactory" }));
+check("Cg. PF en menos de 36 h: hub SIN porEquipo sigue bloqueado (409)", (await cancelPorEquipo("prontoPF2", { "x-intake-secret": SECRETO })).status === 409);
+check("Ch. PF en menos de 36 h: porEquipo:true SIN el secreto del hub sigue bloqueado (409)", (await cancelPorEquipo("prontoPF2", {}, { porEquipo: true })).status === 409);
+check("Ci. PF en menos de 36 h: hub + porEquipo:true cancela (200)", (await cancelPorEquipo("prontoPF2", { "x-intake-secret": SECRETO }, { porEquipo: true })).status === 200);
 // sin el secreto del hub, una reserva de Doppel en menos de 36 h sigue protegida
 kv.set("booking:prontoX", JSON.stringify({ ...pronto, token: "prontoX" }));
 const rSin = await cancel({ request: new Request("https://podfactory.cl/api/cancel", { method: "POST", body: JSON.stringify({ id: "prontoX" }) }), env: envDoppel });

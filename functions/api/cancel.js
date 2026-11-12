@@ -22,7 +22,10 @@ export async function onRequestPost({ request, env }) {
   // Grabación comprada en el portal: el cambio va por el portal (si no, el hub no descuenta ni devuelve el capítulo).
   if (b.compraId && !esHub && !isAdmin) return json({ error: "Esta grabación se cambia o cancela desde tu portal de cliente.", portalUrl: b.portalUrl || null }, 409);
   // Las grabaciones de Doppel (calendario de Domingo) las gestiona Domingo desde el hub: la regla de 36 h es de Pod Factory y no les aplica.
-  if (!isAdmin && !(esHub && b.calendarId) && !esFlex(b.tipo) && !isModifiable(b.start)) {
+  // `porEquipo: true` (solo con el secreto del hub): el EQUIPO de Doppel/Pod Factory cancela o reagenda desde el hub aunque falten menos de 36 h
+  // (la regla de 36 h es solo para el cliente; el hub ya la aplica en sus rutas de cliente antes de llegar aquí).
+  const porEquipo = esHub && body.porEquipo === true;
+  if (!isAdmin && !porEquipo && !(esHub && b.calendarId) && !esFlex(b.tipo) && !isModifiable(b.start)) {
     return json({ error: "Ya no se puede cancelar (menos de 36 horas para la grabación)." }, 409);
   }
 
