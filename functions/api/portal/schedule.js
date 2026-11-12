@@ -14,12 +14,15 @@
 //   · otro choque      → 409 que lo nombra («Choca con “Andigital” 09:00–14:00»).
 // La reserva guarda `calendarId`: cancelar actúa sobre ese calendario (una adoptada solo se desvincula: NUNCA se borra el evento).
 // Sin la variable, Doppel sigue como siempre (calendario del estudio). Pod Factory no cambia.
+// Reagendar (`reemplazaToken`): en AMBOS calendarios el evento de la propia reserva que se mueve no cuenta como choque (mover 19:00 → 19:30 no
+// se rechaza por chocar consigo misma). En el del estudio, ver _lib/propia-reserva.js; lo demás (otras reservas, eventos de Iván, margen) sigue igual.
 import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slots.js";
-import { getBusy, createEvent, listarEventosDe, agregarADescripcion, CalendarioNoCompartido } from "../../_lib/google.js";
+import { createEvent, listarEventosDe, agregarADescripcion, CalendarioNoCompartido } from "../../_lib/google.js";
 import { normalizarEventos, decidirGrabacionDoppel, horaDe } from "../../_lib/doppel-calendario.js";
 import { newToken, saveBooking, getBooking, bookingPorEvento, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsReserva, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
 import { salidaDe, deadlineDe, correosDe, minutosDe } from "../../_lib/email.js";
+import { eventoPropioDelEstudio, busyDelEstudio } from "../../_lib/propia-reserva.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -87,7 +90,9 @@ export async function onRequestPost({ request, env }) {
     // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
     try {
       const rp = recParams(env), margenMs = rp.margen * 60000;
-      const busy = await getBusy(env, new Date(startMs - margenMs).toISOString(), new Date(startMs + mins * 60000 + margenMs).toISOString());
+      // `reemplazaToken` (reagendar): el evento de la propia reserva que se mueve NO cuenta (si no, 19:00 → 19:30 chocaba consigo misma).
+      const propio = await eventoPropioDelEstudio(env, body.reemplazaToken);
+      const busy = await busyDelEstudio(env, config.timeZone, new Date(startMs - margenMs).toISOString(), new Date(startMs + mins * 60000 + margenMs).toISOString(), propio);
       if (env.HOLDS) {
         const list = await env.HOLDS.list({ prefix: `hold:${date}:` });
         const holds = await Promise.all(list.keys.map((k) => env.HOLDS.get(k.name, "json")));

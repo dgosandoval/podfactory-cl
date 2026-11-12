@@ -45,6 +45,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (url === "https://api.resend.com/emails") { correos.push(JSON.parse(init.body)); return json({ id: "r" + correos.length }); }
   if (url.endsWith("/calendar/v3/freeBusy")) { const id = JSON.parse(init.body).items[0].id; return json({ calendars: { [id]: { busy: [] } } }); }
   if (/\/calendars\/[^/]+\/events/.test(url)) {
+    if (method === "GET") return json({ items: [] });   // reagendar lee los eventos del calendario (sin la propia reserva) en vez de freeBusy: calendario vacío
     if (method === "POST") return json({ id: "ev" + sigEvento++ });
     if (method === "PATCH") return json({ id: "ev" });
     if (method === "DELETE") return new Response(null, { status: 204 });

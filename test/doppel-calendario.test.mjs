@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { onRequestPost as schedule } from "../functions/api/portal/schedule.js";
 import { onRequestPost as cancel } from "../functions/api/cancel.js";
 import { onRequestPost as reschedule } from "../functions/api/reschedule.js";
-import { getOffset, addDaysStr, todayIn } from "../functions/_lib/slots.js";
+import { getOffset, addDaysStr, todayIn, weekday } from "../functions/_lib/slots.js";
 import { normalizarEventos, decidirGrabacionDoppel } from "../functions/_lib/doppel-calendario.js";
 
 const resultados = [];
@@ -304,6 +304,97 @@ const ev1 = normalizarEventos([ev("x", "A", "10:00", "11:00")], "America/Santiag
 const t0 = Date.parse(iso("11:00")), t1 = Date.parse(iso("12:00"));
 check("14a. un evento que termina justo cuando empieza la grabación no choca", decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: ev1, timeZone: "America/Santiago" }).accion === "crear");
 check("14b. evento de otro día que cruza la medianoche se nombra con fecha", /^Choca con “Vuelo” \d+ \w+\.? \d\d:\d\d–\d\d:\d\d$/.test(decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error), decidirGrabacionDoppel({ startMs: t0, endMs: t1, eventos: normalizarEventos([{ id: "n", summary: "Vuelo", start: { dateTime: iso("22:00").replace(DIA, addDaysStr(DIA, -1)) }, end: { dateTime: iso("12:30") } }], "America/Santiago"), timeZone: "America/Santiago" }).error);
+
+// 15. Reagendar una reserva del ESTUDIO (Pod Factory) a una hora que se superpone con la ACTUAL de la misma reserva (bug 12-nov-2026: 19:00 → 19:30
+//     se rechazaba con «Ese horario ya está ocupado en el estudio» porque el evento de la propia reserva seguía en el calendario).
+//     Aquí freeBusy se arma a partir de los eventos del calendario (como Google, juntando los que se tocan) para que el escenario sea el real.
+const juntar = (xs) => { const o = []; for (const x of [...xs].sort((a, b) => a.start.localeCompare(b.start))) { const u = o[o.length - 1]; if (u && Date.parse(x.start) <= Date.parse(u.end)) { if (x.end > u.end) u.end = x.end; } else o.push({ ...x }); } return o; };
+const sincronizarBusy = () => { cal[ESTUDIO].busy = juntar(cal[ESTUDIO].eventos.map((e) => ({ start: new Date(e.start.dateTime).toISOString(), end: new Date(e.end.dateTime).toISOString() }))); };
+const agendarPF = async (body) => { const x = await agendar(envBase, { brand: "podfactory", projectName: "Rentabilizate · Podcast", ...body }); sincronizarBusy(); return x; };
+const manual = (id, titulo, a, b) => { cal[ESTUDIO].eventos.push(ev(id, titulo, a, b)); sincronizarBusy(); };   // anotado a mano por Iván: sin reserva en KV
+
+// 15.1 el caso real: reserva de 60 min a las 19:00, mover a las 19:30
+reiniciar();
+r = await agendarPF({ start: "19:00", minutes: 60 });
+const propia = r.j;
+check("15a. la reserva de las 19:00 se creó en el calendario del estudio", r.status === 200 && tipos("crear").length === 1 && tipos("crear")[0].cal === ESTUDIO, JSON.stringify(r));
+r = await agendarPF({ start: "19:30", minutes: 60 });
+check("15b. sin reemplazaToken, 19:30 choca con la de las 19:00 (409, comportamiento de siempre)", r.status === 409 && /ocupado en el estudio/.test(r.j.error), JSON.stringify(r));
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: propia.token });
+check("15c. con reemplazaToken, 19:00 → 19:30 (se superpone con la propia): 200 y evento nuevo", r.status === 200 && r.j.token !== propia.token && r.j.hora === "19:30" && tipos("crear").length === 2, JSON.stringify(r));
+check("15d. la reserva nueva sigue siendo del estudio (sin calendarId) y la antigua NO se tocó aún (la libera /api/cancel)", JSON.parse(kv.get("booking:" + r.j.token)).calendarId === undefined && kv.has("booking:" + propia.token) && tipos("borrar").length === 0);
+// otras superposiciones con la propia: 18:30–19:30, 19:00–20:00 (misma hora) y 19:15–20:15 también valen
+for (const [ini, mins] of [["18:30", 60], ["19:00", 60], ["19:15", 90]]) {
+  reiniciar(); r = await agendarPF({ start: "19:00", minutes: 60 }); const p2 = r.j;
+  r = await agendarPF({ start: ini, minutes: mins, reemplazaToken: p2.token });
+  check(`15e. ${ini} (${mins} min) superpuesto con la propia 19:00–20:00 y reemplazaToken: 200`, r.status === 200, JSON.stringify(r));
+}
+
+// 15.2 sigue detectando OTRAS cosas: otra reserva, un evento puesto a mano por Iván, y el margen de 30 min
+reiniciar();
+r = await agendarPF({ start: "17:00", minutes: 60 }); const mia = r.j;                      // la que se mueve: 17:00–18:00
+r = await agendarPF({ start: "19:00", minutes: 60, projectName: "Otro cliente" }); const otra = r.j;   // otra reserva: 19:00–20:00
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: mia.token });
+check("15f. superponerse con OTRA reserva sigue rechazado (409) aunque se ignore la propia", r.status === 409 && /ocupado en el estudio/.test(r.j.error), JSON.stringify(r));
+r = await agendarPF({ start: "20:00", minutes: 60, reemplazaToken: mia.token });
+check("15g. pegado (0 min de margen) a OTRA reserva sigue rechazado: «muy pegado»", r.status === 409 && /muy pegado/.test(r.j.error), JSON.stringify(r));
+manual("ivan1", "Ivan: grabación de otro cliente", "15:00", "16:00");
+r = await agendarPF({ start: "15:30", minutes: 60, reemplazaToken: mia.token });
+check("15h. superponerse con un evento anotado a mano (sin reserva en KV) sigue rechazado (409)", r.status === 409 && /ocupado en el estudio/.test(r.j.error), JSON.stringify(r));
+r = await agendarPF({ start: "16:00", minutes: 60, reemplazaToken: mia.token });
+check("15i. pegado a un evento de Iván (sin margen de 30 min) sigue rechazado: «muy pegado»", r.status === 409 && /muy pegado/.test(r.j.error), JSON.stringify(r));
+r = await agendarPF({ start: "16:30", minutes: 60, reemplazaToken: mia.token });
+check("15j. con 30 min de margen respecto de Iván y de la propia: 200", r.status === 200, JSON.stringify(r));
+
+// 15.3 la propia reserva pegada a un evento ajeno (juntos en freeBusy): solo se libera lo de la propia
+reiniciar();
+r = await agendarPF({ start: "18:00", minutes: 60 }); const p3 = r.j;       // 18:00–19:00
+manual("ivan2", "Ivan: reunión", "19:00", "20:00");                          // contiguo: freeBusy los junta en 18:00–20:00
+r = await agendarPF({ start: "18:30", minutes: 60, reemplazaToken: p3.token });
+check("15k. mover 18:00 → 18:30 con Iván a las 19:00 (contiguo a la propia): 409 (el evento de Iván sigue contando)", r.status === 409, JSON.stringify(r));
+r = await agendarPF({ start: "17:00", minutes: 60, reemplazaToken: p3.token });
+check("15l. mover 18:00 → 17:00 (libera la propia; Iván queda a 2 h): 200", r.status === 200, JSON.stringify(r));
+
+// 15.4 reemplazaToken que no sirve para ignorar nada: inexistente, de otro calendario, adoptada
+reiniciar();
+r = await agendarPF({ start: "19:00", minutes: 60 });
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: "no-existe" });
+check("15m. reemplazaToken inexistente: no ignora nada (409)", r.status === 409, JSON.stringify(r));
+kv.set("booking:ajena", JSON.stringify({ token: "ajena", eventId: "ev1", calendarId: DOMINGO, start: new Date(iso("19:00")).toISOString() }));
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: "ajena" });
+check("15n. reemplazaToken de una reserva de OTRO calendario: no ignora el evento del estudio (409)", r.status === 409, JSON.stringify(r));
+kv.set("booking:adop", JSON.stringify({ token: "adop", eventId: "ev1", adoptado: true, start: new Date(iso("19:00")).toISOString() }));
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: "adop" });
+check("15o. reemplazaToken de una adoptada: su evento es ajeno y sigue contando (409)", r.status === 409, JSON.stringify(r));
+
+// 15.5 si no se puede leer el calendario del estudio, NUNCA se interpreta como libre
+reiniciar();
+r = await agendarPF({ start: "19:00", minutes: 60 }); const p5 = r.j;
+cal[ESTUDIO].noCompartido = true;
+log.length = 0;
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: p5.token });
+check("15p. el calendario del estudio no responde al reagendar: 502 y no se crea nada", r.status === 502 && tipos("crear").length === 0, JSON.stringify(r));
+
+// 15.6 flujo completo del hub (agenda la nueva → cancela la anterior con porEquipo): la nueva queda y la anterior desaparece
+reiniciar();
+r = await agendarPF({ start: "19:00", minutes: 60 }); const orig = r.j;
+r = await agendarPF({ start: "19:30", minutes: 60, reemplazaToken: orig.token }); const nueva = r.j;
+const cEq = await cancel({ request: new Request("https://podfactory.cl/api/cancel", { method: "POST", headers: { "content-type": "application/json", "x-intake-secret": SECRETO }, body: JSON.stringify({ id: orig.token, notify: false, porEquipo: true }) }), env: envBase });
+check("15q. luego /api/cancel (porEquipo) libera la anterior: borra SU evento y deja la nueva", cEq.status === 200 && tipos("borrar").length === 1 && tipos("borrar")[0].evId === orig.eventId && !kv.has("booking:" + orig.token) && kv.has("booking:" + nueva.token));
+
+// 15.7 cliente: /api/reschedule (Gestionar mi reserva), bloque de la grilla que se superpone solo con la propia reserva
+const habil = (() => { let d = addDaysStr(todayIn("America/Santiago"), 10); for (let i = 0; i < 7; i++) { if ([1, 2, 3, 4, 5].includes(weekday(d, "America/Santiago"))) return d; d = addDaysStr(d, 1); } })();
+const offH = getOffset(habil, "America/Santiago"), isoH = (hhmm) => `${habil}T${hhmm}:00${offH}`;
+const reschedulear = async (env, token, label) => { const rr2 = await reschedule({ request: new Request("https://podfactory.cl/api/reschedule", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: token, date: habil, start: new Date(isoH(label)).toISOString(), label }) }), env }); return { status: rr2.status, j: await rr2.json() }; };
+reiniciar();
+r = await agendar(envBase, { brand: "podfactory", date: habil, start: "17:00", minutes: 90 }); sincronizarBusy(); const mia2 = r.j;   // 17:00–18:30 (la grilla es 17:30–18:30)
+r = await reschedulear(envBase, mia2.token, "17:30");
+check("15r. cliente: mover al bloque 17:30 que solo se superpone con la propia reserva: 200 y se mueve el evento", r.status === 200 && r.j.ok === true && tipos("patch").length === 1 && tipos("patch")[0].evId === mia2.eventId, JSON.stringify({ r, log }));
+reiniciar();
+r = await agendar(envBase, { brand: "podfactory", date: habil, start: "17:00", minutes: 90 }); const mia3 = r.j;
+cal[ESTUDIO].eventos.push({ id: "otro", summary: "🎙️ Pod Factory: Otro", status: "confirmed", start: { dateTime: isoH("17:30") }, end: { dateTime: isoH("18:30") } }); sincronizarBusy();   // otra reserva en el bloque 17:30
+r = await reschedulear(envBase, mia3.token, "17:30");
+check("15s. cliente: si el bloque 17:30 lo ocupa OTRA reserva: sigue 409 «ya no está disponible»", r.status === 409 && /ya no está disponible/.test(r.j.error) && tipos("patch").length === 0, JSON.stringify({ r, log }));
 
 const fallas = resultados.filter((x) => !x).length;
 console.log(`\n${resultados.length - fallas}/${resultados.length} comprobaciones OK`);

@@ -3,7 +3,8 @@
 // El pago ya hecho se mantiene. No cobra de nuevo.
 import { parseConfig, configFor, buildSlots, weekday, overlapsBusy } from "../_lib/slots.js";
 import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/booking.js";
-import { getBusy, patchEvent } from "../_lib/google.js";
+import { patchEvent } from "../_lib/google.js";
+import { busyDelEstudio } from "../_lib/propia-reserva.js";
 import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml, icsReserva, correosDe } from "../_lib/email.js";
 
 const json = (data, status = 200) =>
@@ -41,7 +42,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Ese bloque está siendo reservado por otra persona. Elige otro." }, 409);
   }
   try {
-    const busy = await getBusy(env, slot.start, slot.end);
+    const busy = await busyDelEstudio(env, config.timeZone, slot.start, slot.end, b.eventId); // la propia reserva (su evento) no cuenta como ocupado
     if (overlapsBusy(slot, busy)) return json({ error: "Ese bloque ya no está disponible." }, 409);
     await patchEvent(env, b.eventId, { startISO: slot.start, endISO: slot.end, timeZone: config.timeZone });
   } catch (e) {
