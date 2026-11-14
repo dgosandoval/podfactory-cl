@@ -118,6 +118,19 @@ export async function deleteEvent(env, eventId, calendarId) {
   return true;
 }
 
+// Un evento del calendario del estudio por id (para vincular a una grabación un evento que alguien anotó a mano). null si no existe o fue borrado.
+// Cualquier otro error (red, permisos) se lanza: NUNCA se interpreta como «no existe».
+export async function getEvent(env, eventId, calendarId) {
+  const sa = JSON.parse(env.GOOGLE_SA_KEY);
+  const token = await getAccessToken(sa);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId || env.GOOGLE_CALENDAR_ID)}/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw new Error(`getEvent error: ${res.status} ${await res.text()}`);
+  const ev = await res.json();
+  return ev && ev.status !== "cancelled" ? ev : null;
+}
+
 // Eventos del calendario del estudio entre dos instantes (para el panel del estudio en el hub).
 export async function listEvents(env, timeMinISO, timeMaxISO) {
   const sa = JSON.parse(env.GOOGLE_SA_KEY);

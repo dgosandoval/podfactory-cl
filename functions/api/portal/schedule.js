@@ -14,10 +14,15 @@
 //   · otro choque      → 409 que lo nombra («Choca con “Andigital” 09:00–14:00»).
 // La reserva guarda `calendarId`: cancelar actúa sobre ese calendario (una adoptada solo se desvincula: NUNCA se borra el evento).
 // Sin la variable, Doppel sigue como siempre (calendario del estudio). Pod Factory no cambia.
+// Pod Factory, dos opciones SOLO para el hub (llevan el secreto del hub, como todo este endpoint):
+//   · vincularEventoId: el evento ya existe en el calendario del estudio (lo anotó a mano alguien del equipo). NO se crea otro: se guarda la reserva
+//     apuntando a ese evento, con la hora REAL del evento (también si ya pasó). Un evento no se vincula a dos reservas. Cancelar o reagendar esa
+//     reserva borra o mueve ESE evento, como en cualquier reserva del hub (se vinculó justamente para que el hub la gestione).
+//   · forzar: true → no se rechaza por choque ni por el margen de 30 min (el equipo decide agendar encima de otra cosa, con confirmación en el hub).
 // Reagendar (`reemplazaToken`): en AMBOS calendarios el evento de la propia reserva que se mueve no cuenta como choque (mover 19:00 → 19:30 no
 // se rechaza por chocar consigo misma). En el del estudio, ver _lib/propia-reserva.js; lo demás (otras reservas, eventos de Iván, margen) sigue igual.
 import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slots.js";
-import { createEvent, listarEventosDe, agregarADescripcion, CalendarioNoCompartido } from "../../_lib/google.js";
+import { createEvent, listarEventosDe, agregarADescripcion, getEvent, CalendarioNoCompartido } from "../../_lib/google.js";
 import { normalizarEventos, decidirGrabacionDoppel, horaDe } from "../../_lib/doppel-calendario.js";
 import { newToken, saveBooking, getBooking, bookingPorEvento, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, icsReserva, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
@@ -37,18 +42,34 @@ export async function onRequestPost({ request, env }) {
 
   const brand = body.brand === "podfactory" ? "podfactory" : "doppel";
   const projectName = String(body.projectName || "").slice(0, 120) || "Grabación";
-  const date = String(body.date || "");
-  const start = String(body.start || "");
+  // Vincular un evento que ya existe en el calendario del estudio (solo Pod Factory): la fecha y la hora salen del propio evento.
+  const vincularId = brand === "podfactory" && body.vincularEventoId ? String(body.vincularEventoId) : null;
+  let vinculado = null;
+  if (vincularId) {
+    if (!/^[A-Za-z0-9_@.-]{1,200}$/.test(vincularId)) return json({ error: "Id de evento inválido" }, 400);
+    try {
+      const ev = await getEvent(env, vincularId);
+      if (!ev) return json({ error: "Ese evento ya no está en el calendario del estudio." }, 404);
+      if (!ev.start?.dateTime || !ev.end?.dateTime) return json({ error: "Ese evento es de todo el día: no se puede vincular a una grabación." }, 400);
+      const otra = await bookingPorEvento(env, ev.id);
+      if (otra && otra.token !== body.reemplazaToken) return json({ error: "Ese evento ya está vinculado a otra reserva del hub." }, 409);
+      vinculado = ev;
+    } catch (e) { return json({ error: "No se pudo leer el evento del calendario", detail: String(e) }, 502); }
+  }
+  const dFmt = new Intl.DateTimeFormat("en-CA", { timeZone: config.timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  const hFmt = new Intl.DateTimeFormat("en-GB", { timeZone: config.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const date = vinculado ? dFmt.format(new Date(vinculado.start.dateTime)) : String(body.date || "");
+  const start = vinculado ? hFmt.format(new Date(vinculado.start.dateTime)) : String(body.start || "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Fecha inválida (YYYY-MM-DD)" }, 400);
   if (!/^\d{1,2}:\d{2}$/.test(start)) return json({ error: "Hora inválida (HH:MM)" }, 400);
 
   const hhmm = start.padStart(5, "0");
   const offset = getOffset(date, config.timeZone);
-  const startMs = Date.parse(`${date}T${hhmm}:00${offset}`);
+  const startMs = vinculado ? Date.parse(vinculado.start.dateTime) : Date.parse(`${date}T${hhmm}:00${offset}`);
   if (isNaN(startMs)) return json({ error: "Fecha/hora inválida" }, 400);
-  const mins = Math.min(480, Math.max(20, parseInt(body.minutes, 10) || config.slotMinutes));
+  const mins = vinculado ? Math.max(1, Math.round((Date.parse(vinculado.end.dateTime) - startMs) / 60000)) : Math.min(480, Math.max(20, parseInt(body.minutes, 10) || config.slotMinutes));
   let slot = { label: hhmm, start: new Date(startMs).toISOString(), end: new Date(startMs + mins * 60000).toISOString() };
-  if (startMs <= Date.now()) return json({ error: "Ese horario ya pasó" }, 400);
+  if (startMs <= Date.now() && !vinculado) return json({ error: "Ese horario ya pasó" }, 400);
 
   // Doppel con calendario propio (el de Domingo) o, como siempre, el calendario del estudio.
   const calendarioDoppel = brand === "doppel" && env.DOPPEL_CALENDAR_ID ? String(env.DOPPEL_CALENDAR_ID) : null;
@@ -85,6 +106,8 @@ export async function onRequestPost({ request, env }) {
       if (e instanceof CalendarioNoCompartido) return json({ error: "No se pudo revisar el calendario de Domingo: " + e.message, detail: String(e) }, 502);
       return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
     }
+  } else if (vinculado || body.forzar === true) {
+    // Vinculado: el evento ya ocupa ese horario (es esta misma reserva). Forzar: el equipo decidió agendar aunque choque (confirmación en el hub).
   } else {
     // ¿El calendario del estudio está libre en ese rango, con REC_MARGEN min libres antes y después? (reservas PF +
     // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
@@ -119,6 +142,13 @@ export async function onRequestPost({ request, env }) {
   let eventId;
   if (adoptado) {
     eventId = adoptado.evento.id; // ya existe: no se crea nada
+  } else if (vinculado) {
+    eventId = vinculado.id; // ya existe en el calendario del estudio: se vincula, no se crea otro
+    // Trazabilidad (mejor esfuerzo): el enlace a la jornada al final de la descripción, sin borrar nada.
+    if (body.projectUrl) {
+      try { await agregarADescripcion(env, env.GOOGLE_CALENDAR_ID, vinculado.id, vinculado.description || "", `Jornada en el hub: ${String(body.projectUrl).slice(0, 300)}`); }
+      catch (e) { console.log("schedule: no se pudo agregar el enlace al evento vinculado:", String(e)); }
+    }
   } else {
     try {
       const ev = await createEvent(env, calendarioDoppel
@@ -167,6 +197,6 @@ export async function onRequestPost({ request, env }) {
     } catch (e) { console.log("schedule email error:", String(e)); }
   }
 
-  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora, calendario: calendarioDoppel ? "doppel" : "estudio",
+  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora, calendario: calendarioDoppel ? "doppel" : "estudio", ...(vinculado ? { vinculado: true, evento: { titulo: vinculado.summary || "", id: vinculado.id } } : {}),
     ...(adoptado ? { adoptado: true, evento: { titulo: adoptado.evento.titulo, inicio: horaDe(adoptado.evento.start, config.timeZone), fin: horaDe(adoptado.evento.end, config.timeZone), organizadorPropio: adoptado.evento.organizadorPropio, enlaceAgregado: adoptado.enlaceAgregado } } : {}) });
 }

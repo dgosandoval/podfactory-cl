@@ -54,7 +54,8 @@ export async function onRequestGet({ request, env }) {
       creador: (e.creator && e.creator.email) || null,
       dia: fKey.format(d), diaLabel: fDia.format(d),
       hora: allDay ? "Todo el día" : fHora.format(d), horaFin: end ? fHora.format(new Date(end)) : null,
-      reserva: b ? { tipo: b.tipo, name: b.name, email: b.email, phone: b.phone, personas: b.personas, empresa: b.empresa || "", pagado: b.deposit || 0, comentarios: b.comentarios || "", confirmada: b.confirmedAt ? (b.confirmedVia || "sí") : null } : null,
+      // token / compraId / adoptado: el hub enlaza cada evento con su jornada por el token de la reserva (no por la hora exacta).
+      reserva: b ? { token: b.token, compraId: b.compraId || null, tipo: b.tipo, name: b.name, email: b.email, phone: b.phone, personas: b.personas, empresa: b.empresa || "", pagado: b.deposit || 0, comentarios: b.comentarios || "", confirmada: b.confirmedAt ? (b.confirmedVia || "sí") : null } : null,
     };
   });
   return json({ events, days });
