@@ -1,8 +1,9 @@
 // GET /api/cron/reminders?key=<CRON_KEY>
 // Llamado cada hora por un cron externo (cron-job.org). Envía dos avisos por reserva:
-//  · 48 h antes: confirmar + último aviso para cambiar o cancelar (quedan 12 h: el plazo vence 36 h antes).
+//  · 48 h antes: confirmar + último aviso para cambiar o cancelar (quedan 48 − N h, con N = la ventana de cambio sin costo de la tarifa del hub: hoy 36 h, o sea 12 h).
 //  · 24 h antes: recordatorio con las reglas del día de grabación.
 import { parseConfig, esFlex } from "../../_lib/slots.js";
+import { horasCambio } from "../../_lib/tarifas.js";
 import { resolverUrl } from "../../_lib/solicitud.js";
 import { listBookings, saveBooking, manageUrl } from "../../_lib/booking.js";
 import { sendEmail, formatSession, solicitudPendienteHtml, reminderEmailHtml, reminder72EmailHtml, whatsappLink, salidaDe, minutosDe, finDe, correosDe, confirmUrlDe, studioRecipients } from "../../_lib/email.js";
@@ -48,8 +49,8 @@ export async function onRequestGet({ request, env }) {
       waConfirmUrl: whatsappLink(env, `Confirmo mi grabación del ${fecha} a las ${hora} hrs (reserva ${String(b.token).slice(0, 6)}).`),
     } : {};
     try {
-      if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 48 * HOUR_MS && ms > 37 * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
-        const dl = formatSession(new Date(Date.parse(b.start) - 36 * HOUR_MS).toISOString(), config.timeZone);
+      if (!b.reminded72 && b.tipo !== "visita" && b.tipo !== "llamada" && ms <= 48 * HOUR_MS && ms > (horasCambio() + 1) * HOUR_MS) { // la visita es gratis: no hay plazo que recordar
+        const dl = formatSession(new Date(Date.parse(b.start) - horasCambio() * HOUR_MS).toISOString(), config.timeZone);
         if (correosDe(b.email).length) {
           await sendEmail(env, {
             to: correosDe(b.email),

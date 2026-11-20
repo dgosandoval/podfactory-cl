@@ -1,5 +1,6 @@
 // Lógica de generación de bloques horarios (independiente de Google/MercadoPago).
 // Maneja zona horaria de Chile (DST) sin librerías externas.
+import { suscribirTarifas, clp } from "./tarifas.js";
 
 export function parseConfig(env) {
   return {
@@ -16,19 +17,25 @@ export function parseConfig(env) {
   };
 }
 
-// Recargo por horario nocturno (Domingo, 10-nov-2026): una grabación del estudio que EMPIEZA a las 19:00 o después (hora de Chile) cuesta $100.000 + IVA más (neto).
+// Recargo por horario nocturno (Domingo, 10-nov-2026): una grabación del estudio que EMPIEZA a la hora de RECARGO_NOCTURNO.desde (hora de Chile) o después lleva un recargo (neto).
 // El precio lo cobra el hub (clientes.doppel.cl, RECARGO_NOCTURNO en src/compras.ts: Nueva grabación del equipo y reservas con pago posterior); aquí solo se MARCA en la
 // disponibilidad de grabaciones (availability-range?flex=1) y se avisa en los correos. No aplica a la visita, la reunión por Meet ni el mini-piloto de la web (no son capítulos).
+// Los montos y la hora NO se escriben aquí: salen de la tarifa del hub (_lib/tarifas.js). Estos valores son «vivos»: tarifas.js los reescribe cuando cambia la tarifa.
 export const RECARGO_NOCTURNO = { desde: "19:00", neto: 100000 };
-export const esNocturno = (hhmm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim()); return !!m && +m[1] * 60 + +m[2] >= 19 * 60; };
-export const TXT_RECARGO = `Las grabaciones que empiezan a las 19:00 o después tienen un recargo de $${RECARGO_NOCTURNO.neto.toLocaleString("es-CL")} + IVA.`;
+export const esNocturno = (hhmm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim()); const [h, mi] = RECARGO_NOCTURNO.desde.split(":").map(Number); return !!m && +m[1] * 60 + +m[2] >= h * 60 + mi; };
+export let TXT_RECARGO = "";   // vivo
 
-// Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis).
+// Productos que se reservan desde la web. price = total con IVA que se cobra (0 = gratis). El precio del mini-piloto es vivo (tarifa del hub).
 export const SERVICES = {
   visita: { key: "visita", label: "Visita al estudio", minutes: 30, price: 0, net: 0 },
   llamada: { key: "llamada", label: "Reunión por videollamada (Meet)", minutes: 30, price: 0, net: 0 },
-  minipiloto: { key: "minipiloto", label: "Mini-piloto (10 minutos)", minutes: 30, price: 35700, net: 30000 },
+  minipiloto: { key: "minipiloto", label: "Mini-piloto (10 minutos)", minutes: 30, price: 0, net: 0 },
 };
+suscribirTarifas((t) => {
+  RECARGO_NOCTURNO.desde = t.recargo_nocturno.desde; RECARGO_NOCTURNO.neto = t.recargo_nocturno.neto;
+  TXT_RECARGO = `Las grabaciones que empiezan a las ${t.recargo_nocturno.desde} o después tienen un recargo de ${clp(t.recargo_nocturno.neto)} + IVA.`;
+  SERVICES.minipiloto.price = t.mini_piloto.bruto; SERVICES.minipiloto.net = t.mini_piloto.neto;
+});
 
 // Config con la duración y los horarios del servicio pedido (o la grilla normal si no hay servicio).
 export function configFor(config, tipo) {

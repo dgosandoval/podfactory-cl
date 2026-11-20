@@ -2,6 +2,7 @@
 import { parseConfig, esFlex } from "../_lib/slots.js";
 import { getBooking, isModifiable } from "../_lib/booking.js";
 import { formatSession } from "../_lib/email.js";
+import { horasCambio } from "../_lib/tarifas.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -26,6 +27,7 @@ export async function onRequestGet({ request, env }) {
     address: env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago",
     modifiable: esFlex(b.tipo) ? Date.parse(b.start) > Date.now() : isModifiable(b.start),
     flex: esFlex(b.tipo),
+    horasCambio: horasCambio(),   // ventana de cambio sin costo (tarifa del hub): la página la muestra en sus avisos
     estado: b.estado || "confirmada",
     meetUrl: b.meetUrl || null,
     pastSession: Date.parse(b.start) <= Date.now(),

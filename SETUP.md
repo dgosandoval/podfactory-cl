@@ -197,3 +197,16 @@ Dashboard → Workers & Pages → tu proyecto `podfactory-cl` → Settings →
 
 Avísame cuando tengas esto (o dudas en cualquier paso) y enchufamos todo.
 ```
+
+---
+
+## Tarifas (precios) — viven en el hub, no aquí
+
+Los precios que muestra y cobra podfactory.cl (mini-piloto, recargo por horario nocturno, tiempo extra, horas de cambio sin costo, «desde» de la locación) **se editan en el hub**:
+clientes.doppel.cl → Pod Factory → **Tarifas** (Domingo e Iván). Este sitio los lee de `https://clientes.doppel.cl/api/public/tarifas`:
+
+- **Servidor** (`functions/_lib/tarifas.js`, cargado por `functions/api/_middleware.js`): caché de 60 s; el cobro de MercadoPago, la disponibilidad, los correos y la ventana de cambio salen de ahí.
+- **Navegador** (`src/tarifas.jsx`, compilado a `app.js` con `./build.sh`): la landing y el agendador muestran lo mismo.
+- **Si el hub no responde**: el servidor usa la última versión buena guardada en KV (`tarifas:ultima`) y, si no hay, los valores de respaldo de `functions/_lib/tarifas.js` (`TARIFAS_DEFECTO`); el navegador usa los de respaldo de `src/tarifas.jsx`. Siempre queda en el log (`tarifas: …`).
+- **Pendiente a mano (no siguen la tarifa)**: `condiciones.pdf` y `pod-factory-informacion.pdf` son archivos estáticos con las cifras escritas, y el texto de respaldo para buscadores de `index.html` (el «desde $950.000 + IVA» de la locación). Si cambia la tarifa, hay que regenerarlos.
+- Pruebas: `node test/tarifas.test.mjs` (servidor) y `node test/tarifas-web.test.mjs` (navegador).

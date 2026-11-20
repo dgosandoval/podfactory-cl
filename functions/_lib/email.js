@@ -1,6 +1,7 @@
 // Envío de correos vía Resend (https://resend.com). Best-effort: si falla,
 // el llamador debe ignorarlo para no romper la confirmación de la reserva.
 import { SERVICES, esNocturno, TXT_RECARGO } from "./slots.js";
+import { tarifaActual, horasCambio, clp } from "./tarifas.js";
 
 export async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
   if (!env.RESEND_API_KEY) return { skipped: "RESEND_API_KEY no configurada" };
@@ -196,7 +197,7 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
       <ul style="font-size:13px;line-height:1.55;color:#0A0A0Acc;margin:0;padding-left:18px">
         ${conHorario ? "" : `<li>Es <b>1 hora de estudio</b> desde la hora reservada, incluida la preparación. La hora corre aunque lleguen tarde.</li>`}
         <li>Pueden grabar <b>hasta 4 personas</b>. El capítulo dura de 20 a 40 minutos.</li>
-        ${conHorario ? "" : `<li>Si la grabación se pasa de la hora y el estudio está libre, el tiempo extra se cobra en bloques de <b>30 minutos ($100.000 + IVA)</b>.</li>`}
+        ${conHorario ? "" : `<li>Si la grabación se pasa de la hora y el estudio está libre, el tiempo extra se cobra en bloques de <b>${tarifaActual().tiempo_extra.minutos} minutos (${clp(tarifaActual().tiempo_extra.neto)} + IVA)</b>.</li>`}
         ${conHorario ? "" : `<li>${TXT_RECARGO}</li>`}
         <li>Edición simple: color, sonido, logo, música y nombres en pantalla, con <b>1 ronda de cambios</b>. Entregamos en <b>5 días hábiles</b>.</li>
         <li>Los archivos entregados quedan para descargar <b>90 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
@@ -206,7 +207,7 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
 
 const changePolicy = `
     <p style="font-size:12px;color:#0A0A0A99;line-height:1.5">
-      Puedes cambiar la fecha o cancelar sin costo hasta <b>36 horas antes</b>. Con menos de 36 horas,
+      Puedes cambiar la fecha o cancelar sin costo hasta <b>${horasCambio()} horas antes</b>. Con menos de ${horasCambio()} horas,
       o si no llegas, el capítulo se da por grabado.
     </p>`;
 
@@ -243,12 +244,12 @@ export const horarioBlock = (hora, salida, minutos = ESTUDIO_MIN) => `
       </tr></table>
       <p style="font-size:13px;line-height:1.5;margin:0;padding:10px 14px;background:#F5EBD6">
         Es <b>${duracionTxt(minutos)} de estudio</b>, incluida la preparación. <b>Si llegas tarde, igual terminamos a las ${salida}</b>, porque después viene otro cliente.
-        Si la grabación se extiende, cada 30 minutos extra cuesta $100.000 + IVA, solo si el estudio está libre.${esNocturno(hora) ? ` <b>${TXT_RECARGO}</b> Esta grabación empieza a las ${hora}.` : ""}
+        Si la grabación se extiende, cada ${tarifaActual().tiempo_extra.minutos} minutos extra cuesta ${clp(tarifaActual().tiempo_extra.neto)} + IVA, solo si el estudio está libre.${esNocturno(hora) ? ` <b>${TXT_RECARGO}</b> Esta grabación empieza a las ${hora}.` : ""}
       </p>
     </div>`;
 export const perdidaBlock = (deadline) => `
     <div style="margin:14px 0;padding:12px 14px;border-left:4px solid #D92E2E;background:#FDEDED;font-size:13px;line-height:1.5">
-      <b>Si no cancelas o cambias la fecha antes del ${deadline}</b> (36 horas antes), pierdes la hora: el capítulo se da por grabado aunque no vengas.
+      <b>Si no cancelas o cambias la fecha antes del ${deadline}</b> (${horasCambio()} horas antes), pierdes la hora: el capítulo se da por grabado aunque no vengas.
     </div>`;
 export const confirmBlock = (confirmUrl, waConfirmUrl) => `
     <div style="margin:18px 0;padding:16px;border:2px solid #D92E2E;border-radius:4px;text-align:center">
@@ -257,7 +258,7 @@ export const confirmBlock = (confirmUrl, waConfirmUrl) => `
       ${waConfirmUrl ? `<a href="${waConfirmUrl}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:12px 22px;font-weight:800;font-size:14px;border-radius:999px;margin:4px">Confirmar por WhatsApp</a>` : ""}
     </div>`;
 export const deadlineDe = (startISO, timeZone) => {
-  const d = new Date(Date.parse(startISO) - 36 * 3600 * 1000);
+  const d = new Date(Date.parse(startISO) - horasCambio() * 3600 * 1000);
   const f = new Intl.DateTimeFormat("es-CL", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(d);
   const h = new Intl.DateTimeFormat("es-CL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
   return `${f} a las ${h} hrs`;
@@ -289,7 +290,7 @@ export function customerEmailHtml({ name, fecha, hora, deposit, address, manageU
     ${tipo === "minipiloto" ? `
     <p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">
       Son <b>10 minutos de grabación</b> en el set, con las cámaras Blackmagic.
-      Si después compras capítulos, los $30.000 del mini-piloto se descuentan de la compra.
+      Si después compras capítulos, los ${clp(tarifaActual().mini_piloto.neto)} del mini-piloto se descuentan de la compra.
     </p>` : ""}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${portalUrl ? `
@@ -344,13 +345,13 @@ export function cancelEmailHtml({ name, fecha, hora, whatsappUrl, portalUrl }) {
   `);
 }
 
-// Recordatorio 48 h antes: confirmar y último aviso para cambiar o cancelar (quedan 12 h: el plazo vence a las 36 h).
+// Recordatorio 48 h antes: confirmar y último aviso para cambiar o cancelar (quedan 48 − horas de la ventana: con 36 h, 12 h).
 export function reminder72EmailHtml({ name, fecha, hora, deadline, address, manageUrl, whatsappUrl, salida, confirmUrl, waConfirmUrl, confirmado, minutos }) {
   return shell(`
     <div style="font-size:22px;font-weight:800;margin-bottom:6px">Tu grabación es en 2 días 🎙️</div>
     <p style="font-size:14px;line-height:1.5;color:#0A0A0Acc">
       Hola ${name}, te recordamos tu grabación en Pod Factory el <b>${fecha}</b>.
-      <b>Tienes 12 horas</b> (hasta el ${deadline}) para cambiar la fecha o cancelar sin costo.
+      ${48 - horasCambio() > 0 ? `<b>Tienes ${48 - horasCambio()} horas</b> (hasta el ${deadline}) para cambiar la fecha o cancelar sin costo.` : `El plazo para cambiar la fecha o cancelar sin costo ya venció (era hasta el ${deadline}).`}
     </p>
     ${salida ? horarioBlock(hora, salida, minutos) : `<table style="width:100%;border-collapse:collapse;margin:18px 0">${row("Hora", hora + " hrs")}</table>`}
     ${confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : confirmado ? `<p style="font-size:14px;color:#1a7f37;font-weight:700">✓ Ya confirmaste tu asistencia. ¡Gracias!</p>` : ""}
@@ -378,7 +379,7 @@ export function reminderEmailHtml({ name, fecha, hora, address, manageUrl, whats
     </table>
     ${esGrabacion && salida ? horarioBlock(hora, salida, minutos) : ""}
     ${esGrabacion && confirmUrl && !confirmado ? confirmBlock(confirmUrl, waConfirmUrl) : ""}
-    ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de 36 horas para cambiar la fecha o cancelar: si no vienes, el capítulo se da por grabado.</p>` : ""}
+    ${esGrabacion ? `<p style="font-size:13px;line-height:1.5;color:#0A0A0Acc">Ya pasó el plazo de ${horasCambio()} horas para cambiar la fecha o cancelar: si no vienes, el capítulo se da por grabado.</p>` : ""}
     ${tipo === "llamada" ? (meetUrl ? `<p style="margin:6px 0 14px">${button(meetUrl, "Unirme por Google Meet")}</p>` : "") : mapsBlock(address)}
     ${tipo === "visita" || tipo === "minipiloto" || tipo === "llamada" ? "" : guideBlock(conditionsUrl, !!salida)}
     ${waLine(whatsappUrl)}

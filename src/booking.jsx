@@ -62,14 +62,17 @@ function groupByWeek(days) {
   });
 }
 
-// Productos reservables: la visita y la llamada (gratis) y el mini-piloto (pagado por MercadoPago).
-const PRODUCTOS = {
+// Productos reservables: la visita y la llamada (gratis) y el mini-piloto (pagado por MercadoPago). El precio del mini-piloto sale de la tarifa del hub (src/tarifas.jsx);
+// lo que se cobra lo decide el servidor (functions/api/reserve.js) con el mismo valor.
+const productosDe = (T) => ({
   visita: { label: 'Visita al estudio', sub: 'Gratis · presencial', precio: 0, cta: 'SOLICITAR VISITA' },
   llamada: { label: 'Reunión por Meet', sub: 'Gratis · 30 min · online', precio: 0, cta: 'SOLICITAR REUNIÓN' },
-  minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · $30.000 + IVA', precio: 35700, cta: 'PAGAR $35.700 Y RESERVAR' },
-};
+  minipiloto: { label: 'Mini-piloto', sub: '10 minutos grabando · ' + window.pfClp(T.mini_piloto.neto) + ' + IVA', precio: T.mini_piloto.bruto, cta: 'PAGAR ' + window.pfClp(T.mini_piloto.bruto) + ' Y RESERVAR' },
+});
 
 function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = null }) {
+  const TARIFA = window.usePfTarifas();
+  const PRODUCTOS = productosDe(TARIFA);
   const OPEN_DOWS = [1, 2, 3, 4, 5]; // Lun–Vie
   const days = React.useMemo(() => upcomingDays(18, OPEN_DOWS), []);
   const weeks = React.useMemo(() => groupByWeek(days), [days]);
@@ -306,7 +309,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
                 ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos la dirección exacta.'
                 : tipo === 'llamada'
                 ? 'Es una solicitud: te confirmamos por correo en menos de 24 horas hábiles y ahí te enviamos el link de Google Meet.'
-                : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después compras capítulos, los $30.000 se descuentan.'}
+                : gratisPiloto ? 'Tu mini-piloto va por nuestra cuenta. Usa el mismo correo al que te llegó la invitación.' : 'Pago seguro con MercadoPago. Si después compras capítulos, los ' + window.pfClp(TARIFA.mini_piloto.neto) + ' se descuentan.'}
             </div>
           </div>
         )}

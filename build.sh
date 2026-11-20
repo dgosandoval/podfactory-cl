@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 ESBUILD="${ESBUILD:-../doppel-clientes/node_modules/.bin/esbuild}"
 TMP=$(mktemp)
 # Cada archivo va en su propio IIFE (antes eran <script> separados); se comunican por window.
-for f in src/track.jsx src/shared.jsx src/booking.jsx src/landing.jsx; do
+for f in src/track.jsx src/tarifas.jsx src/shared.jsx src/booking.jsx src/landing.jsx; do
   printf '(function(){\n' >> "$TMP"; cat "$f" >> "$TMP"; printf '\n})();\n' >> "$TMP"
 done
 printf "ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(window.PodFactoryLanding));\n" >> "$TMP"

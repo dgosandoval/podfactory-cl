@@ -6,6 +6,7 @@ import { parseConfig, esFlex } from "../_lib/slots.js";
 import { getBooking, deleteBooking, isModifiable } from "../_lib/booking.js";
 import { deleteEvent } from "../_lib/google.js";
 import { sendEmail, studioRecipients, formatSession, cancelEmailHtml, whatsappLink, icsReserva, correosDe } from "../_lib/email.js";
+import { horasCambio } from "../_lib/tarifas.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -26,7 +27,7 @@ export async function onRequestPost({ request, env }) {
   // (la regla de 36 h es solo para el cliente; el hub ya la aplica en sus rutas de cliente antes de llegar aquí).
   const porEquipo = esHub && body.porEquipo === true;
   if (!isAdmin && !porEquipo && !(esHub && b.calendarId) && !esFlex(b.tipo) && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede cancelar (menos de 36 horas para la grabación)." }, 409);
+    return json({ error: `Ya no se puede cancelar (menos de ${horasCambio()} horas para la grabación).` }, 409);
   }
 
   try {

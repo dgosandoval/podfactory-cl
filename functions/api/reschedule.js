@@ -6,6 +6,7 @@ import { getBooking, saveBooking, isModifiable, manageUrl } from "../_lib/bookin
 import { patchEvent } from "../_lib/google.js";
 import { busyDelEstudio } from "../_lib/propia-reserva.js";
 import { sendEmail, studioRecipients, formatSession, rescheduleEmailHtml, icsReserva, correosDe } from "../_lib/email.js";
+import { horasCambio } from "../_lib/tarifas.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -26,7 +27,7 @@ export async function onRequestPost({ request, env }) {
   // calendario). Esta ruta mueve eventos en la grilla del estudio y en su calendario: no se usa para no tocar el calendario equivocado.
   if (b.calendarId) return json({ error: "Esta grabación se cambia desde el hub de Doppel o escribiéndole a Domingo." }, 409);
   if (!isAdmin && !isModifiable(b.start)) {
-    return json({ error: "Ya no se puede reagendar (menos de 36 horas para la grabación)." }, 409);
+    return json({ error: `Ya no se puede reagendar (menos de ${horasCambio()} horas para la grabación).` }, 409);
   }
 
   // Validar el nuevo bloque

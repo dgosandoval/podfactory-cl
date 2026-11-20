@@ -177,7 +177,7 @@ function ReservaBanner() {
       const pid = q.get('payment_id') || q.get('collection_id') || 'sin-id';
       let seen = false;
       try { seen = localStorage.getItem('pf_purchase_' + pid) === '1'; localStorage.setItem('pf_purchase_' + pid, '1'); } catch (e) {}
-      if (!seen && window.pfTrack) window.pfTrack('purchase', { value: 35700, currency: 'CLP', transaction_id: pid, event_id: 'mp-' + pid, items: [{ item_name: 'Mini-piloto', price: 35700 }] });
+      if (!seen && window.pfTrack) window.pfTrack('purchase', { value: window.PF_TARIFAS.mini_piloto.bruto, currency: 'CLP', transaction_id: pid, event_id: 'mp-' + pid, items: [{ item_name: 'Mini-piloto', price: window.PF_TARIFAS.mini_piloto.bruto }] });
     }
   }, [estado]);
   if (!open || !estado) return null;
@@ -288,6 +288,7 @@ function InfoButton({ size = 'md', label = 'INFORMACIÓN Y PRECIOS', dark = fals
 // Calendario para quien llega desde un correo de la secuencia (?agendar=1) o vuelve de
 // MercadoPago. En la página normal no aparece: el primer paso siempre es el correo.
 function AgendarDesdeCorreo() {
+  const TARIFA = window.usePfTarifas();
   const q = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const agendar = q.get('agendar');
   const show = agendar === '1' || agendar === 'llamada' || agendar === 'piloto' || !!q.get('reserva');
@@ -304,7 +305,7 @@ function AgendarDesdeCorreo() {
         <div>
           <Kicker>▸ CONOCE EL ESTUDIO</Kicker>
           <H2>Ven a verlo <Serif>con tus propios ojos.</Serif></H2>
-          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Reunión por Meet</b>: 30 minutos online con el equipo, si prefieres conversar antes. Eliges la hora y te confirmamos por correo.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después compras capítulos, los $30.000 se descuentan.</p>
+          <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 18 }}><b>Visita gratis</b>: 20 minutos para conocer el set, ver el look en el monitor y conversar tu idea.<br /><b>Reunión por Meet</b>: 30 minutos online con el equipo, si prefieres conversar antes. Eliges la hora y te confirmamos por correo.<br /><b>Mini-piloto</b>: 10 minutos grabando en el set; si después compras capítulos, los {window.pfClp(TARIFA.mini_piloto.neto)} se descuentan.</p>
         </div>
         <BookingCalendar initialTipo={agendar === 'llamada' ? 'llamada' : agendar === 'piloto' ? 'minipiloto' : 'visita'} cortesia={cortesia} prefill={prefill} />
       </div>
@@ -313,6 +314,7 @@ function AgendarDesdeCorreo() {
 }
 
 function PodFactoryLanding() {
+  const TARIFA = window.usePfTarifas();   // tarifas del hub (src/tarifas.jsx): hoy, lo que se muestra de la locación
   return (
     <div style={{ background: PF.bg, color: PF.ink, fontFamily: PF.display, minHeight: '100%' }}>
       <ReservaBanner />
@@ -548,7 +550,7 @@ function PodFactoryLanding() {
               En Santiago y regiones.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 20px', fontSize: 14, lineHeight: 1.9, color: PF.bg + 'dd' }}>
-              {['Jornadas de hasta 3 horas de grabación, desde $950.000 + IVA', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
+              {['Jornadas de hasta 3 horas de grabación, desde ' + window.pfClp(TARIFA.locacion.desde_neto) + ' + IVA', 'Montaje, operación y traslado incluidos', 'Espacio mínimo de 4 × 4 m y 2 enchufes'].map((t) => <li key={t}>▸ {t}</li>)}
               <li style={{ marginTop: 8, color: PF.yellow }}>▸ Horas adicionales se suman; si tu proyecto es distinto, cotizamos a medida.</li>
             </ul>
             <div style={{ marginTop: 'auto' }}>

@@ -2,7 +2,10 @@
 // Clave: booking:<token>. Guarda lo necesario para gestionar/recordar la reserva.
 
 const KEY = (token) => `booking:${token}`;
-const MODIFY_WINDOW_MS = 36 * 60 * 60 * 1000; // 36 h (condiciones del estudio, 7-oct-2026)
+import { suscribirTarifas } from "./tarifas.js";
+// Ventana de cambio sin costo: las horas salen de la tarifa del hub (_lib/tarifas.js; 36 h según las condiciones del 7-oct-2026).
+let MODIFY_WINDOW_MS = 36 * 60 * 60 * 1000;
+suscribirTarifas((t) => { MODIFY_WINDOW_MS = t.cambio_sin_costo_horas * 60 * 60 * 1000; });
 
 export function newToken() {
   return crypto.randomUUID().replace(/-/g, "");
@@ -45,7 +48,7 @@ export async function bookingPorEvento(env, eventId) {
   return (await listBookings(env)).find((b) => b.eventId === eventId) || null;
 }
 
-// ¿Aún se puede cambiar la fecha? (al menos 36 h antes del inicio)
+// ¿Aún se puede cambiar la fecha? (al menos las horas de la ventana de cambio antes del inicio: 36 h hoy)
 export function isModifiable(startISO, nowMs = Date.now()) {
   return Date.parse(startISO) - nowMs >= MODIFY_WINDOW_MS;
 }
