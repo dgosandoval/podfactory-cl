@@ -9,6 +9,7 @@ import { onRequestGet as rango } from "../functions/api/availability-range.js";
 import { onRequestPost as reservar } from "../functions/api/reserve.js";
 import { onRequest as middleware } from "../functions/api/_middleware.js";
 import { onRequestPost as cancelar } from "../functions/api/cancel.js";
+import { onRequestGet as verTarifas } from "../functions/api/tarifas.js";
 import { parseConfig, recParams, recSlots, esNocturno, RECARGO_NOCTURNO, TXT_RECARGO, SERVICES, buildSlots, weekday, addDaysStr, todayIn } from "../functions/_lib/slots.js";
 import { isModifiable, saveBooking } from "../functions/_lib/booking.js";
 import { horarioBlock, customerEmailHtml, reminder72EmailHtml, deadlineDe } from "../functions/_lib/email.js";
@@ -150,6 +151,14 @@ await saveBooking(env, { token, tipo: "podcast", brand: "podfactory", start: new
 const rc = await cancelar({ request: new Request("https://podfactory.cl/api/cancel", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: token, notify: false }) }), env });
 const jc = await rc.json();
 check("3j. con la ventana de 48 h, cancelar una reserva a 40 h se rechaza y el mensaje dice «menos de 48 horas»", rc.status === 409 && /menos de 48 horas/.test(jc.error || ""), JSON.stringify(jc));
+
+hub.respuesta = () => new Response(JSON.stringify(NUEVA), { status: 200 });
+reiniciarTarifas(); await cargarTarifas(env, { forzar: true });
+const vt = await (await verTarifas({})).json();
+check("3k. GET /api/tarifas dice qué tarifa usa el sitio y de dónde salió (origen hub, versión 7, mini-piloto $38.080) para compararla con la del hub", vt.origen === "hub" && vt.version === 7 && vt.mini_piloto.bruto === 38080 && vt.cambio_sin_costo_horas === 48 && !/secret|token|email/i.test(JSON.stringify(vt)), JSON.stringify(vt));
+reiniciarTarifas();
+const vt0 = await (await verTarifas({})).json();
+check("3l. con los valores de respaldo ese mismo endpoint dice origen «respaldo» y los valores de siempre", vt0.origen === "respaldo" && vt0.mini_piloto.bruto === 35700 && vt0.cambio_sin_costo_horas === 36, JSON.stringify(vt0));
 
 console.log = log0;
 const fallas = resultados.filter((x) => !x).length;
