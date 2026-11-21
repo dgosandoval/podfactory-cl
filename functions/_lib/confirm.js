@@ -70,7 +70,7 @@ export async function confirmBooking(env, config, origin, d) {
         subject: d.tipo === "visita" ? "Tu visita a Pod Factory está confirmada 🎙️" : d.tipo === "llamada" ? "Tu llamada con Pod Factory está agendada 📞" : "Tu mini-piloto en Pod Factory está confirmado 🎙️",
         html: customerEmailHtml({
           name: d.name, fecha, hora, deposit: d.paid || 0, address, tipo: d.tipo,
-          manageUrl: manageUrl(origin, token), conditionsUrl: `${config.siteUrl}condiciones.pdf`,
+          manageUrl: manageUrl(origin, token), conditionsUrl: `${config.siteUrl}condiciones`,
           whatsappUrl: whatsappLink(env, `Hola Pod Factory, sobre mi reserva del ${fecha} a las ${hora} hrs:`),
           portalUrl,
         }),

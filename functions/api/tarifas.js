@@ -1,10 +1,14 @@
-// GET /api/tarifas — la tarifa que este sitio está usando AHORA (lo que leyó del hub, o los valores de respaldo) y de dónde salió: origen = "hub" | "ultima-guardada" | "respaldo".
+// GET /api/tarifas — la tarifa que este sitio está usando AHORA (lo que leyó del hub, o los valores de respaldo) y de dónde salió: origen = "hub" | "ultima-guardada" | "respaldo". Incluye también el horario de grabación que rige (de dónde salió: «hub» o «respaldo»).
 // Sirve para comprobar que podfactory.cl y el hub dicen lo mismo (compararlo con https://clientes.doppel.cl/api/public/tarifas). Solo precios públicos, sin ningún dato sensible.
 import { tarifaActual } from "../_lib/tarifas.js";
+import { recParams } from "../_lib/slots.js";
+import { origenHorario } from "../_lib/horario.js";
 
-export async function onRequestGet() {
+export async function onRequestGet({ env } = {}) {
   const t = tarifaActual();
+  const rp = recParams(env || {}), hh = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   return new Response(JSON.stringify({ origen: t.origen, version: t.version ?? null, mini_piloto: t.mini_piloto, recargo_nocturno: t.recargo_nocturno, tiempo_extra: t.tiempo_extra,
-    ronda_cambios_extra: t.ronda_cambios_extra, cambio_sin_costo_horas: t.cambio_sin_costo_horas, locacion: t.locacion }),
+    ronda_cambios_extra: t.ronda_cambios_extra, cambio_sin_costo_horas: t.cambio_sin_costo_horas, locacion: t.locacion,
+    horario_grabacion: { desde: hh(rp.open), hasta: hh(rp.close), origen: origenHorario() } }),
   { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }

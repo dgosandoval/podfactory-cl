@@ -294,7 +294,7 @@ function BookingCalendar({ initialTipo = 'visita', prefill = null, cortesia = nu
             <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 14, fontFamily: PFB.mono, fontSize: 11.5, lineHeight: 1.5 }}>
               <input type="checkbox" checked={form.acepta} onChange={(e) => setForm({ ...form, acepta: e.target.checked })} style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
               {tipo === 'minipiloto'
-                ? <span>Acepto las <a href="condiciones.pdf" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones</a> y recibir información de Pod Factory por correo (puedo darme de baja cuando quiera).</span>
+                ? <span>Acepto las <a href="/condiciones" target="_blank" rel="noopener" style={{ color: PFB.blue, fontWeight: 700 }}>condiciones</a> y recibir información de Pod Factory por correo (puedo darme de baja cuando quiera).</span>
                 : <span>Quiero recibir información de Pod Factory por correo (opcional, puedo darme de baja cuando quiera).</span>}
             </label>
             <button onClick={reservar} disabled={!valid || submitting} style={{

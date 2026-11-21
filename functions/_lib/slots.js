@@ -1,6 +1,7 @@
 // Lógica de generación de bloques horarios (independiente de Google/MercadoPago).
 // Maneja zona horaria de Chile (DST) sin librerías externas.
 import { suscribirTarifas, clp } from "./tarifas.js";
+import { horarioVivo, HORARIO_RESPALDO } from "./horario.js";
 
 export function parseConfig(env) {
   return {
@@ -173,7 +174,8 @@ export function inicioFlexValido(dateStr, startISO, config, busy, nowMs, minutes
 // grabaciones; las visitas, llamadas y el mini-piloto de la web siguen con lo suyo.
 export function recParams(env) {
   const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
-  const [a, b] = String(env.REC_HOURS || "10:00-20:00").split("-");
+  // El horario sale del hub (_lib/horario.js, Ajustes → Horario del estudio); sin respuesta del hub rige REC_HOURS y, si tampoco existe, el de siempre (10:00-20:00).
+  const [a, b] = String(horarioVivo() || env.REC_HOURS || HORARIO_RESPALDO).split("-");
   const num = (v, def, min) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= min ? n : def; };
   const p = { open: toMin(a), close: toMin(b), step: num(env.REC_STEP, 30, 5), margen: num(env.REC_MARGEN, 30, 0) };
   if (!Number.isFinite(p.open) || !Number.isFinite(p.close) || p.close <= p.open) { p.open = 600; p.close = 1200; }

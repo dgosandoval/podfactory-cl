@@ -202,7 +202,7 @@ const guideBlock = (conditionsUrl, conHorario = false) => `
         <li>Edición simple: color, sonido, logo, música y nombres en pantalla, con <b>1 ronda de cambios</b>. Entregamos en <b>5 días hábiles</b>.</li>
         <li>Los archivos entregados quedan para descargar <b>90 días</b> en tu portal de cliente. El material en bruto se guarda <b>1 semana</b>.</li>
       </ul>
-      ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas (PDF)</a></p>` : ""}
+      ${conditionsUrl ? `<p style="font-size:12px;margin:10px 0 0"><a href="${conditionsUrl}" style="color:#1F3FA3;font-weight:700">Ver las condiciones completas</a></p>` : ""}
     </div>`;
 
 const changePolicy = `

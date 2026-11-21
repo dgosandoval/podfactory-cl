@@ -41,8 +41,8 @@
       window.pfTrack('whatsapp_click', { context: ctx, location: a.closest('section')?.id || 'header' });
     } else if (href === '#reservar') {
       window.pfTrack('piloto_cta', { location: a.closest('section')?.id || 'header' });
-    } else if (href.endsWith('condiciones.pdf')) {
-      window.pfTrack('file_download', { file_name: 'condiciones.pdf' });
+    } else if (/\/condiciones(\.pdf)?\/?$/.test(href)) {
+      window.pfTrack('file_download', { file_name: 'condiciones.pdf' });   // mismo nombre de evento de siempre (la página /condiciones reemplazó al PDF) para no cortar la serie en GA4
     }
   }, true);
 })();

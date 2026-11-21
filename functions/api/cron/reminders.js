@@ -20,7 +20,7 @@ export async function onRequestGet({ request, env }) {
   const config = parseConfig(env);
   const origin = new URL(request.url).origin;
   const address = env.STUDIO_ADDRESS || "Eduardo Marquina 3937, Vitacura · Santiago";
-  const conditionsUrl = `${config.siteUrl}condiciones.pdf`;
+  const conditionsUrl = `${config.siteUrl}condiciones`;
   const now = Date.now();
   const bookings = await listBookings(env);
 

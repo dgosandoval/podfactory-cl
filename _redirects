@@ -1,2 +1,6 @@
 # podfactory.cl vuelve a ser el sitio de Pod Factory (sep-2026): la landing vive aquí.
 # doppel.cl/podfactory redirige hacia acá (ver _redirects de doppel-web).
+# Los PDF de condiciones e información tenían las cifras escritas a mano: ahora son páginas armadas con la tarifa vigente del hub (functions/condiciones.js e informacion.js,
+# imprimibles / «Guardar como PDF»). Los enlaces viejos (correos ya enviados, WhatsApp, el hub) siguen funcionando y llevan a la página.
+/condiciones.pdf /condiciones 302
+/pod-factory-informacion.pdf /informacion 302

@@ -20,6 +20,12 @@ export const TARIFAS_DEFECTO = Object.freeze({
   ronda_cambios_extra: { neto: 50000, bruto: bruto(50000) },
   cambio_sin_costo_horas: 36,
   locacion: { desde_neto: 950000, desde_bruto: bruto(950000), regiones_extra_neto: 250000 },
+  // Tabla de capítulos y opcionales: solo los usan las páginas de condiciones e información (functions/_lib/documentos.js); el cobro sale de la tarifa del hub.
+  set_full_diferencia_neto: 100000,
+  capitulos: [250000, 245000, 240000, 235000, 230000, 228000, 225000, 220000, 215000, 210000, 205000, 200000].map((base, i) => ({
+    caps: i + 1, base_neto: base, base_bruto: bruto(base), full_neto: base + 100000, full_bruto: bruto(base + 100000), meses_plazo: i < 4 ? 2 : i < 7 ? 3 : 4 })),
+  opcionales: [["reels", "Paquete de 3 reels", 120000], ["camaras", "Cámaras por separado", 50000], ["cortes", "Edición avanzada", 50000], ["imagenes", "Imágenes de apoyo", 50000], ["trailer", "Tráiler", 100000]]
+    .map(([id, nombre, neto]) => ({ id, nombre, neto, bruto: bruto(neto) })),
 });
 
 const entero = (n) => Number.isInteger(n) && n >= 0;
