@@ -133,18 +133,18 @@ export const CSS_INFORMACION = String.raw`
   /* PÁG 3 */
   table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
   th { text-align: left; font-family: 'Space Mono', monospace; font-size: 6.8pt; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
-    padding: 2.2mm 2mm; border-bottom: .5mm solid var(--ink); }
-  td { padding: 1.6mm 2mm; border-bottom: .25mm solid var(--line); vertical-align: top; line-height: 1.35; }
+    padding: 1.8mm 2mm; border-bottom: .5mm solid var(--ink); }
+  td { padding: 1.15mm 2mm; border-bottom: .25mm solid var(--line); vertical-align: top; line-height: 1.35; }
   td.n, th.n { text-align: right; white-space: nowrap; }
   .price { font-weight: 900; font-size: 11pt; }
   tr.hi td { background: rgba(244,184,28,.28); }
   tr.sub td { background: var(--ink); color: var(--cream); font-family: 'Space Mono', monospace; font-size: 6.8pt; letter-spacing: .1em; text-transform: uppercase; padding: 1.6mm 2mm; }
   small.g { display: block; font-size: 7.8pt; opacity: .65; margin-top: 1.5mm; }
   .tagmin { display: inline-block; background: var(--ink); color: var(--cream); font-family: 'Space Mono', monospace; font-size: 6.5pt; letter-spacing: .12em; padding: .8mm 2mm; margin-left: 2mm; vertical-align: .6mm; }
-  .sets { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin: 0 0 3mm; font-size: 8.2pt; line-height: 1.4; }
-  .sets .ph { height: 17mm; background-size: cover; background-position: center; margin-bottom: 2mm; border: .35mm solid var(--ink); }
+  .sets { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin: 0 0 2.5mm; font-size: 8.2pt; line-height: 1.4; }
+  .sets .ph { height: 13mm; background-size: cover; background-position: center; margin-bottom: 2mm; border: .35mm solid var(--ink); }
   .sets b { display: block; font-size: 10.5pt; font-weight: 800; margin-bottom: .5mm; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; margin-top: 3mm; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; margin-top: 2.5mm; }
   .box { border: .35mm solid var(--ink); background: var(--cream); padding: 3mm 5mm; font-size: 9.2pt; line-height: 1.45; }
   .box h4 { font-family: 'Space Mono', monospace; font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2mm; color: var(--red); }
   .box .big { font-size: 15pt; font-weight: 900; letter-spacing: -.02em; margin: 1mm 0; }
@@ -152,20 +152,22 @@ export const CSS_INFORMACION = String.raw`
   .box li { display: flex; justify-content: space-between; gap: 3mm; padding: .35mm 0; border-bottom: .25mm solid var(--line); }
   .box li:last-child { border-bottom: none; }
   .box li b { white-space: nowrap; }
-  .next { background: var(--ink); color: var(--cream); padding: 4.5mm 7mm; margin-top: 3.5mm; box-shadow: 1.8mm 1.8mm 0 var(--yellow);
+  .next { background: var(--ink); color: var(--cream); padding: 4mm 7mm; margin-top: 3.5mm; box-shadow: 1.8mm 1.8mm 0 var(--yellow);
     display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
   .next .mono { font-size: 7pt; color: var(--yellow); font-weight: 700; }
   .next h3 { font-size: 16pt; font-weight: 900; margin: 1.5mm 0 2mm; }
   .next h3 .serif { color: var(--yellow); font-size: 18pt; }
   .next p { font-size: 9.2pt; line-height: 1.45; opacity: .9; }
   .next .cta { display: inline-block; margin-top: 3mm; background: var(--red); color: #fff; font-weight: 800; font-size: 9.5pt; padding: 2.5mm 4mm; text-decoration: none; }
-  .contact { position: absolute; left: 15mm; right: 15mm; bottom: 19mm; display: flex; justify-content: space-between; align-items: flex-end;
-    border-top: .5mm solid var(--ink); padding-top: 4.5mm; font-size: 9pt; line-height: 1.55; }
+  .contact { position: absolute; left: 15mm; right: 15mm; bottom: 15.5mm; display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; align-items: end;
+    border-top: .5mm solid var(--ink); padding-top: 3.5mm; font-size: 9pt; line-height: 1.45; }
+  .contact .fact { font-size: 8.3pt; line-height: 1.45; }
+  .contact h4 { font-family: 'Space Mono', monospace; font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 1.5mm; }
   .contact a { color: inherit; }
   .contact a.wa { color: var(--cream); }
   .wa { display: inline-block; background: var(--ink); color: var(--cream); font-weight: 800; font-size: 11pt; padding: 3mm 5mm; box-shadow: 1.2mm 1.2mm 0 var(--red); text-decoration: none; }
 `;
-export const cuerpoCondiciones = (t, { m, filasCaps, rango, vig, vigDe, h36, plazoLargo, op }) => `
+export const cuerpoCondiciones = (t, { m, filasCaps, rango, vig, vigDe, h36, plazoLargo, op, fact }) => `
 
 <!-- ===== PÁGINA 1 · CAPÍTULOS Y PRECIOS ===== -->
 <section class="page">
@@ -310,19 +312,13 @@ export const cuerpoCondiciones = (t, { m, filasCaps, rango, vig, vigDe, h36, pla
       hola@podfactory.cl · podfactory.cl<br>Eduardo Marquina 3937, Vitacura
       <div><span class="wa">WhatsApp +56 9 2797 0014</span></div>
     </div>
-    <div>
-      <h4>Datos de facturación y pago</h4>
-      Productora Domingo Ignacio Sandoval Piña EIRL<br>
-      RUT 76.268.307-5 · Producción audiovisual<br>
-      Banco Santander · Cuenta corriente 71647560<br>
-      Comprobantes a pagos@podfactory.cl
-    </div>
+    ${fact}
   </div>
   <div class="foot"><span>Pod Factory es parte de Doppel</span><span>4 / 4</span></div>
 </section>
 
 `;
-export const cuerpoInformacion = (t, { m, filasCaps, rango, vig, plazoCorto, op }) => `
+export const cuerpoInformacion = (t, { m, filasCaps, rango, vig, plazoCorto, op, fact }) => `
 
 <!-- ===== PÁGINA 1 · QUIÉNES SOMOS ===== -->
 <section class="page">
@@ -437,8 +433,9 @@ export const cuerpoInformacion = (t, { m, filasCaps, rango, vig, plazoCorto, op 
       hola@podfactory.cl · <a href="https://podfactory.cl">podfactory.cl</a><br>
       Eduardo Marquina 3937, Vitacura<br>
       <span style="font-size:7.8pt;opacity:.65">Condiciones completas: podfactory.cl/condiciones</span>
+      <div style="margin-top:1.5mm"><a class="wa" href="https://wa.me/56927970014">WhatsApp +56 9 2797 0014</a></div>
     </div>
-    <a class="wa" href="https://wa.me/56927970014">WhatsApp +56 9 2797 0014</a>
+    ${fact}
   </div>
   <div class="foot"><span>Pod Factory es parte de Doppel · Valores vigentes desde ${vig}</span><span>3 / 3</span></div>
 </section>

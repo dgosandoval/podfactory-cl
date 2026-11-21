@@ -3,6 +3,7 @@
 // Antes eran dos PDF con las cifras escritas a mano (condiciones.pdf y pod-factory-informacion.pdf) que se desactualizaban al cambiar una tarifa. El texto es el mismo de esos PDF;
 // las plantillas (documentos-plantillas.js) tienen las cifras como huecos. Cada página sirve en pantalla (se adapta al teléfono) y al imprimir o «Guardar como PDF» sale en hojas A4 como el PDF.
 import { TARIFAS_DEFECTO } from "./tarifas.js";
+import { EMPRESA_RESPALDO } from "./empresa.js";
 import { CSS_CONDICIONES, CSS_INFORMACION, cuerpoCondiciones, cuerpoInformacion } from "./documentos-plantillas.js";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -60,11 +61,23 @@ export function vigenciaTexto(t) {
   return { corto: `${mes} ${anio}`, de: `${mes} de ${anio}` };
 }
 
-function ayudas(t) {
+/** El pie «Datos de facturación y pago» (el mismo en /condiciones e /informacion): razón social, RUT y giro, banco, tipo y número de cuenta, y correo de comprobantes. Texto como lo escribía la página a mano. */
+export function bloqueFacturacion(e) {
+  const x = { ...EMPRESA_RESPALDO, ...(e || {}) };
+  return `<div class="fact">
+      <h4>Datos de facturación y pago</h4>
+      ${esc(x.razonSocial)}<br>
+      RUT ${esc(x.rut)} · ${esc(x.giro)}<br>
+      ${esc(x.banco)} · ${esc(x.tipoCuenta)} ${esc(x.numeroCuenta)}<br>
+      Comprobantes a ${esc(x.correoComprobantes)}
+    </div>`;
+}
+
+function ayudas(t, empresa) {
   const op = Object.fromEntries(t.opcionales.map((o) => [o.id, o.neto]));
   const maxCaps = Math.max(...t.capitulos.map((c) => c.caps)), minCaps = Math.min(...t.capitulos.map((c) => c.caps));
   const v = vigenciaTexto(t);
-  return { m, filasCaps, op, rango: `${minCaps} a ${maxCaps}`, vig: v.corto, vigDe: v.de, h36: t.cambio_sin_costo_horas, plazoLargo: plazoLargo(t), plazoCorto: plazoCorto(t) };
+  return { m, filasCaps, op, fact: bloqueFacturacion(empresa), rango: `${minCaps} a ${maxCaps}`, vig: v.corto, vigDe: v.de, h36: t.cambio_sin_costo_horas, plazoLargo: plazoLargo(t), plazoCorto: plazoCorto(t) };
 }
 
 // Estilos de pantalla (la hoja original es A4 fija para imprimir): en pantalla las hojas fluyen, se adaptan al ancho y llevan una barra con «Guardar como PDF». Al imprimir rige la hoja original.
@@ -131,26 +144,26 @@ const BARRA = `<div class="barra"><a href="/">← podfactory.cl</a><button type=
 // Las tablas anchas se envuelven para poder desplazarse en teléfonos muy angostos sin romper la hoja.
 const envolverTablas = (html) => html.replace(/<table(\s[^>]*)?>(\s*<tr><th>Capítulos)/g, '<table class="caps">$2').replace(/<table(\s[^>]*)?>/g, (x) => `<div class="tw">${x}`).replace(/<\/table>/g, "</table></div>");
 
-export function paginaCondiciones(tarifa) {
+export function paginaCondiciones(tarifa, empresa) {
   const t = tarifaParaDocumentos(tarifa);
   return `${CABEZA("Pod Factory · Tarifas y condiciones del estudio", "Tarifas y condiciones del estudio de Pod Factory: capítulos, edición, opcionales, pago, plazos y cambios de fecha.", "/condiciones")}
 <style>${CSS_CONDICIONES}${CSS_PANTALLA}</style>
 </head>
 <body>
 ${BARRA}
-${envolverTablas(cuerpoCondiciones(t, ayudas(t)))}
+${envolverTablas(cuerpoCondiciones(t, ayudas(t, empresa)))}
 </body>
 </html>`;
 }
 
-export function paginaInformacion(tarifa) {
+export function paginaInformacion(tarifa, empresa) {
   const t = tarifaParaDocumentos(tarifa);
   return `${CABEZA("Pod Factory · Información del estudio", "Información del estudio de Pod Factory en Vitacura: el set, cómo trabajamos y los precios vigentes.", "/informacion")}
 <style>${CSS_INFORMACION}${CSS_PANTALLA}</style>
 </head>
 <body>
 ${BARRA}
-${envolverTablas(cuerpoInformacion(t, ayudas(t)))}
+${envolverTablas(cuerpoInformacion(t, ayudas(t, empresa)))}
 </body>
 </html>`;
 }
