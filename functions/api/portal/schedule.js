@@ -14,11 +14,16 @@
 //   · otro choque      → 409 que lo nombra («Choca con “Andigital” 09:00–14:00»).
 // La reserva guarda `calendarId`: cancelar actúa sobre ese calendario (una adoptada solo se desvincula: NUNCA se borra el evento).
 // Sin la variable, Doppel sigue como siempre (calendario del estudio). Pod Factory no cambia.
-// Pod Factory, dos opciones SOLO para el hub (llevan el secreto del hub, como todo este endpoint):
+// Pod Factory, tres opciones SOLO para el hub (llevan el secreto del hub, como todo este endpoint):
 //   · vincularEventoId: el evento ya existe en el calendario del estudio (lo anotó a mano alguien del equipo). NO se crea otro: se guarda la reserva
 //     apuntando a ese evento, con la hora REAL del evento (también si ya pasó). Un evento no se vincula a dos reservas. Cancelar o reagendar esa
 //     reserva borra o mueve ESE evento, como en cualquier reserva del hub (se vinculó justamente para que el hub la gestione).
 //   · forzar: true → no se rechaza por choque ni por el margen de 30 min (el equipo decide agendar encima de otra cosa, con confirmación en el hub).
+//   · pasada: true (24-nov-2026) → la grabación YA OCURRIÓ y no quedó cargada: se acepta una fecha/hora que ya empezó (hasta 365 días atrás). El evento se crea igual en el
+//     calendario del estudio (queda de registro), NO se revisa disponibilidad ni margen (los choques con el pasado no importan: es como `forzar`), NO se manda correo ni invitación
+//     al cliente aunque venga `sendEmail`, y la reserva nace con los recordatorios de 48/24 h ya marcados (el cron además solo mira reservas futuras). Solo Pod Factory y solo si
+//     la hora ya pasó (una futura sigue las reglas de siempre). Sin esta opción, o con otra marca, una hora pasada sigue siendo 400 «Ese horario ya pasó». Decisión en _lib/horario-pasado.js.
+//     El endpoint entero exige el secreto del hub (x-intake-secret): sin él es 403 antes de mirar el cuerpo; el cliente NUNCA puede reservar en el pasado.
 // Reagendar (`reemplazaToken`): en AMBOS calendarios el evento de la propia reserva que se mueve no cuenta como choque (mover 19:00 → 19:30 no
 // se rechaza por chocar consigo misma). En el del estudio, ver _lib/propia-reserva.js; lo demás (otras reservas, eventos de Iván, margen) sigue igual.
 import { parseConfig, getOffset, errorDeMargen, recParams } from "../../_lib/slots.js";
@@ -28,6 +33,7 @@ import { newToken, saveBooking, getBooking, bookingPorEvento, manageUrl } from "
 import { sendEmail, formatSession, icsReserva, whatsappLink, customerEmailHtml } from "../../_lib/email.js";
 import { salidaDe, deadlineDe, correosDe, minutosDe } from "../../_lib/email.js";
 import { eventoPropioDelEstudio, busyDelEstudio } from "../../_lib/propia-reserva.js";
+import { decidirHorario } from "../../_lib/horario-pasado.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -62,6 +68,9 @@ export async function onRequestPost({ request, env }) {
   const start = vinculado ? hFmt.format(new Date(vinculado.start.dateTime)) : String(body.start || "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Fecha inválida (YYYY-MM-DD)" }, 400);
   if (!/^\d{1,2}:\d{2}$/.test(start)) return json({ error: "Hora inválida (HH:MM)" }, 400);
+  // Una fecha con forma de AAAA-MM-DD pero imposible («2026-13-45», «2026-02-31») hacía reventar getOffset (500): ahora es un 400 claro (con `pasada` también se aceptan fechas pasadas, no absurdas).
+  const dMedio = new Date(`${date}T12:00:00Z`);
+  if (isNaN(dMedio) || dMedio.toISOString().slice(0, 10) !== date) return json({ error: "Fecha inválida (YYYY-MM-DD)" }, 400);
 
   const hhmm = start.padStart(5, "0");
   const offset = getOffset(date, config.timeZone);
@@ -69,7 +78,10 @@ export async function onRequestPost({ request, env }) {
   if (isNaN(startMs)) return json({ error: "Fecha/hora inválida" }, 400);
   const mins = vinculado ? Math.max(1, Math.round((Date.parse(vinculado.end.dateTime) - startMs) / 60000)) : Math.min(480, Math.max(20, parseInt(body.minutes, 10) || config.slotMinutes));
   let slot = { label: hhmm, start: new Date(startMs).toISOString(), end: new Date(startMs + mins * 60000).toISOString() };
-  if (startMs <= Date.now() && !vinculado) return json({ error: "Ese horario ya pasó" }, 400);
+  // Hora que ya empezó: 400 de siempre, salvo vínculo a un evento existente o `pasada: true` del hub (grabación que ya ocurrió; ver la cabecera).
+  const horario = decidirHorario({ startMs, ahora: Date.now(), pasadaPedida: body.pasada === true, vinculado: !!vinculado, brand });
+  if (!horario.ok) return json({ error: horario.error }, horario.status);
+  const pasada = horario.pasada;
 
   // Doppel con calendario propio (el de Domingo) o, como siempre, el calendario del estudio.
   const calendarioDoppel = brand === "doppel" && env.DOPPEL_CALENDAR_ID ? String(env.DOPPEL_CALENDAR_ID) : null;
@@ -106,8 +118,9 @@ export async function onRequestPost({ request, env }) {
       if (e instanceof CalendarioNoCompartido) return json({ error: "No se pudo revisar el calendario de Domingo: " + e.message, detail: String(e) }, 502);
       return json({ error: "No se pudo verificar el calendario", detail: String(e) }, 502);
     }
-  } else if (vinculado || body.forzar === true) {
+  } else if (vinculado || body.forzar === true || pasada) {
     // Vinculado: el evento ya ocupa ese horario (es esta misma reserva). Forzar: el equipo decidió agendar aunque choque (confirmación en el hub).
+    // Pasada: la grabación ya ocurrió; la disponibilidad de una hora que ya pasó no importa (trátalo como forzar).
   } else {
     // ¿El calendario del estudio está libre en ese rango, con REC_MARGEN min libres antes y después? (reservas PF +
     // otras grabaciones + holds de pago). El borde exacto está permitido: 10:00–11:00 y 11:30 de 60 min conviven.
@@ -134,7 +147,7 @@ export async function onRequestPost({ request, env }) {
   const phone = String(body.phone || "").slice(0, 40);
   const tipo = body.tipo === "Webinar / Streaming" ? "Webinar / Streaming" : "Podcast";
   const personas = Math.min(8, Math.max(1, parseInt(body.personas, 10) || 1));
-  const sendConfirmation = !!body.sendEmail && !!email;
+  const sendConfirmation = !!body.sendEmail && !!email && !pasada;   // una grabación pasada nunca avisa al cliente, venga lo que venga en sendEmail
   const marca = brand === "podfactory" ? "Pod Factory" : "Doppel";
   const emoji = brand === "podfactory" ? "🎙️" : "🎬";
 
@@ -159,7 +172,7 @@ export async function onRequestPost({ request, env }) {
         }
         : {
           summary: `${emoji} ${marca}: ${projectName}`,
-          description: `Grabación agendada desde el portal (${marca}).\nProyecto: ${projectName}\nContacto: ${name}\nEmail: ${email || "—"}\nTel: ${phone || "—"}\nTipo: ${tipo} · Personas: ${personas}\nGestión: token ${token}`,
+          description: `${pasada ? `Grabación PASADA cargada a mano desde el hub (ya ocurrió; queda de registro).` : `Grabación agendada desde el portal (${marca}).`}\nProyecto: ${projectName}\nContacto: ${name}\nEmail: ${email || "—"}\nTel: ${phone || "—"}\nTipo: ${tipo} · Personas: ${personas}\nGestión: token ${token}`,
           startISO: slot.start, endISO: slot.end, timeZone: config.timeZone,
         });
       eventId = ev.id;
@@ -172,7 +185,9 @@ export async function onRequestPost({ request, env }) {
   await saveBooking(env, {
     token, eventId, date, label: slot.label, start: slot.start, end: slot.end,
     name, email, phone, tipo, personas, addons: [], comentarios: "", deposit: 0,
-    brand, projectName, source: "portal", reminded: false,
+    brand, projectName, source: "portal", reminded: !!pasada,
+    // Grabación pasada: sin recordatorios (el cron solo mira reservas futuras; estas marcas lo dejan explícito).
+    ...(pasada ? { reminded72: true, pasada: true } : {}),
     // Calendario donde vive el evento, SOLO si no es el del estudio (Doppel → calendario de Domingo): cancelar y reagendar lo usan.
     ...(calendarioDoppel ? { calendarId: calendarioDoppel } : {}),
     // Adoptada: el evento ya existía en el calendario de Domingo (no lo creó el hub). Cancelar solo la desvincula: NUNCA se borra ese evento.
@@ -197,6 +212,6 @@ export async function onRequestPost({ request, env }) {
     } catch (e) { console.log("schedule email error:", String(e)); }
   }
 
-  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora, calendario: calendarioDoppel ? "doppel" : "estudio", ...(vinculado ? { vinculado: true, evento: { titulo: vinculado.summary || "", id: vinculado.id } } : {}),
+  return json({ ok: true, token, eventId, brand, start: slot.start, end: slot.end, fecha, hora, calendario: calendarioDoppel ? "doppel" : "estudio", ...(pasada ? { pasada: true } : {}), ...(vinculado ? { vinculado: true, evento: { titulo: vinculado.summary || "", id: vinculado.id } } : {}),
     ...(adoptado ? { adoptado: true, evento: { titulo: adoptado.evento.titulo, inicio: horaDe(adoptado.evento.start, config.timeZone), fin: horaDe(adoptado.evento.end, config.timeZone), organizadorPropio: adoptado.evento.organizadorPropio, enlaceAgregado: adoptado.enlaceAgregado } } : {}) });
 }
