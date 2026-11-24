@@ -272,7 +272,9 @@ export const cuerpoCondiciones = (t, { m, filasCaps, rango, vig, vigDe, h36, pla
   <h2>Las reglas, <span class="serif">claras desde el inicio.</span></h2>
   <div class="conds">
     <div><h4>Pago</h4><ul>
-      <li>Se compra y paga en línea (MercadoPago o transferencia). <b>1 capítulo:</b> se paga completo al comprar. <b>2 o más:</b> 50% al comprar y 50% antes de agendar la segunda mitad de los capítulos, o <b>100% al comprar</b>, al mismo valor (no hay descuento por pagar todo).</li>
+      <li>Se compra y paga en línea (MercadoPago o transferencia), desde 1 capítulo y al mismo valor de dos formas (no hay descuento por pagar todo): <b>100% al comprar</b>, o <b>reservas sin pagar</b>: abonas el 50% hasta 24 horas antes de tu primera grabación y el otro 50% después de grabar, antes de la entrega.</li>
+      <li>Si a las 24 horas antes de tu primera grabación no hay abono, se cancelan tus reservas y se libera el horario. Puedes volver a reservar pagando el abono.</li>
+      <li>Mientras el saldo esté pendiente, tu entrega se ve en el portal, pero se reproduce y se descarga una vez pagado.</li>
       <li><b>Mini-piloto:</b> ${m(t.mini_piloto.neto)} + IVA al reservar; gratis con la invitación de tu correo.</li>
       <li>Los opcionales se eligen al comprar y se pagan con los capítulos.</li>
     </ul></div>
@@ -392,7 +394,7 @@ export const cuerpoInformacion = (t, { m, filasCaps, rango, vig, plazoCorto, op,
     <tr><th>Capítulos</th><th class="n">Base · cap.</th><th class="n">Base · total</th><th class="n">Full · cap.</th><th class="n">Full · total</th></tr>
     ${filasCaps(t)}
   </table>
-  <small class="g">Cualquier cantidad de ${rango}: mientras más capítulos, menor el valor por capítulo. El portal te muestra el valor exacto. Valores en pesos chilenos, más IVA. Pago en línea (MercadoPago o transferencia): 1 capítulo, completo al comprar; 2 o más, 50% al comprar y 50% antes de agendar la segunda mitad, o 100% al comprar, al mismo valor. Los opcionales se eligen al comprar y se pagan junto con los capítulos. Plazo para grabar: ${plazoCorto}. Las grabaciones que empiezan a las ${t.recargo_nocturno.desde} o después tienen un recargo de ${m(t.recargo_nocturno.neto)} + IVA.</small>
+  <small class="g">Cualquier cantidad de ${rango}: mientras más capítulos, menor el valor por capítulo. El portal te muestra el valor exacto. Valores en pesos chilenos, más IVA. Pago en línea (MercadoPago o transferencia), al mismo valor: 100% al comprar, o reservas sin pagar, abonas el 50% hasta 24 horas antes de tu primera grabación (si no, se libera el horario) y el otro 50% antes de la entrega. Los opcionales se eligen al comprar y se pagan junto con los capítulos. Plazo para grabar: ${plazoCorto}. Las grabaciones que empiezan a las ${t.recargo_nocturno.desde} o después tienen un recargo de ${m(t.recargo_nocturno.neto)} + IVA.</small>
   <div style="border-left:1mm solid var(--red);padding:.4mm 0 .4mm 3mm;margin-top:2.5mm;font-size:8.4pt;line-height:1.4"><b>Cobros posteriores (solo si ocurren):</b> tiempo extra, ${m(t.tiempo_extra.neto)} cada ${t.tiempo_extra.minutos} minutos; ronda de cambios extra, ${m(t.ronda_cambios_extra.neto)}.</div>
 
   <div class="two">
